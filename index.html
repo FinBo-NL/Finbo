@@ -2235,7 +2235,7 @@ function renderHeader(){
 // Standaard dichtgeklapt bij het inloggen/openen (issue #1) — de actieve maand/jaar blijft altijd
 // gewoon bereikbaar via de kop van de pagina/het actieve tabblad, dus dichtgeklapt is geen
 // probleem, en zo oogt het menu meteen rustiger bij het inloggen.
-let collapsedGroups = { budgets: true, years: true };
+let collapsedGroups = { budgets: true, years: true, growth: true };
 
 function renderTabs(){
   const el = document.getElementById("tabs");
@@ -2326,19 +2326,27 @@ function renderTabs(){
     el.appendChild(monthGroup);
   }
 
-  // "Groei"-groepje: een eigen kopje/menugroep (net als Maandbudgetten en Jaren), met daarin
-  // (voorlopig) alleen "Salaris groei" als pagina — zie issue #2.
+  // "Groei"-groepje: een eigen, in-/uitklapbare menugroep (net als Maandbudgetten en Jaren, met
+  // hetzelfde pijltje en standaard dichtgeklapt), met daarin (voorlopig) alleen "Salaris groei"
+  // als pagina — zie issue #2 en de feedback daarop (het moest zich echt hetzelfde gedragen als
+  // Maandbudgetten/Jaren, niet alleen een los kopje zijn).
   const extraGroup = document.createElement("div");
   extraGroup.className = "tab-group";
   extraGroup.innerHTML = `
     <div class="tab-group-head">
+      <button class="group-collapse-btn${collapsedGroups.growth ? " collapsed":""}" id="collapseGrowthBtn" title="${t("collapseGroupBtn")}" aria-label="${t("collapseGroupBtn")}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
       <span class="tab-group-label">${t("groeiGroupLabel")}</span>
     </div>`;
-  const loonstijgingBtn = document.createElement("button");
-  loonstijgingBtn.className = "tab" + (state.activeView.type==="loonstijging" ? " active":"");
-  loonstijgingBtn.textContent = t("navLoonstijging");
-  loonstijgingBtn.onclick = () => { state.activeView = {type:"loonstijging"}; renderAll(); };
-  extraGroup.appendChild(loonstijgingBtn);
+  extraGroup.querySelector("#collapseGrowthBtn").onclick = () => { collapsedGroups.growth = !collapsedGroups.growth; renderTabs(); };
+  if(!collapsedGroups.growth){
+    const loonstijgingBtn = document.createElement("button");
+    loonstijgingBtn.className = "tab" + (state.activeView.type==="loonstijging" ? " active":"");
+    loonstijgingBtn.textContent = t("navLoonstijging");
+    loonstijgingBtn.onclick = () => { state.activeView = {type:"loonstijging"}; renderAll(); };
+    extraGroup.appendChild(loonstijgingBtn);
+  }
   el.appendChild(extraGroup);
 
   const uploadBtn = document.createElement("button");
