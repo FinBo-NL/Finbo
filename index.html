@@ -975,6 +975,7 @@
   /* Maandbudget-vergelijking (CSV vs. gekozen maandbudget) */
   .compare-picker{padding:2px 18px 14px;}
   .apply-to-budget-row{padding:0 18px 14px;}
+  .apply-to-budget-row .review-btn{margin-right:8px;}
   .apply-to-budget-note{padding:8px 0 0; margin:0;}
   .compare-picker select{
     font-family:"Segoe UI",sans-serif;
@@ -1216,9 +1217,11 @@ const i18n = {
     noBudgetOption: "— geen maandbudget —",
     noBudgetSelected: "Nog geen maandbudget gekozen (of nog geen maandbudget aangemaakt). Maak op Basisdata een maandbudget aan en kies het hierboven om te vergelijken.",
     applyToBudgetBtn: (title) => `Toepassen op "${title}"`,
-    applyToBudgetNote: "Zet de werkelijke bedragen van deze maand (incl. wat je via \"Nog in te delen\" hebt toegevoegd) in de line-items van het gekoppelde maandbudget — bestaande regels worden overschreven, nieuwe labels worden toegevoegd. Kan gerust nog een keer, bijvoorbeeld nadat je meer posten hebt ingedeeld.",
-    applyToBudgetConfirm: (title) => `De line-items van maandbudget "${title}" overschrijven met de werkelijke bedragen van deze maand? Dit kan niet ongedaan worden gemaakt (het maandbudget blijft daarna gewoon weer los bewerkbaar).`,
+    applyToBudgetNote: "Zet de werkelijke bedragen van deze maand (incl. wat je via \"Nog in te delen\" hebt toegevoegd) in de line-items van het gekoppelde maandbudget — bestaande regels worden overschreven, nieuwe labels worden toegevoegd. Kan gerust nog een keer, bijvoorbeeld nadat je meer posten hebt ingedeeld. Kan hierna ook weer ongedaan gemaakt worden.",
+    applyToBudgetConfirm: (title) => `De line-items van maandbudget "${title}" overschrijven met de werkelijke bedragen van deze maand? Je kunt dit hierna nog ongedaan maken (zolang je niet nog een keer toepast), het maandbudget blijft ook gewoon weer los bewerkbaar.`,
     applyToBudgetDone: "Toegepast op het maandbudget.",
+    reverseApplyToBudgetBtn: (title) => `Toepassen op "${title}" ongedaan maken`,
+    reverseApplyToBudgetConfirm: (title) => `Het toepassen op "${title}" ongedaan maken? Het maandbudget krijgt de line-items terug zoals ze waren vóór het toepassen (handmatige wijzigingen die je daarna nog deed, gaan hiermee ook mee terug).`,
     compareBudgetCol: "Begroot",
     compareActualCol: "Werkelijk",
     compareDiffCol: "Verschil",
@@ -1355,9 +1358,11 @@ const i18n = {
     noBudgetOption: "— no monthly budget —",
     noBudgetSelected: "No monthly budget chosen yet (or none created yet). Create one on Basisdata and select it above to compare.",
     applyToBudgetBtn: (title) => `Apply to "${title}"`,
-    applyToBudgetNote: "Writes this month's actual amounts (including anything you've added via \"Still to be filed\") into the linked monthly budget's own line items — existing lines get overwritten, new labels get added. Safe to run again later, e.g. after filing more items.",
-    applyToBudgetConfirm: (title) => `Overwrite the line items of monthly budget "${title}" with this month's actual amounts? This can't be undone (the budget stays freely editable afterwards).`,
+    applyToBudgetNote: "Writes this month's actual amounts (including anything you've added via \"Still to be filed\") into the linked monthly budget's own line items — existing lines get overwritten, new labels get added. Safe to run again later, e.g. after filing more items. Can also be reversed afterwards.",
+    applyToBudgetConfirm: (title) => `Overwrite the line items of monthly budget "${title}" with this month's actual amounts? You can still reverse this afterwards (as long as you don't apply again), and the budget stays freely editable either way.`,
     applyToBudgetDone: "Applied to the monthly budget.",
+    reverseApplyToBudgetBtn: (title) => `Reverse applying to "${title}"`,
+    reverseApplyToBudgetConfirm: (title) => `Reverse applying to "${title}"? The monthly budget's line items go back to how they were before you applied (any manual edits you made since then go back too).`,
     compareBudgetCol: "Budgeted",
     compareActualCol: "Actual",
     compareDiffCol: "Difference",
@@ -1472,6 +1477,20 @@ function budgetObjFromView(){
    "outstanding" (dat loopt al rechtstreeks via renderStornoReviewCard) en is idempotent: opnieuw
    toepassen na het indelen van meer "Nog in te delen"-posten werkt gewoon opnieuw bij. */
 function applyMonthToBudget(m, budget){
+  // Bewaar een momentopname van het budget van vóór het overschrijven, op de MAAND zelf — zodat
+  // "Toepassen" met één druk op de knop ongedaan gemaakt kan worden (zie
+  // reverseApplyMonthToBudget/renderBudgetPickerCard). Bewust maar één stap terug, net als de
+  // Toevoegen/Ongedaan-maken-toggle elders in de app: een nieuwe keer "Toepassen" overschrijft deze
+  // momentopname gewoon weer met de daaraan voorafgaande stand.
+  m.appliedToBudget = {
+    budgetId: budget.id,
+    snapshot: {
+      income: cloneItems(budget.income.items),
+      vasteLasten: cloneItems(budget.vasteLasten.items),
+      abonnementen: cloneItems(budget.abonnementen.items),
+      variabeleLasten: cloneItems(budget.variabeleLasten.items),
+    },
+  };
   const cats = ["income","vasteLasten","abonnementen","variabeleLasten"];
   cats.forEach(cat=>{
     m[cat].items.forEach(item=>{
@@ -1484,6 +1503,22 @@ function applyMonthToBudget(m, budget){
       }
     });
   });
+}
+
+/* Zet een eerdere applyMonthToBudget() terug via de op de maand bewaarde momentopname — vervangt
+   de vier categorieën van het budget één-op-één door de stand van vóór het toepassen (dus ook
+   nieuw-toegevoegde regels verdwijnen weer, niet alleen overschreven waarden worden hersteld). */
+function reverseApplyMonthToBudget(m){
+  if(!m.appliedToBudget) return;
+  const budget = state.budgets.find(b => b.id === m.appliedToBudget.budgetId);
+  if(budget){
+    const snap = m.appliedToBudget.snapshot;
+    budget.income.items = cloneItems(snap.income);
+    budget.vasteLasten.items = cloneItems(snap.vasteLasten);
+    budget.abonnementen.items = cloneItems(snap.abonnementen);
+    budget.variabeleLasten.items = cloneItems(snap.variabeleLasten);
+  }
+  m.appliedToBudget = null;
 }
 
 const BASISDATA_INCOME = [
@@ -3553,6 +3588,11 @@ function renderBudgetPickerCard(m){
   const wrap = document.createElement("div");
   wrap.className = "card";
   const linkedBudget = m.budgetId ? state.budgets.find(b=>b.id===m.budgetId) : null;
+  // "Toepassen" blijft altijd gewoon klikbaar (o.a. om na het indelen van meer "Nog in te
+  // delen"-posten opnieuw te synchroniseren) — "Ongedaan maken" staat er als los knopje naast,
+  // alleen zichtbaar zolang er voor DIT gekoppelde maandbudget nog een niet-teruggedraaide
+  // momentopname klaarstaat (zie applyMonthToBudget/reverseApplyMonthToBudget).
+  const canReverse = !!(linkedBudget && m.appliedToBudget && m.appliedToBudget.budgetId === linkedBudget.id);
   wrap.innerHTML = `
     <div class="card-head"><h2>${t("compareWithLabel")}</h2></div>
     <div class="compare-picker">
@@ -3564,6 +3604,7 @@ function renderBudgetPickerCard(m){
     ${linkedBudget ? `
       <div class="apply-to-budget-row">
         <button type="button" id="applyToBudgetBtn" class="review-btn">${t("applyToBudgetBtn")(linkedBudget.title)}</button>
+        ${canReverse ? `<button type="button" id="reverseApplyToBudgetBtn" class="review-btn added">${t("reverseApplyToBudgetBtn")(linkedBudget.title)}</button>` : ""}
         <div class="card-note apply-to-budget-note">${t("applyToBudgetNote")}</div>
       </div>
     ` : ""}
@@ -3577,6 +3618,15 @@ function renderBudgetPickerCard(m){
     applyBtn.onclick = () => {
       if(confirm(t("applyToBudgetConfirm")(linkedBudget.title))){
         applyMonthToBudget(m, linkedBudget);
+        renderAll();
+      }
+    };
+  }
+  const reverseBtn = wrap.querySelector("#reverseApplyToBudgetBtn");
+  if(reverseBtn && linkedBudget){
+    reverseBtn.onclick = () => {
+      if(confirm(t("reverseApplyToBudgetConfirm")(linkedBudget.title))){
+        reverseApplyMonthToBudget(m);
         renderAll();
       }
     };
