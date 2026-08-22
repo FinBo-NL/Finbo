@@ -155,10 +155,17 @@
   }
 
   /* Tabs */
+  /* De ruimte tussen de losse menu-secties (Basisdata / Maandbudgetten+Jaren / Groei /
+     upload-knop) komt nu volledig uit deze ene `gap` op de flex-container, in plaats van losse
+     margin/padding/border-regels per sectie-combinatie — dat laatste bleek stil te breken zodra
+     een sectie een ander wrapper-element werd (zoals de Maandbudgetten+Jaren-"pair", zie issue
+     #8): de afstand was dan opeens veel kleiner voor die ene combinatie. Met een simpele `gap` is
+     de afstand altijd en overal exact hetzelfde, hoeveel secties er ook zijn of wat voor wrapper
+     ze gebruiken. */
   .tabs{
     display:flex;
     flex-direction:column;
-    gap:2px;
+    gap:20px;
     margin-top:20px;
     max-width:340px;
   }
@@ -166,11 +173,6 @@
     display:flex;
     flex-direction:column;
     gap:2px;
-  }
-  .tab-group + .tab-group{
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px dashed color-mix(in srgb, var(--text-onink) 12%, transparent);
   }
   .tab-group-head{
     display:flex;
@@ -242,14 +244,15 @@
      .tab-group-kolom: gestapeld onder elkaar, identiek aan hoe het er al uitzag vóór deze
      wijziging. Pas vanaf voldoende breedte (er is toch ruime lege ruimte rechts van het menu op
      een breed scherm) gaan de twee lijstjes naast elkaar staan. */
+  /* Geen streepje meer tussen Maandbudgetten en Jaren (issue #7) — ze horen inhoudelijk bij
+     elkaar (vandaar ook de gedeelde "pair"-wrapper), dus alleen witruimte, geen lijn. Die
+     witruimte komt nu — net als bij `.tabs` hierboven — uit één simpele `gap`, zodat 'm altijd
+     precies hetzelfde is, ongeacht in-/uitgeklapte staat of aantal items (issue #8). */
   .tab-group-pair{
     display:flex;
     flex-direction:column;
+    gap:20px;
   }
-  /* Geen streepje tussen Maandbudgetten en Jaren (zie issue #7) — ze horen inhoudelijk bij elkaar
-     (vandaar ook de gedeelde "pair"-wrapper), dus alleen wat extra witruimte ertussen, geen lijn.
-     Geldt op elke breedte, niet alleen vanaf de 760px-drempel hieronder. */
-  .tab-group-pair > .tab-group + .tab-group{ border-top:none; }
   @media (min-width:760px){
     .tabs{ max-width:640px; }
     .tab-group-pair{
@@ -260,14 +263,6 @@
     .tab-group-pair > .tab-group{
       flex:1 1 0;
       min-width:0;
-    }
-    /* De verticale scheidingslijn die normaal BOVEN een volgende groep staat (zie
-       ".tab-group + .tab-group" hierboven) hoort hier niet meer boven Jaren, want die staat nu
-       naast Maandbudgetten in plaats van eronder. */
-    .tab-group-pair > .tab-group + .tab-group{
-      margin-top:0;
-      padding-top:0;
-      border-top:none;
     }
   }
   .tab{
@@ -297,7 +292,6 @@
     margin-right:6px;
   }
   .tab-upload{
-    margin-top:10px;
     border:1px dashed color-mix(in srgb, var(--text-onink) 30%, transparent);
     border-radius:3px;
     color:var(--gold-bright);
