@@ -246,6 +246,10 @@
     display:flex;
     flex-direction:column;
   }
+  /* Geen streepje tussen Maandbudgetten en Jaren (zie issue #7) — ze horen inhoudelijk bij elkaar
+     (vandaar ook de gedeelde "pair"-wrapper), dus alleen wat extra witruimte ertussen, geen lijn.
+     Geldt op elke breedte, niet alleen vanaf de 760px-drempel hieronder. */
+  .tab-group-pair > .tab-group + .tab-group{ border-top:none; }
   @media (min-width:760px){
     .tabs{ max-width:640px; }
     .tab-group-pair{
