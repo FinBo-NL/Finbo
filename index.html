@@ -186,6 +186,7 @@
     text-transform:uppercase;
     letter-spacing:.12em;
     font-family:"Segoe UI",sans-serif;
+    flex:1;
   }
   .group-add-btn{
     width:19px;
@@ -207,6 +208,55 @@
     border-color:var(--gold);
     color:var(--gold-bright);
     background:color-mix(in srgb, var(--gold) 12%, transparent);
+  }
+  .group-collapse-btn{
+    width:17px;
+    height:17px;
+    border:none;
+    background:transparent;
+    color:var(--text-onink-soft);
+    padding:0;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .group-collapse-btn svg{
+    width:13px;
+    height:13px;
+    transition:transform .15s ease;
+  }
+  .group-collapse-btn.collapsed svg{ transform:rotate(-90deg); }
+  .group-collapse-btn:hover{ color:var(--gold-bright); }
+  /* Maandbudgetten + Jaren staan samen in deze wrapper. Op een smal scherm (het gebruikelijke
+     geval, en altijd onder de 760px-drempel hieronder) gedraagt hij zich als een gewone
+     .tab-group-kolom: gestapeld onder elkaar, identiek aan hoe het er al uitzag vóór deze
+     wijziging. Pas vanaf voldoende breedte (er is toch ruime lege ruimte rechts van het menu op
+     een breed scherm) gaan de twee lijstjes naast elkaar staan. */
+  .tab-group-pair{
+    display:flex;
+    flex-direction:column;
+  }
+  @media (min-width:760px){
+    .tabs{ max-width:640px; }
+    .tab-group-pair{
+      flex-direction:row;
+      align-items:flex-start;
+      gap:28px;
+    }
+    .tab-group-pair > .tab-group{
+      flex:1 1 0;
+      min-width:0;
+    }
+    /* De verticale scheidingslijn die normaal BOVEN een volgende groep staat (zie
+       ".tab-group + .tab-group" hierboven) hoort hier niet meer boven Jaren, want die staat nu
+       naast Maandbudgetten in plaats van eronder. */
+    .tab-group-pair > .tab-group + .tab-group{
+      margin-top:0;
+      padding-top:0;
+      border-top:none;
+    }
   }
   .tab{
     display:flex;
@@ -1021,6 +1071,7 @@ const i18n = {
     kostenUitBasisdataNote: "Vaste lasten, abonnementen en variabele lasten volgen altijd Basisdata. Wijzig ze daar — dat werkt hier direct door.",
     maandbudgettenLabel: "Maandbudgetten",
     jarenLabel: "Jaren",
+    collapseGroupBtn: "In-/uitklappen",
     maandbudgetCardTitle: "Maandbudget",
     maandbudgetCardInfo: "Maakt een nieuwe, losse momentopname van de huidige Basisdata-waarden (inkomsten + alle kosten). Verandert daarna niet meer mee met latere wijzigingen in Basisdata.",
     nieuwBudgetBtn: "+ Nieuw maandbudget",
@@ -1146,6 +1197,7 @@ const i18n = {
     kostenUitBasisdataNote: "Fixed costs, subscriptions and variable costs always follow Basisdata. Edit them there — it updates here immediately.",
     maandbudgettenLabel: "Monthly budgets",
     jarenLabel: "Years",
+    collapseGroupBtn: "Collapse/expand",
     maandbudgetCardTitle: "Monthly budget",
     maandbudgetCardInfo: "Creates a fresh, standalone snapshot of the current Basisdata values (income + all costs). Won't change again with later edits to Basisdata.",
     nieuwBudgetBtn: "+ New monthly budget",
@@ -2187,6 +2239,10 @@ function renderHeader(){
 }
 
 /* ---------- RENDER: TABS ---------- */
+// In-/uitklapstand van de Maandbudgetten- en Jaren-lijstjes in het menu. Bewust NIET in `state`
+// (dus niet meegenomen in export/cloud-sync) — dit is puur een lokale schermvoorkeur, geen data.
+let collapsedGroups = { budgets: false, years: false };
+
 function renderTabs(){
   const el = document.getElementById("tabs");
   el.innerHTML = "";
@@ -2202,6 +2258,13 @@ function renderTabs(){
   bdGroup.appendChild(bdBtn);
   el.appendChild(bdGroup);
 
+  // Maandbudgetten + Jaren staan samen in een "pair"-wrapper: op een smal scherm staan ze
+  // gewoon onder elkaar (zoals voorheen), maar vanaf voldoende paginabreedte zet de CSS
+  // (`.tab-group-pair`, zie <style>) ze naast elkaar — er is toch ruime lege ruimte rechts van
+  // het menu op brede schermen. Beide lijstjes zijn bovendien los van elkaar in-/uitklapbaar.
+  const groupPair = document.createElement("div");
+  groupPair.className = "tab-group-pair";
+
   // Maandbudgetten: eigen groepje direct na Basisdata, vóór de overige jaren (nieuwste bovenaan).
   // Het groepje (met "+"-knop) staat er altijd, ook zonder maandbudgetten — dat is nu meteen de
   // plek om er een aan te maken, in plaats van een kaart onderaan de Basisdata-pagina.
@@ -2209,38 +2272,52 @@ function renderTabs(){
   budgetGroup.className = "tab-group";
   budgetGroup.innerHTML = `
     <div class="tab-group-head">
+      <button class="group-collapse-btn${collapsedGroups.budgets ? " collapsed":""}" id="collapseBudgetsBtn" title="${t("collapseGroupBtn")}" aria-label="${t("collapseGroupBtn")}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
       <span class="tab-group-label">${t("maandbudgettenLabel")}</span>
       <button class="group-add-btn" id="addBudgetBtn" title="${t("nieuwBudgetBtn")}">+</button>
     </div>`;
   budgetGroup.querySelector("#addBudgetBtn").onclick = () => createBudget();
-  state.budgets.forEach(b=>{
-    const btn = document.createElement("button");
-    btn.className = "tab" + (state.activeView.type==="budget" && state.activeView.id===b.id ? " active":"");
-    btn.textContent = b.title;
-    btn.onclick = ()=>{ state.activeView = {type:"budget", id:b.id}; renderAll(); };
-    budgetGroup.appendChild(btn);
-  });
-  el.appendChild(budgetGroup);
+  budgetGroup.querySelector("#collapseBudgetsBtn").onclick = () => { collapsedGroups.budgets = !collapsedGroups.budgets; renderTabs(); };
+  if(!collapsedGroups.budgets){
+    state.budgets.forEach(b=>{
+      const btn = document.createElement("button");
+      btn.className = "tab" + (state.activeView.type==="budget" && state.activeView.id===b.id ? " active":"");
+      btn.textContent = b.title;
+      btn.onclick = ()=>{ state.activeView = {type:"budget", id:b.id}; renderAll(); };
+      budgetGroup.appendChild(btn);
+    });
+  }
+  groupPair.appendChild(budgetGroup);
 
   // Overige jaren (2027, 2028, en elk zelf aangemaakt jaar erna) — "+" maakt het volgende jaar aan.
   const scenGroup = document.createElement("div");
   scenGroup.className = "tab-group";
   scenGroup.innerHTML = `
     <div class="tab-group-head">
+      <button class="group-collapse-btn${collapsedGroups.years ? " collapsed":""}" id="collapseYearsBtn" title="${t("collapseGroupBtn")}" aria-label="${t("collapseGroupBtn")}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
       <span class="tab-group-label">${t("jarenLabel")}</span>
       <button class="group-add-btn" id="addJaarBtn" title="${t("nieuwJaarBtn")(latestScenario().jaar+1)}">+</button>
     </div>`;
   scenGroup.querySelector("#addJaarBtn").onclick = () => createNewYear();
-  state.scenarios.slice(1).forEach((s,offset)=>{
-    const i = offset + 1;
-    const b = document.createElement("button");
-    b.className = "tab" + (state.activeView.type==="scenario" && state.activeView.index===i ? " active":"");
-    const labelText = s.label === String(s.jaar) ? s.label : `${s.label} · ${s.jaar}`;
-    b.innerHTML = `<span class="tab-idx">${String(i+1).padStart(2,"0")}</span>${labelText}`;
-    b.onclick = ()=>{ state.activeScenario = i; state.activeView = {type:"scenario", index:i}; renderAll(); };
-    scenGroup.appendChild(b);
-  });
-  el.appendChild(scenGroup);
+  scenGroup.querySelector("#collapseYearsBtn").onclick = () => { collapsedGroups.years = !collapsedGroups.years; renderTabs(); };
+  if(!collapsedGroups.years){
+    state.scenarios.slice(1).forEach((s,offset)=>{
+      const i = offset + 1;
+      const b = document.createElement("button");
+      b.className = "tab" + (state.activeView.type==="scenario" && state.activeView.index===i ? " active":"");
+      const labelText = s.label === String(s.jaar) ? s.label : `${s.label} · ${s.jaar}`;
+      b.innerHTML = `<span class="tab-idx">${String(i+1).padStart(2,"0")}</span>${labelText}`;
+      b.onclick = ()=>{ state.activeScenario = i; state.activeView = {type:"scenario", index:i}; renderAll(); };
+      scenGroup.appendChild(b);
+    });
+  }
+  groupPair.appendChild(scenGroup);
+
+  el.appendChild(groupPair);
 
   if(state.months.length){
     const monthGroup = document.createElement("div");
