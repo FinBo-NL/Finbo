@@ -1287,6 +1287,9 @@ function makeBudget(title, source){
     vasteLasten: { items: cloneItems(source.vasteLasten.items) },
     abonnementen: { items: cloneItems(source.abonnementen.items) },
     variabeleLasten: { items: cloneItems(source.variabeleLasten.items) },
+    // Eigen, los instelbaar vinkje (zie renderWarmtefondsToggleForBudget) — neemt bij aanmaken de
+    // huidige Basisdata-stand over, maar wijzigt daarna niet meer mee met Basisdata (bevroren snapshot).
+    warmtefondsAftrek: state.warmtefondsAftrek,
   };
 }
 function createBudget(){
@@ -1407,6 +1410,11 @@ function migrateState(){
   state.months.forEach(m=>{
     if(m.budgetId === undefined) m.budgetId = state.budgets.length ? state.budgets[0].id : null;
   });
+  // Oudere maandbudgetten kennen het eigen warmtefonds-vinkje nog niet. Standaard uit, zodat
+  // hun al opgeslagen/getoonde totalen niet stilzwijgend veranderen bij het laden.
+  state.budgets.forEach(b=>{
+    if(b.warmtefondsAftrek === undefined) b.warmtefondsAftrek = false;
+  });
   syncComputedLoons();
 }
 
@@ -1471,6 +1479,14 @@ function vasteLastenTotal(){
   const warmtefondsItem = bd.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "warmtefonds");
   const warmtefondsVal = (state.warmtefondsAftrek && warmtefondsItem) ? (parseFloat(warmtefondsItem.v)||0) : 0;
   return sum(bd.vasteLasten.items) - warmtefondsVal;
+}
+/* Zelfde logica als vasteLastenTotal(), maar voor een bevroren maandbudget: gebruikt de eigen
+   (gekopieerde) vaste-lasten-items en het eigen warmtefondsAftrek-vinkje van dat budget, niet de
+   globale Basisdata-instelling. */
+function vasteLastenTotalForBudget(b){
+  const warmtefondsItem = b.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "warmtefonds");
+  const warmtefondsVal = (b.warmtefondsAftrek && warmtefondsItem) ? (parseFloat(warmtefondsItem.v)||0) : 0;
+  return sum(b.vasteLasten.items) - warmtefondsVal;
 }
 function basisdataCostTotals(){
   const bd = basisdataScenario();
@@ -2703,6 +2719,54 @@ function renderWarmtefondsToggle(){
   return wrap;
 }
 
+/* Budget-versie van renderVasteLastenCard(): identieke UN-Gas+elec-min-Warmtefonds weergave, maar
+   scoped op de eigen (bevroren) vaste-lasten-items en het eigen warmtefondsAftrek-vinkje van dit
+   specifieke maandbudget, in plaats van Basisdata/de globale instelling. */
+function renderVasteLastenCardForBudget(b){
+  const unItem = b.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "un-gas+elec");
+  const warmtefondsItem = b.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "warmtefonds");
+  const toggleActive = b.warmtefondsAftrek && unItem && warmtefondsItem;
+
+  let opts = {};
+  if(toggleActive){
+    const warmtefondsVal = parseFloat(warmtefondsItem.v) || 0;
+    const rawUN = parseFloat(unItem.v) || 0;
+    const netUN = Math.round((rawUN - warmtefondsVal) * 100) / 100;
+    unItem.note = { nl: i18n.nl.warmtefondsNote(fmt(warmtefondsVal)), en: i18n.en.warmtefondsNote(fmt(warmtefondsVal)) };
+    opts = {
+      totalOverride: vasteLastenTotalForBudget(b),
+      valueFor: (item) => {
+        if(item !== unItem) return null;
+        return { value: netUN, editable: false };
+      }
+    };
+  } else if(unItem){
+    unItem.note = undefined;
+  }
+
+  const card = renderCard("vasteLasten", { title: t("vasteLasten"), items: b.vasteLasten.items }, opts);
+  card.id = "vaste-lasten-card";
+  return card;
+}
+
+/* Budget-versie van renderWarmtefondsToggle(): schakelt b.warmtefondsAftrek i.p.v. de globale
+   state.warmtefondsAftrek, zodat elk maandbudget zijn eigen, onafhankelijke instelling houdt. */
+function renderWarmtefondsToggleForBudget(b){
+  const wrap = document.createElement("div");
+  wrap.className = "toggle-row";
+  wrap.innerHTML = `
+    <label class="toggle-label">
+      <input type="checkbox" id="warmtefondsToggleBudget" ${b.warmtefondsAftrek ? "checked" : ""} />
+      ${t("warmtefondsToggleLabel")}
+    </label>
+  `;
+  wrap.querySelector("#warmtefondsToggleBudget").onchange = (e) => {
+    b.warmtefondsAftrek = e.target.checked;
+    renderAll();
+  };
+  return wrap;
+}
+
 /* Nieuw maandbudget aanmaken gebeurt nu vanuit het "+"-knopje bij de groep "Maandbudgetten"
    in het menu (zie renderTabs) in plaats van een kaart onderaan de Basisdata-pagina. */
 
@@ -2764,7 +2828,8 @@ function renderBudgetCategories(){
   el.appendChild(titleWrap);
 
   el.appendChild(renderCard("income", { title: t("income"), items: b.income.items }));
-  el.appendChild(renderCard("vasteLasten", { title: t("vasteLasten"), items: b.vasteLasten.items }));
+  el.appendChild(renderVasteLastenCardForBudget(b));
+  el.appendChild(renderWarmtefondsToggleForBudget(b));
   el.appendChild(renderCard("abonnementen", { title: t("abonnementen"), items: b.abonnementen.items }));
   el.appendChild(renderCard("variabeleLasten", { title: t("variabeleLasten"), items: b.variabeleLasten.items }));
 }
@@ -3463,7 +3528,7 @@ function renderBudgetSummary(){
   const el = document.getElementById("summary");
   if(!b){ el.innerHTML = ""; return; }
   const income = sum(b.income.items);
-  const vasteLasten = sum(b.vasteLasten.items);
+  const vasteLasten = vasteLastenTotalForBudget(b);
   const abonnementen = sum(b.abonnementen.items);
   const variabeleLasten = sum(b.variabeleLasten.items);
   const totaalUitgaven = vasteLasten + abonnementen + variabeleLasten;
