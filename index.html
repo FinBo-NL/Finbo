@@ -1514,14 +1514,25 @@ function migrateState(){
   state.months.forEach(m=>{
     if(m.budgetId === undefined) m.budgetId = state.budgets.length ? state.budgets[0].id : null;
     if(!m.openTerugboekingen) m.openTerugboekingen = [];
-    // Oudere opslagbestanden kennen "selected" op een nog-in-te-delen post nog niet — standaard
-    // aangevinkt, zodat de nieuwe "Selecteer alles/Toevoegen geselecteerde" bulk-actie er meteen
-    // mee werkt zonder dat de gebruiker eerst alles los hoeft aan te vinken.
-    if(m.review) m.review.forEach(entry=>{ if(entry.selected === undefined) entry.selected = true; });
+    // Oudere opslagbestanden kennen "selected" op een nog-in-te-delen post nog niet. Issue #11:
+    // standaard NIET aangevinkt, zodat er nooit stilzwijgend iets wordt meegenomen door de
+    // "Selecteer alles/Toevoegen geselecteerde"-bulk-actie zonder dat de gebruiker dat zelf koos.
+    if(m.review) m.review.forEach(entry=>{ if(entry.selected === undefined) entry.selected = false; });
     // Idem voor openstaande terugboekingen: "budgetId" (het maandbudget waarnaar deze specifieke
     // rij toegevoegd moet worden) verving de oude categorie-keuze — bestaande, nog niet toegevoegde
     // rijen krijgen standaard geen koppeling (de gebruiker kiest 'm zelf via de nieuwe dropdown).
     if(m.openTerugboekingen) m.openTerugboekingen.forEach(entry=>{ if(entry.budgetId === undefined) entry.budgetId = null; });
+    // Issue #10: FinBo's eigen naamgevingsconventie voor imports ("JJJJ-CSV-MM"/"JJJJ-PDF-MM")
+    // i.p.v. de rauwe bankbestandsnaam — met terugwerkende kracht ook toegepast op maanden die al
+    // vóór deze wijziging waren geïmporteerd en dus nog de oude naam als sourceFile hebben staan.
+    const IMPORT_NAME_RE = /^\d{4}-(CSV|PDF)-\d{2}$/;
+    if(m.sourceFile && !IMPORT_NAME_RE.test(m.sourceFile)){
+      const type = inferLegacyImportType(m.sourceFile);
+      m.sourceType = type;
+      m.sourceFile = formatImportName(m.year, m.monthIndex, type);
+    } else if(m.sourceFile && !m.sourceType){
+      m.sourceType = IMPORT_NAME_RE.exec(m.sourceFile)[1];
+    }
   });
   // Oudere maandbudgetten kennen het eigen warmtefonds-vinkje nog niet. Standaard uit, zodat
   // hun al opgeslagen/getoonde totalen niet stilzwijgend veranderen bij het laden.
@@ -1757,6 +1768,26 @@ function detectMonthFromFilename(name){
     if(month>=1 && month<=12) return {year, month};
   }
   return null;
+}
+
+/* FinBo's eigen naamgeving voor een geïmporteerde maand ("JJJJ-CSV-MM" / "JJJJ-PDF-MM"), gebruikt
+   i.p.v. de kale bankbestandsnaam (die zelf nietszeggende dingen als "RA_A_NL47RABO..." bevat) —
+   zie renderReviewCard()/sourceNote en migrateState() voor de retroactieve toepassing op al eerder
+   geïmporteerde maanden. */
+function formatImportName(year, month, type){
+  return `${year}-${type}-${String(month).padStart(2,"0")}`;
+}
+
+/* Alleen gebruikt door de migratie in migrateState(): een al opgeslagen maand van vóór deze
+   naamgevingsconventie kent alleen nog de oude, rauwe bankbestandsnaam — daaruit wordt CSV/PDF
+   afgeleid via de extensie, met "RA_"/"CSV_"-prefixen (de Rabobank-exportnamen die tot nu toe
+   gebruikt werden) als extra vangnet, en CSV als veiligste fallback als geen van beide matcht. */
+function inferLegacyImportType(oldName){
+  if(/\.pdf$/i.test(oldName)) return "PDF";
+  if(/\.csv$/i.test(oldName)) return "CSV";
+  if(/^ra[_-]/i.test(oldName)) return "PDF";
+  if(/^csv[_-]/i.test(oldName)) return "CSV";
+  return "CSV";
 }
 
 function detectMonthFromRows(rows){
@@ -2001,16 +2032,24 @@ function buildMonthFromCSV(rows, filename){
     .filter(it=>Math.abs(it.v) > 0.001)
     .sort((a,b)=> b.v - a.v);
 
+  // Issue #11: nieuw geïmporteerde "nog in te delen"-posten staan standaard NIET aangevinkt — de
+  // gebruiker moet ze bewust selecteren (of "Alles selecteren" gebruiken) vóór de bulk-toevoegknop
+  // ze meeneemt, in plaats van dat per ongeluk alles in één klap wordt toegevoegd.
   const review = Object.entries(reviewBucket)
-    .map(([naam,amt])=>({ naam, amt: Math.round(amt*100)/100, target:null, addedItem:null, selected:true }))
+    .map(([naam,amt])=>({ naam, amt: Math.round(amt*100)/100, target:null, addedItem:null, selected:false }))
     .filter(it=>Math.abs(it.amt) > 0.001)
     .sort((a,b)=> Math.abs(b.amt) - Math.abs(a.amt));
+
+  // Issue #10: FinBo's eigen naamgevingsconventie voor imports ("JJJJ-CSV-MM"/"JJJJ-PDF-MM")
+  // i.p.v. de rauwe, nietszeggende bankbestandsnaam (bv. "RA_A_NL47RABO...202607.pdf").
+  const importType = /\.pdf$/i.test(filename) ? "PDF" : "CSV";
 
   return {
     key,
     year: ym.year,
     monthIndex: ym.month,
-    sourceFile: filename,
+    sourceFile: formatImportName(ym.year, ym.month, importType),
+    sourceType: importType,
     rowCount,
     income: { items: toItems(buckets.income) },
     vasteLasten: { items: toItems(buckets.vasteLasten) },
