@@ -192,6 +192,18 @@
      Het "+"-knopje zelf blijft zijn eigen (andere) actie houden, zie wireGroupHeadCollapse(). */
   .tab-group-head.collapsible{ cursor:pointer; }
   .tab-group-head.collapsible:hover .tab-group-label{ color:var(--gold-bright); }
+  /* Basisdata: zelfde kop-uiterlijk als Maandbudgetten/Jaren/Groei, maar als knop die direct naar
+     de pagina navigeert — geen pijltje, geen dropdown (zie issue #5). */
+  .tab-group-head-direct{
+    width:100%;
+    background:transparent;
+    border:none;
+    cursor:pointer;
+    text-align:left;
+    font-family:inherit;
+  }
+  .tab-group-head-direct:hover .tab-group-label{ color:var(--gold-bright); }
+  .tab-group-head-direct.active .tab-group-label{ color:var(--gold-bright); }
   /* group-add-btn ("+") en group-collapse-btn (pijltje) zijn de twee ronde icoonknopjes in een
      groepskop — bewust exact dezelfde breedte/hoogte/vormgeving (zie issue #4), zodat ze als een
      nette, bij elkaar horende set ogen in plaats van twee net iets andere knopjes. */
@@ -1906,9 +1918,47 @@ const cloudClient = (typeof window.supabase !== "undefined")
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 let cloudSession = null;       // huidige Supabase auth-sessie (na inloggen)
-let encryptionPassword = null; // alleen in het geheugen, nooit opgeslagen/verstuurd
+let encryptionPassword = null; // in het geheugen; optioneel ook tijdelijk in sessionStorage, zie hieronder
 let saveErrorFlag = false;
 let autoSaveTimer = null;
+
+/* ---- Versleutelingswachtwoord tijdelijk onthouden bij verversen (issue #6) ----
+   Bewuste afweging, expliciet op verzoek van Joshua: het versleutelingswachtwoord werd tot nu toe
+   NERGENS opgeslagen (alleen in het geheugen, weg bij verversen/uitloggen) — dat was de veiligste
+   optie, maar betekende dat je het bij elke paginaverversing opnieuw moest intypen. Nu wordt het,
+   ná een geslaagde ontsleuteling, ook (versleuteld noch onversleuteld — gewoon als tekst) in de
+   sessionStorage van déze browser-tab gezet, met een vervaltijd van 8 uur.
+   - sessionStorage (i.p.v. localStorage) is bewust gekozen: dat verdwijnt zodra dit tabblad echt
+     dichtgaat, in tegenstelling tot localStorage dat voor altijd blijft staan. Het lost dus precies
+     "steeds opnieuw intypen bij verversen" op, niet "voor altijd ingelogd blijven op dit apparaat".
+   - Gekoppeld aan de ingelogde user_id, zodat een ander/volgend account op hetzelfde apparaat nooit
+     per ongeluk het wachtwoord van een eerder account overneemt.
+   - Concreet betekent dit wel een echte verandering in het dreigingsmodel: heeft iemand binnen die
+     8 uur toegang tot dit browsertabblad (bijv. via de developer-tools, of fysieke toegang tot een
+     ontgrendeld toestel), dan kan die het versleutelingswachtwoord uitlezen zonder het te hoeven
+     weten. Dat is de bewuste prijs voor het gemak — zie ook het bijgewerkte beveiligingsdocument. */
+const FINBO_ENC_PW_TTL_MS = 8 * 60 * 60 * 1000; // 8 uur
+function finboEncPwStorageKey(userId){ return "finbo_enc_pw_" + userId; }
+function saveEncPasswordForSession(userId, pw){
+  try{
+    sessionStorage.setItem(finboEncPwStorageKey(userId), JSON.stringify({ pw, expires: Date.now() + FINBO_ENC_PW_TTL_MS }));
+  }catch(err){ /* sessionStorage niet beschikbaar (bijv. privénavigatie) — dan gewoon niet onthouden */ }
+}
+function loadEncPasswordForSession(userId){
+  try{
+    const raw = sessionStorage.getItem(finboEncPwStorageKey(userId));
+    if(!raw) return null;
+    const record = JSON.parse(raw);
+    if(!record || !record.pw || !record.expires || Date.now() > record.expires){
+      sessionStorage.removeItem(finboEncPwStorageKey(userId));
+      return null;
+    }
+    return record.pw;
+  }catch(err){ return null; }
+}
+function clearEncPasswordForSession(userId){
+  try{ sessionStorage.removeItem(finboEncPwStorageKey(userId)); }catch(err){ /* niets te wissen */ }
+}
 /* "dirty" volgt of er wijzigingen zijn die nog niet écht naar de cloud zijn geschreven — gebruikt
    door de beforeunload-waarschuwing hieronder, zodat een aangemaakt maandbudget/jaar/maand nooit
    stilzwijgend verloren gaat doordat het tabblad dichtgaat vóórdat er daadwerkelijk geschreven is. */
@@ -2008,6 +2058,10 @@ async function signOutCloud(){
   clearTimeout(autoSaveTimer);
   if(dirty) await writeStateToCloud();
   if(cloudClient) await cloudClient.auth.signOut();
+  // Een expliciete uitlog-actie wist het 8-uur-onthouden versleutelingswachtwoord (issue #6) ook
+  // meteen weer — dat "onthouden" is puur bedoeld om verversen te overbruggen, niet om na bewust
+  // uitloggen alsnog automatisch weer in te loggen.
+  if(cloudSession) clearEncPasswordForSession(cloudSession.user.id);
   cloudSession = null;
   encryptionPassword = null;
   renderAuthGate();
@@ -2106,6 +2160,29 @@ function renderEncryptionPrompt(){
       return;
     }
     if(data){
+      // Staat er nog een niet-vervallen versleutelingswachtwoord voor dit account uit een eerdere
+      // verversing binnen de laatste 8 uur (issue #6)? Dan meteen zelf ontsleutelen en doorstarten,
+      // zonder de gebruiker opnieuw te laten typen.
+      const rememberedPw = loadEncPasswordForSession(cloudSession.user.id);
+      if(rememberedPw){
+        finboDecryptState(data, rememberedPw).then(decrypted => {
+          state = decrypted;
+          if(!state.activeView) state.activeView = {type:"scenario", index: state.activeScenario||0};
+          if(!state.months) state.months = [];
+          if(!state.lang) state.lang = "nl";
+          if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING;
+          migrateState();
+          encryptionPassword = rememberedPw;
+          renderAuthGate();
+          bootApp();
+        }).catch(() => {
+          // Onwaarschijnlijk (zou betekenen dat het onthouden wachtwoord niet meer bij de data
+          // past), maar voor de zekerheid: gewoon opnieuw laten intypen i.p.v. vastlopen.
+          clearEncPasswordForSession(cloudSession.user.id);
+          renderEncryptionPromptExisting(data);
+        });
+        return;
+      }
       renderEncryptionPromptExisting(data);
     }else{
       renderEncryptionPromptNew();
@@ -2137,6 +2214,7 @@ function renderEncryptionPromptExisting(record){
       if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING;
       migrateState();
       encryptionPassword = pw;
+      saveEncPasswordForSession(cloudSession.user.id, pw);
       renderAuthGate();
       bootApp();
     }catch(err){
@@ -2203,6 +2281,7 @@ function renderEncryptionPromptNewPassword(){
       return;
     }
     encryptionPassword = pw;
+    saveEncPasswordForSession(cloudSession.user.id, pw);
     renderAuthGate();
     bootApp();
     dirty = true;
@@ -2248,13 +2327,15 @@ function renderTabs(){
   const el = document.getElementById("tabs");
   el.innerHTML = "";
 
-  // Basisdata staat altijd los vooraan, als eigen groepje van één tab.
+  // Basisdata staat altijd los vooraan, als eigen groepje van één tab. Zelfde uiterlijk als de
+  // kopjes van Maandbudgetten/Jaren/Groei (zie issue #5) — maar zonder pijltje/dropdown, want een
+  // klik gaat meteen naar de pagina zelf in plaats van een lijstje te openen. Geen "01"-prefix meer.
   const bdGroup = document.createElement("div");
   bdGroup.className = "tab-group";
   const bd = basisdataScenario();
   const bdBtn = document.createElement("button");
-  bdBtn.className = "tab" + (state.activeView.type==="scenario" && state.activeView.index===0 ? " active":"");
-  bdBtn.innerHTML = `<span class="tab-idx">01</span>${bd.label}`;
+  bdBtn.className = "tab-group-head tab-group-head-direct" + (state.activeView.type==="scenario" && state.activeView.index===0 ? " active":"");
+  bdBtn.innerHTML = `<span class="tab-group-label">${bd.label}</span>`;
   bdBtn.onclick = ()=>{ state.activeScenario = 0; state.activeView = {type:"scenario", index:0}; renderAll(); };
   bdGroup.appendChild(bdBtn);
   el.appendChild(bdGroup);
@@ -3565,6 +3646,12 @@ document.getElementById("modeBtn").addEventListener("click", ()=>{
    kopie), dan biedt de auth-gate die aan als startpunt bij een gloednieuw account — zie
    renderEncryptionPromptNew() / readEmbeddedData() hierboven. */
 function bootApp(){
+  // Start altijd op Basisdata bij het inloggen (issue #5) — ongeacht welke pagina het laatst
+  // actief was toen er voor het laatst opgeslagen is. bootApp() wordt uitsluitend aangeroepen
+  // vanuit de twee inlog-momenten hierboven (na het invoeren van het versleutelingswachtwoord),
+  // dus dit raakt nooit gewoon navigeren binnen een al ingelogde sessie.
+  state.activeScenario = 0;
+  state.activeView = { type:"scenario", index:0 };
   syncComputedLoons();
   renderHeader();
   renderTabs();
