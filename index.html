@@ -272,6 +272,7 @@
     color:var(--debit);
     background:color-mix(in srgb, var(--debit) 12%, transparent);
   }
+  .tab-delete-btn svg{ width:12px; height:12px; }
   /* Maandbudgetten + Jaren staan samen in deze wrapper. Op een smal scherm (het gebruikelijke
      geval, en altijd onder de 760px-drempel hieronder) gedraagt hij zich als een gewone
      .tab-group-kolom: gestapeld onder elkaar, identiek aan hoe het er al uitzag vóór deze
@@ -510,6 +511,12 @@
     min-width:0;
     font-size:13px;
     color:var(--text);
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
+  .review-name > span:last-child{
+    min-width:0;
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
@@ -1012,6 +1019,12 @@
   .compare-row .compare-name{
     flex:1 1 120px;
     min-width:0;
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
+  .compare-row .compare-name > span:last-child{
+    min-width:0;
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
@@ -1026,6 +1039,44 @@
   }
   .compare-diff.good{color:var(--credit);}
   .compare-diff.bad{color:var(--debit);}
+  /* Uitklap-knopje ("Toon/verberg de losse betalingen achter dit bedrag") + de ingesprongen
+     deellijst eronder — gedeeld tussen de vergelijkingskaarten (Inkomsten/Vaste lasten/
+     Abonnementen/Variabele lasten) en "Nog in te delen", zie renderBreakdownRows(). */
+  .compare-row-wrap, .review-row-wrap, .row-wrap{ display:block; }
+  .breakdown-toggle-btn{
+    width:16px;
+    height:16px;
+    border:none;
+    background:transparent;
+    color:var(--text-soft);
+    padding:0;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .breakdown-toggle-btn svg{ width:11px; height:11px; transition:transform .15s ease; }
+  .breakdown-toggle-btn.open svg{ transform:rotate(-180deg); }
+  .breakdown-toggle-btn:hover{ color:var(--gold-bright); }
+  .breakdown-rows{
+    margin:0 0 6px 26px;
+    padding-left:10px;
+    border-left:2px solid color-mix(in srgb, var(--text) 15%, transparent);
+  }
+  .breakdown-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:4px 0;
+    font-size:11.5px;
+    color:var(--text-soft);
+  }
+  .breakdown-datum{ flex-shrink:0; width:44px; opacity:.8; }
+  .breakdown-naam{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .breakdown-amt{ flex-shrink:0; width:76px; text-align:right; }
+  .breakdown-amt.pos{color:var(--credit);}
+  .breakdown-amt.neg{color:var(--debit);}
 
 </style>
 </head>
@@ -1207,6 +1258,7 @@ const i18n = {
     maandbudgettenLabel: "Maandbudgetten",
     jarenLabel: "Jaren",
     collapseGroupBtn: "In-/uitklappen",
+    breakdownToggleBtn: "Toon/verberg de losse betalingen achter dit bedrag",
     maandbudgetCardTitle: "Maandbudget",
     maandbudgetCardInfo: "Maakt een nieuwe, losse momentopname van de huidige Basisdata-waarden (inkomsten + alle kosten). Verandert daarna niet meer mee met latere wijzigingen in Basisdata.",
     nieuwBudgetBtn: "+ Nieuw maandbudget",
@@ -1348,6 +1400,7 @@ const i18n = {
     maandbudgettenLabel: "Monthly budgets",
     jarenLabel: "Years",
     collapseGroupBtn: "Collapse/expand",
+    breakdownToggleBtn: "Show/hide the individual payments behind this amount",
     maandbudgetCardTitle: "Monthly budget",
     maandbudgetCardInfo: "Creates a fresh, standalone snapshot of the current Basisdata values (income + all costs). Won't change again with later edits to Basisdata.",
     nieuwBudgetBtn: "+ New monthly budget",
@@ -1416,7 +1469,14 @@ const DEFAULT_LOONSTIJGING = [
    zijn "locked" (niet verwijderbaar); alles wat via de knop
    "+ Nieuw jaar" wordt aangemaakt komt erachter en is wel verwijderbaar. */
 function cloneItems(items){
-  return items.map(it => ({ l: it.l, v: it.v }));
+  // Kopieert ook "entries" (de per-transactie-details achter een samengevoegde regel, zie
+  // buildMonthFromCSV/applyMonthToBudget) wanneer aanwezig, zodat een undo-snapshot (bv. bij
+  // reverseApplyMonthToBudget) de uitklapbare deellijst niet stilzwijgend kwijtraakt.
+  return items.map(it => {
+    const clone = { l: it.l, v: it.v };
+    if(it.entries && it.entries.length) clone.entries = it.entries.map(e => ({...e}));
+    return clone;
+  });
 }
 function makeScenario(label, jaar, locked, incomeItems, vasteLastenItems, abonnementenItems, variabeleLastenItems, loonstijging){
   return {
@@ -1496,10 +1556,19 @@ function applyMonthToBudget(m, budget){
     m[cat].items.forEach(item=>{
       const key = item.l.trim().toLowerCase();
       const existing = budget[cat].items.find(it => it.l.trim().toLowerCase() === key);
+      // Combinatieregels (meerdere onderliggende betalingen, bv. Geldmaat/Bouwmarkt/Online) dragen
+      // hun per-transactie-detail nu ook over naar het budget, zodat de budgetkaart na "Toepassen"
+      // dezelfde uitklapbare deellijst kan tonen als de maand zelf al deed — zie renderCard. Een
+      // enkele-transactie-post krijgt bewust geen "entries" (net als in buildMonthFromCSV: alleen
+      // > 1 entry verdient een uitklapknopje).
+      const entries = (item.entries && item.entries.length > 1) ? item.entries.map(e => ({...e})) : null;
       if(existing){
         existing.v = item.v;
+        if(entries) existing.entries = entries; else delete existing.entries;
       } else {
-        budget[cat].items.push({ l: item.l, v: item.v });
+        const newItem = { l: item.l, v: item.v };
+        if(entries) newItem.entries = entries;
+        budget[cat].items.push(newItem);
       }
     });
   });
@@ -2024,7 +2093,12 @@ function classifyTransaction(tx){
   // "Geldmaat Bautscherw 43") — dat zou anders los in "Nog in te delen" komen te staan. Samenvoegen
   // tot één post zodra 'm die kant op gaat (via review), zodat je 'm in één keer kunt toevoegen.
   if(blobNaam.includes("geldmaat")){
-    return {cat:"review", label:"Geldmaat", naam:"Geldmaat", amt};
+    // Let op: "naam" hier is bewust de ORIGINELE tegenpartijnaam (mét locatie, bv. "Geldmaat
+    // Kerkrade") i.p.v. de kale "Geldmaat" — de samengevoegde reviewregel heet zelf nog gewoon
+    // "Geldmaat" (dat komt uit "label"), maar de individuele opname in de uitklapbare deellijst
+    // (zie buildMonthFromCSV/renderBreakdownRows) moet juist wél de locatie tonen, anders is de
+    // deellijst drie identieke regels en heeft uitklappen geen nut.
+    return {cat:"review", label:"Geldmaat", naam, amt};
   }
   // Idem voor de maandelijkse Rabobank-rekeningkosten ("Rabobank" incl. het losse "NL47 RABO..."
   // tegenrekeningnummer bij de vaste Rabo Standaard-afschrijving): als abonnement herkend i.p.v. in
@@ -2124,6 +2198,10 @@ function buildMonthFromCSV(rows, filename){
   const { rows: filteredRows, openTerugboekingen } = resolveStornos(rows);
 
   const cats = ["income","vasteLasten","abonnementen","variabeleLasten"];
+  // Elke bucket-post houdt nu ook de individuele bijdragende transacties bij ("entries") — niet
+  // alleen de opgetelde waarde. Nodig om achteraf een uitklapbare deellijst te kunnen tonen van wat
+  // er precies in een samengevoegde regel zit (bv. meerdere Geldmaat-opnames, meerdere Bouwmarkt-
+  // aankopen) i.p.v. alleen het totaal. Zie renderCompareCard/renderReviewCard.
   const buckets = {}; cats.forEach(c=>buckets[c]={});
   const reviewBucket = {};
 
@@ -2136,8 +2214,14 @@ function buildMonthFromCSV(rows, filename){
 
     if(cat === "ignore") return; // terugboeking/herincasso: bewust genegeerd
 
+    const datum = r["Datum"] || "";
+    const omschrijving = ((r["Omschrijving-1"]||"") + " " + (r["Omschrijving-2"]||"")).trim();
+    const rawNaam = result.naam || label;
+
     if(cat === "review"){
-      reviewBucket[label] = (reviewBucket[label]||0) + amt;
+      if(!reviewBucket[label]) reviewBucket[label] = { total:0, entries:[] };
+      reviewBucket[label].total += amt;
+      reviewBucket[label].entries.push({ naam: rawNaam, amt: Math.round(amt*100)/100, datum, omschrijving });
       return;
     }
 
@@ -2148,11 +2232,14 @@ function buildMonthFromCSV(rows, filename){
 
     const isIncome = (cat === "income");
     const contribution = isIncome ? amt : -amt; // kostenposten worden als positief bedrag opgeslagen
-    buckets[cat][label] = (buckets[cat][label]||0) + contribution;
+    if(!buckets[cat][label]) buckets[cat][label] = { total:0, entries:[] };
+    buckets[cat][label].total += contribution;
+    buckets[cat][label].entries.push({ naam: rawNaam, amt: Math.round(contribution*100)/100, datum, omschrijving });
   });
 
+  const byDatum = (a,b) => (a.datum||"").localeCompare(b.datum||"");
   const toItems = bucket => Object.entries(bucket)
-    .map(([l,v])=>({l, v: Math.round(v*100)/100}))
+    .map(([l,data])=>({ l, v: Math.round(data.total*100)/100, entries: data.entries.slice().sort(byDatum) }))
     .filter(it=>Math.abs(it.v) > 0.001)
     .sort((a,b)=> b.v - a.v);
 
@@ -2160,7 +2247,10 @@ function buildMonthFromCSV(rows, filename){
   // gebruiker moet ze bewust selecteren (of "Alles selecteren" gebruiken) vóór de bulk-toevoegknop
   // ze meeneemt, in plaats van dat per ongeluk alles in één klap wordt toegevoegd.
   const review = Object.entries(reviewBucket)
-    .map(([naam,amt])=>({ naam, amt: Math.round(amt*100)/100, target:null, addedItem:null, selected:false }))
+    .map(([naam,data])=>({
+      naam, amt: Math.round(data.total*100)/100, target:null, addedItem:null, selected:false,
+      entries: data.entries.slice().sort(byDatum),
+    }))
     .filter(it=>Math.abs(it.amt) > 0.001)
     .sort((a,b)=> Math.abs(b.amt) - Math.abs(a.amt));
 
@@ -2921,6 +3011,32 @@ function renderHeader(){
 // probleem, en zo oogt het menu meteen rustiger bij het inloggen.
 let collapsedGroups = { budgets: true, years: true, growth: true };
 
+/* Welke samengevoegde regels (bv. "Geldmaat", "Online") op dit moment uitgeklapt staan om hun
+   onderliggende, individuele transacties te tonen — zie renderBreakdownRows(). Bewust NIET
+   onderdeel van `state` (dus niet opgeslagen/gesynct): dit is puur tijdelijke UI-stand, elke sleutel
+   is "<scope>::<label>" zodat kaarten met dezelfde labels (bv. Basisdata vs. een maandbudget) elkaar
+   niet kruisen. */
+let expandedBreakdowns = new Set();
+function toggleBreakdown(key){
+  if(expandedBreakdowns.has(key)) expandedBreakdowns.delete(key); else expandedBreakdowns.add(key);
+}
+/* Bouwt de uitklapbare, ingesprongen deellijst-HTML voor de individuele transacties achter één
+   samengevoegde regel — gedeeld tussen renderCompareCard (budget-vs-werkelijk) en renderReviewCard
+   ("Nog in te delen"), zodat bv. Geldmaat, Bouwmarkt of Online overal op dezelfde manier uitklapt. */
+function renderBreakdownRows(entries){
+  return `
+    <div class="breakdown-rows">
+      ${entries.map(e => `
+        <div class="breakdown-row">
+          <span class="breakdown-datum mono">${e.datum || "—"}</span>
+          <span class="breakdown-naam" title="${(e.naam||"") + (e.omschrijving ? " — " + e.omschrijving : "")}">${e.naam || ""}${e.omschrijving ? ` — ${e.omschrijving}` : ""}</span>
+          <span class="breakdown-amt mono ${e.amt>=0?'pos':'neg'}">${e.amt>=0?'+':'−'} € ${fmt(Math.abs(e.amt))}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 /* Maakt een hele groepskop (niet alleen het pijltje) klikbaar om in-/uit te klappen — zie issue
    #4. Klikken op het "+"-knopje (indien aanwezig) doet bewust NIET mee, die heeft al zijn eigen
    actie (nieuw jaar/maandbudget aanmaken). */
@@ -3143,7 +3259,7 @@ function renderTabs(){
       delBtn.type = "button";
       delBtn.title = t("deleteMonthBtn");
       delBtn.setAttribute("aria-label", t("deleteMonthBtn"));
-      delBtn.textContent = "×";
+      delBtn.innerHTML = TRASH_ICON;
       delBtn.onclick = (e) => {
         e.stopPropagation();
         if(confirm(t("deleteMonthConfirm"))){
@@ -3311,6 +3427,11 @@ function createNewYear(){
   renderAll();
 }
 
+/* Vuilnisbak-icoontje voor verwijder-knopjes (bv. .tab-delete-btn) — vervangt een kaal "×" zodat in
+   één oogopslag duidelijk is dat het om verwijderen gaat, in dezelfde lijn-icoonstijl (currentColor,
+   dunne stroke) als CARD_ICONS/group-collapse-btn hieronder. */
+const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2"/><path d="M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/><path d="M10 11v6M14 11v6"/></svg>`;
+
 /* ---------- RENDER: CATEGORY CARD (generiek, gebruikt door scenario's en maanden) ---------- */
 /* Kleine lijn-iconen per categorie-kaart — puur ter herkenning, geen functie. Gebruiken
    currentColor zodat ze automatisch de --forest-kleur van de kop volgen (ook in donkere modus). */
@@ -3339,9 +3460,20 @@ function renderCard(key, cat, opts={}){
     const editable = override ? override.editable : true;
     const displayLabel = (override && override.label !== undefined) ? override.label : translateLabel(item.l);
 
+    // Een via "Toepassen op budget" overgenomen combinatieregel (bv. Geldmaat/Bouwmarkt/Online,
+    // zie applyMonthToBudget) draagt zijn per-transactie-detail nu mee het budget in, dus krijgt
+    // hier dezelfde uitklapbare, ingesprongen deellijst als de maand zelf al toonde.
+    const hasBreakdown = item.entries && item.entries.length > 1;
+    const breakdownKey = `budgetcard:${key}::${item.l}`;
+    const isOpen = hasBreakdown && expandedBreakdowns.has(breakdownKey);
+
+    const rowWrap = document.createElement("div");
+    rowWrap.className = "row-wrap";
+
     const row = document.createElement("div");
     row.className = "row";
     row.innerHTML = `
+      ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${breakdownKey}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
       <input class="label-input" value="${displayLabel}" ${editable ? "" : "disabled"} />
       <div class="value-wrap">
         <span class="euro">€</span>
@@ -3349,14 +3481,23 @@ function renderCard(key, cat, opts={}){
       </div>
       <button class="del-btn" title="${t('delRow')}">×</button>
     `;
-    const [labelInput, , delBtn] = row.children;
+    const labelInput = row.querySelector(".label-input");
     const valueInput = row.querySelector(".value-input");
+    const delBtn = row.querySelector(".del-btn");
+    const breakdownBtn = row.querySelector(".breakdown-toggle-btn");
     if(editable){
       labelInput.oninput = e => { item.l = e.target.value; };
       valueInput.oninput = e => { item.v = parseFloat(e.target.value)||0; renderAll(true); };
     }
     delBtn.onclick = () => { cat.items.splice(idx,1); renderAll(); };
-    rows.appendChild(row);
+    if(breakdownBtn){
+      breakdownBtn.onclick = () => { toggleBreakdown(breakdownKey); renderCategories(); };
+    }
+    rowWrap.appendChild(row);
+    if(hasBreakdown && isOpen){
+      rowWrap.insertAdjacentHTML("beforeend", renderBreakdownRows(item.entries));
+    }
+    rows.appendChild(rowWrap);
 
     if(item.note){
       const noteText = typeof item.note === "object" ? (item.note[state.lang] || item.note.nl) : item.note;
@@ -3647,6 +3788,9 @@ function buildCompareRows(budgetItems, actualItems){
   (actualItems||[]).forEach(it=>{
     if(!map[it.l]) map[it.l] = { label: it.l, budget:0, actual:0 };
     map[it.l].actual = parseFloat(it.v)||0;
+    // "entries": de individuele transacties achter dit werkelijke bedrag (zie buildMonthFromCSV) —
+    // een begroot/budget-item heeft dit nooit, dat is een los ingevoerde plancijfer.
+    if(it.entries && it.entries.length) map[it.l].entries = it.entries;
   });
   return Object.values(map)
     .map(r=>({ ...r, diff: r.actual - r.budget }))
@@ -3659,6 +3803,9 @@ function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
   const totActual = rows.reduce((a,r)=>a+r.actual,0);
   const totDiff = totActual - totBudget;
   const diffClass = (d) => (kind==="income" ? d>=0 : d<=0) ? "good" : "bad";
+  // Scope voor de uitklap-status: los per kaart (income/vasteLasten/abonnementen/variabeleLasten)
+  // zodat toevallig gelijke labels in verschillende kaarten elkaar niet beïnvloeden.
+  const scope = `compare:${iconKey}`;
 
   const wrap = document.createElement("div");
   wrap.className = "card";
@@ -3673,14 +3820,24 @@ function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
       <span class="compare-col">${t("compareDiffCol")}</span>
     </div>
     <div class="compare-rows">
-      ${rows.map(r=>`
-        <div class="compare-row">
-          <span class="compare-name" title="${r.label}">${translateLabel(r.label)}</span>
-          <span class="compare-col mono">€ ${fmt(r.budget)}</span>
-          <span class="compare-col mono">€ ${fmt(r.actual)}</span>
-          <span class="compare-col mono compare-diff ${diffClass(r.diff)}">${r.diff>=0?'+':'−'} € ${fmt(Math.abs(r.diff))}</span>
+      ${rows.map(r=>{
+        const hasBreakdown = r.entries && r.entries.length > 1;
+        const key = `${scope}::${r.label}`;
+        const isOpen = hasBreakdown && expandedBreakdowns.has(key);
+        return `
+        <div class="compare-row-wrap">
+          <div class="compare-row">
+            <span class="compare-name" title="${r.label}">
+              ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${key}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
+              <span>${translateLabel(r.label)}</span>
+            </span>
+            <span class="compare-col mono">€ ${fmt(r.budget)}</span>
+            <span class="compare-col mono">€ ${fmt(r.actual)}</span>
+            <span class="compare-col mono compare-diff ${diffClass(r.diff)}">${r.diff>=0?'+':'−'} € ${fmt(Math.abs(r.diff))}</span>
+          </div>
+          ${(hasBreakdown && isOpen) ? renderBreakdownRows(r.entries) : ""}
         </div>
-      `).join("")}
+      `;}).join("")}
       <div class="compare-row compare-total">
         <span class="compare-name">${t("subtotaal")}</span>
         <span class="compare-col mono">€ ${fmt(totBudget)}</span>
@@ -3689,6 +3846,12 @@ function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
       </div>
     </div>
   `;
+  wrap.querySelectorAll(".breakdown-toggle-btn").forEach(btn=>{
+    btn.onclick = () => {
+      toggleBreakdown(btn.dataset.key);
+      renderCategories();
+    };
+  });
   return wrap;
 }
 
@@ -3830,15 +3993,26 @@ function renderReviewCard(m){
   };
 
   m.review.forEach(entry=>{
+    const wrapRow = document.createElement("div");
+    wrapRow.className = "review-row-wrap";
+
     const row = document.createElement("div");
     row.className = "row review-row";
     const isAdded = !!entry.target;
     const sign = entry.amt >= 0 ? "+" : "−";
     const defaultTarget = entry.target || (entry.amt > 0 ? "income" : "vasteLasten");
+    // Combinatieregels (bv. meerdere Geldmaat-opnames onder één post) krijgen een uitklapknopje
+    // met daaronder de individuele betalingen — zie renderBreakdownRows().
+    const hasBreakdown = entry.entries && entry.entries.length > 1;
+    const breakdownKey = `review::${entry.naam}`;
+    const isOpen = hasBreakdown && expandedBreakdowns.has(breakdownKey);
 
     row.innerHTML = `
       <input type="checkbox" class="review-row-check" ${entry.selected ? "checked" : ""} ${isAdded ? "disabled" : ""} />
-      <span class="review-name" title="${entry.naam}">${entry.naam}</span>
+      <span class="review-name" title="${entry.naam}">
+        ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${breakdownKey}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
+        <span>${entry.naam}</span>
+      </span>
       <span class="review-amt mono ${entry.amt>=0?'pos':'neg'}">${sign} € ${fmt(Math.abs(entry.amt))}</span>
       <select class="review-select" ${isAdded ? "disabled" : ""}>
         ${targets.map(o=>`<option value="${o.key}" ${defaultTarget===o.key ? "selected" : ""}>${o.label}</option>`).join("")}
@@ -3848,8 +4022,12 @@ function renderReviewCard(m){
     const check = row.querySelector(".review-row-check");
     const select = row.querySelector(".review-select");
     const btn = row.querySelector(".review-btn");
+    const breakdownBtn = row.querySelector(".breakdown-toggle-btn");
 
     check.onchange = () => { entry.selected = check.checked; renderAll(); };
+    if(breakdownBtn){
+      breakdownBtn.onclick = () => { toggleBreakdown(breakdownKey); renderCategories(); };
+    }
 
     btn.onclick = () => {
       if(entry.target){
@@ -3863,7 +4041,11 @@ function renderReviewCard(m){
       }
       renderAll();
     };
-    rows.appendChild(row);
+    wrapRow.appendChild(row);
+    if(hasBreakdown && isOpen){
+      wrapRow.insertAdjacentHTML("beforeend", renderBreakdownRows(entry.entries));
+    }
+    rows.appendChild(wrapRow);
   });
 
   // Issue #12: een subtotaal onder de lijst — nadrukkelijk "Subtotaal" genoemd (niet "Totaal"),
