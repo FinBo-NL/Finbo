@@ -2225,10 +2225,22 @@ function buildMonthFromCSV(rows, filename){
       return;
     }
 
-    // Een creditbedrag op een tegenpartij die normaal alleen kosten afschrijft, is zo goed als
-    // altijd een terugbetaling/correctie van een eerdere afschrijving — geen echte kostenpost.
-    // Alleen de "originele" afschrijvingen (en echte inkomsten) tellen dus mee.
-    if(cat !== "income" && amt > 0) return;
+    // Een creditbedrag op een tegenpartij die normaal alleen kosten afschrijft, is meestal een
+    // terugbetaling/correctie van een eerdere afschrijving — geen nieuwe kostenpost. Een echte
+    // terugboeking (mislukte incasso, "Reden retour" ingevuld) is op dit punt al lang verdwenen:
+    // resolveStornos() filtert die rijen er helemaal uit vóórdat classifyTransaction ze ooit ziet
+    // (zie hierboven). Wat híer overblijft is dus altijd een "losse" creditering zonder duidelijke
+    // terugboekingsreden (bv. een handmatige PayPal-terugbetaling) — die mag niet stilzwijgend
+    // verdwijnen (dat gebeurde eerder wél, en kostte zo onopgemerkt binnengekomen geld), dus komt
+    // hij bij "Nog in te delen" te staan, gegroepeerd per label net als de andere combinatieregels
+    // (zie ook Geldmaat hierboven), zodat zelf gekozen kan worden of het als inkomen meetelt of als
+    // correctie op de kostenpost.
+    if(cat !== "income" && amt > 0){
+      if(!reviewBucket[label]) reviewBucket[label] = { total:0, entries:[] };
+      reviewBucket[label].total += amt;
+      reviewBucket[label].entries.push({ naam: rawNaam, amt: Math.round(amt*100)/100, datum, omschrijving });
+      return;
+    }
 
     const isIncome = (cat === "income");
     const contribution = isIncome ? amt : -amt; // kostenposten worden als positief bedrag opgeslagen
