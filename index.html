@@ -410,6 +410,38 @@
   .card-review .card-head{
     background:color-mix(in srgb, var(--gold) 8%, transparent);
   }
+  .review-bulk-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+    padding:0 18px 10px;
+  }
+  .review-selectall-label{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    color:var(--text-soft);
+    cursor:pointer;
+    user-select:none;
+  }
+  .review-add-selected-btn{
+    flex-shrink:0;
+  }
+  .review-add-selected-btn:disabled,
+  .review-selectall-label input:disabled{
+    opacity:.5;
+    cursor:default;
+  }
+  .review-row-check{
+    flex-shrink:0;
+    width:15px;
+    height:15px;
+    cursor:pointer;
+  }
+  .review-row-check:disabled{cursor:default; opacity:.5;}
   .review-rows{padding:2px 18px 12px;}
   .review-row{
     display:flex;
@@ -462,6 +494,8 @@
   .review-btn:hover{background:color-mix(in srgb, var(--forest) 8%, transparent);}
   .review-btn.added{border-color:var(--debit); color:var(--debit);}
   .review-btn.added:hover{background:color-mix(in srgb, var(--debit) 8%, transparent);}
+  .review-btn:disabled{opacity:.5; cursor:default;}
+  .review-btn:disabled:hover{background:transparent;}
   .rows{padding:2px 18px 10px;}
   .row{
     display:flex;
@@ -1017,7 +1051,11 @@ const i18n = {
     addBtn: "Toevoegen",
     reverseBtn: "Ongedaan maken",
     stornoReviewTitle: "Openstaande terugboekingen",
-    stornoReviewNote: "Deze incasso's zijn deze maand teruggeboekt (\"Oneens met incasso\" e.d.) en lijken niet binnen dezelfde maand alsnog geslaagd — ze tellen dus nu nergens in mee. Kies zelf of en waar je 'm alsnog als kostenpost wilt meetellen.",
+    stornoReviewNote: "Deze incasso's zijn deze maand teruggeboekt (\"Oneens met incasso\" e.d.) en lijken niet binnen dezelfde maand alsnog geslaagd — ze tellen dus nu nergens in mee. Kies het maandbudget waarin je 'm alsnog als kostenpost wilt meetellen.",
+    outstandingTitle: "Openstaand",
+    noBudgetOptionShort: "Kies een maandbudget…",
+    selectAllLabel: "Alles selecteren",
+    addSelectedBtn: "Geselecteerde toevoegen",
     verhogingen: "Nieuw jaar",
     indexLabel: "Indexverhoging (vast bruto bedrag)",
     pctLabel: "Percentage (over loon + indexcijfer)",
@@ -1147,7 +1185,11 @@ const i18n = {
     addBtn: "Add",
     reverseBtn: "Reverse",
     stornoReviewTitle: "Outstanding reversals",
-    stornoReviewNote: "These direct debits were reversed this month (\"payment disputed\" etc.) and don't appear to have succeeded again within the same month — so right now they aren't counted anywhere. Choose yourself whether and where to still count it as a cost.",
+    stornoReviewNote: "These direct debits were reversed this month (\"payment disputed\" etc.) and don't appear to have succeeded again within the same month — so right now they aren't counted anywhere. Choose the monthly budget where you want to still count it as a cost.",
+    outstandingTitle: "Outstanding",
+    noBudgetOptionShort: "Choose a monthly budget…",
+    selectAllLabel: "Select all",
+    addSelectedBtn: "Add selected",
     verhogingen: "New year",
     indexLabel: "Index increase (fixed gross amount)",
     pctLabel: "Percentage (over salary + index figure)",
@@ -1336,6 +1378,10 @@ function makeBudget(title, source){
     // Eigen, los instelbaar vinkje (zie renderWarmtefondsToggleForBudget) — neemt bij aanmaken de
     // huidige Basisdata-stand over, maar wijzigt daarna niet meer mee met Basisdata (bevroren snapshot).
     warmtefondsAftrek: state.warmtefondsAftrek,
+    // Terugboekingen die de gebruiker via "Openstaande terugboekingen" bewust aan dit specifieke
+    // maandbudget toevoegt (zie renderStornoReviewCard) — een los blok, niet vermengd met de
+    // "normale" vaste-lasten-post, zodat altijd zichtbaar blijft dát het om een terugboeking gaat.
+    outstanding: { items: [] },
   };
 }
 function createBudget(){
@@ -1457,11 +1503,22 @@ function migrateState(){
   state.months.forEach(m=>{
     if(m.budgetId === undefined) m.budgetId = state.budgets.length ? state.budgets[0].id : null;
     if(!m.openTerugboekingen) m.openTerugboekingen = [];
+    // Oudere opslagbestanden kennen "selected" op een nog-in-te-delen post nog niet — standaard
+    // aangevinkt, zodat de nieuwe "Selecteer alles/Toevoegen geselecteerde" bulk-actie er meteen
+    // mee werkt zonder dat de gebruiker eerst alles los hoeft aan te vinken.
+    if(m.review) m.review.forEach(entry=>{ if(entry.selected === undefined) entry.selected = true; });
+    // Idem voor openstaande terugboekingen: "budgetId" (het maandbudget waarnaar deze specifieke
+    // rij toegevoegd moet worden) verving de oude categorie-keuze — bestaande, nog niet toegevoegde
+    // rijen krijgen standaard geen koppeling (de gebruiker kiest 'm zelf via de nieuwe dropdown).
+    if(m.openTerugboekingen) m.openTerugboekingen.forEach(entry=>{ if(entry.budgetId === undefined) entry.budgetId = null; });
   });
   // Oudere maandbudgetten kennen het eigen warmtefonds-vinkje nog niet. Standaard uit, zodat
   // hun al opgeslagen/getoonde totalen niet stilzwijgend veranderen bij het laden.
   state.budgets.forEach(b=>{
     if(b.warmtefondsAftrek === undefined) b.warmtefondsAftrek = false;
+    // Nieuw blok voor terugboekingen die de gebruiker bewust als kostenpost aan dít maandbudget
+    // toevoegt (zie renderStornoReviewCard) — oudere maandbudgetten krijgen 'm hier alsnog bij.
+    if(!b.outstanding) b.outstanding = { items: [] };
   });
   // De maandelijkse Rabobank-rekeningkosten (Rabo Standaard, ~€3,60) ontbraken tot nu toe als
   // los abonnement — met terugwerkende kracht toegevoegd aan Basisdata én aan alle al bestaande
@@ -1934,7 +1991,7 @@ function buildMonthFromCSV(rows, filename){
     .sort((a,b)=> b.v - a.v);
 
   const review = Object.entries(reviewBucket)
-    .map(([naam,amt])=>({ naam, amt: Math.round(amt*100)/100, target:null, addedItem:null }))
+    .map(([naam,amt])=>({ naam, amt: Math.round(amt*100)/100, target:null, addedItem:null, selected:true }))
     .filter(it=>Math.abs(it.amt) > 0.001)
     .sort((a,b)=> Math.abs(b.amt) - Math.abs(a.amt));
 
@@ -3207,6 +3264,9 @@ function renderBudgetCategories(){
   el.appendChild(renderWarmtefondsToggleForBudget(b));
   el.appendChild(renderCard("abonnementen", { title: t("abonnementen"), items: b.abonnementen.items }));
   el.appendChild(renderCard("variabeleLasten", { title: t("variabeleLasten"), items: b.variabeleLasten.items }));
+  if(b.outstanding && b.outstanding.items.length){
+    el.appendChild(renderCard("outstanding", { title: t("outstandingTitle"), items: b.outstanding.items }));
+  }
 }
 
 /* ---------- RENDER: MAANDVERGELIJKING (CSV-upload vs. gekozen maandbudget) ---------- */
@@ -3391,11 +3451,23 @@ function renderLoonstijgingCategories(){
 function renderReviewCard(m){
   const wrap = document.createElement("div");
   wrap.className = "card card-review";
+  // "Alles selecteren" bepaalt of nog-niet-toegevoegde rijen standaard aangevinkt zijn; al
+  // toegevoegde rijen doen niet mee (die hebben toch al hun eigen "Ongedaan maken"-knop) en
+  // blijven dus ook buiten de select-all-berekening.
+  const selectableEntries = m.review.filter(entry => !entry.target);
+  const allSelected = selectableEntries.length > 0 && selectableEntries.every(entry => entry.selected);
   wrap.innerHTML = `
     <div class="card-head">
       <h2>${t("reviewTitle")}</h2>
     </div>
     <div class="card-note">${t("reviewNote")}</div>
+    <div class="review-bulk-row">
+      <label class="review-selectall-label">
+        <input type="checkbox" id="reviewSelectAll" ${allSelected ? "checked" : ""} ${selectableEntries.length ? "" : "disabled"} />
+        ${t("selectAllLabel")}
+      </label>
+      <button type="button" class="review-btn review-add-selected-btn" id="reviewAddSelectedBtn" ${selectableEntries.length ? "" : "disabled"}>${t("addSelectedBtn")}</button>
+    </div>
     <div class="rows review-rows"></div>
   `;
   const rows = wrap.querySelector(".review-rows");
@@ -3406,6 +3478,14 @@ function renderReviewCard(m){
     { key:"variabeleLasten", label: t("variabeleLasten") },
   ];
 
+  const addEntry = (entry, chosen) => {
+    const contribution = chosen === "income" ? entry.amt : -entry.amt;
+    const item = { l: entry.naam, v: Math.round(contribution*100)/100 };
+    m[chosen].items.push(item);
+    entry.target = chosen;
+    entry.addedItem = item;
+  };
+
   m.review.forEach(entry=>{
     const row = document.createElement("div");
     row.className = "row review-row";
@@ -3414,6 +3494,7 @@ function renderReviewCard(m){
     const defaultTarget = entry.target || (entry.amt > 0 ? "income" : "vasteLasten");
 
     row.innerHTML = `
+      <input type="checkbox" class="review-row-check" ${entry.selected ? "checked" : ""} ${isAdded ? "disabled" : ""} />
       <span class="review-name" title="${entry.naam}">${entry.naam}</span>
       <span class="review-amt mono ${entry.amt>=0?'pos':'neg'}">${sign} € ${fmt(Math.abs(entry.amt))}</span>
       <select class="review-select" ${isAdded ? "disabled" : ""}>
@@ -3421,8 +3502,11 @@ function renderReviewCard(m){
       </select>
       <button class="review-btn ${isAdded ? "added" : ""}">${isAdded ? t("reverseBtn") : t("addBtn")}</button>
     `;
+    const check = row.querySelector(".review-row-check");
     const select = row.querySelector(".review-select");
     const btn = row.querySelector(".review-btn");
+
+    check.onchange = () => { entry.selected = check.checked; renderAll(); };
 
     btn.onclick = () => {
       if(entry.target){
@@ -3432,17 +3516,33 @@ function renderReviewCard(m){
         entry.target = null;
         entry.addedItem = null;
       } else {
-        const chosen = select.value;
-        const contribution = chosen === "income" ? entry.amt : -entry.amt;
-        const item = { l: entry.naam, v: Math.round(contribution*100)/100 };
-        m[chosen].items.push(item);
-        entry.target = chosen;
-        entry.addedItem = item;
+        addEntry(entry, select.value);
       }
       renderAll();
     };
     rows.appendChild(row);
   });
+
+  const selectAllCheck = wrap.querySelector("#reviewSelectAll");
+  if(selectAllCheck){
+    selectAllCheck.onchange = () => {
+      const checked = selectAllCheck.checked;
+      selectableEntries.forEach(entry => { entry.selected = checked; });
+      renderAll();
+    };
+  }
+  const addSelectedBtn = wrap.querySelector("#reviewAddSelectedBtn");
+  if(addSelectedBtn){
+    addSelectedBtn.onclick = () => {
+      rows.querySelectorAll(".review-row").forEach((row, idx) => {
+        const entry = m.review[idx];
+        if(!entry || entry.target || !entry.selected) return;
+        const select = row.querySelector(".review-select");
+        addEntry(entry, select.value);
+      });
+      renderAll();
+    };
+  }
   return wrap;
 }
 
@@ -3461,45 +3561,66 @@ function renderStornoReviewCard(m){
     <div class="rows review-rows"></div>
   `;
   const rows = wrap.querySelector(".review-rows");
-  const targets = [
-    { key:"income", label: t("income") },
-    { key:"vasteLasten", label: t("vasteLasten") },
-    { key:"abonnementen", label: t("abonnementen") },
-    { key:"variabeleLasten", label: t("variabeleLasten") },
-  ];
 
   m.openTerugboekingen.forEach(entry=>{
     const row = document.createElement("div");
     row.className = "row review-row";
-    const isAdded = !!entry.target;
-    const defaultTarget = entry.target || "vasteLasten";
+    // "entry.target" is het oude veld van vóór deze functie een maandbudget-dropdown kreeg (toen
+    // koos je hier nog een categorie, net als bij "Nog in te delen") — al toegevoegde rijen uit
+    // opslagbestanden van vóór deze wijziging blijven zo als toegevoegd/vergrendeld getoond, zonder
+    // dat hun al bestaande post ergens stilzwijgend verdwijnt.
+    const isLegacyAdded = !!entry.target && !entry.addedBudgetId;
+    const isAdded = !!entry.addedBudgetId || isLegacyAdded;
+    // Standaard: het maandbudget waarmee deze maand al vergeleken wordt, als dat er is — anders
+    // moet de gebruiker zelf kiezen (vandaar de lege "Kies een maandbudget…"-optie).
+    const defaultBudgetId = entry.budgetId || (entry.addedBudgetId || (m.budgetId || ""));
 
     row.innerHTML = `
       <span class="review-name" title="${entry.naam}">${entry.naam}</span>
       <span class="review-amt mono neg">− € ${fmt(Math.abs(entry.amt))}</span>
       <select class="review-select" ${isAdded ? "disabled" : ""}>
-        ${targets.map(o=>`<option value="${o.key}" ${defaultTarget===o.key ? "selected" : ""}>${o.label}</option>`).join("")}
+        <option value="" ${!defaultBudgetId ? "selected" : ""}>${t("noBudgetOptionShort")}</option>
+        ${state.budgets.map(b=>`<option value="${b.id}" ${defaultBudgetId===b.id ? "selected" : ""}>${b.title}</option>`).join("")}
       </select>
-      <button class="review-btn ${isAdded ? "added" : ""}">${isAdded ? t("reverseBtn") : t("addBtn")}</button>
+      <button class="review-btn ${isAdded ? "added" : ""}" ${(!isAdded && !defaultBudgetId) ? "disabled" : ""}>${isAdded ? t("reverseBtn") : t("addBtn")}</button>
     `;
     const select = row.querySelector(".review-select");
     const btn = row.querySelector(".review-btn");
 
+    select.onchange = () => {
+      entry.budgetId = select.value || null;
+      btn.disabled = !entry.budgetId;
+    };
+
     btn.onclick = () => {
-      if(entry.target){
+      if(entry.addedBudgetId){
+        const targetBudget = state.budgets.find(b => b.id === entry.addedBudgetId);
+        if(targetBudget && targetBudget.outstanding){
+          const idx = targetBudget.outstanding.items.indexOf(entry.addedItem);
+          if(idx>=0) targetBudget.outstanding.items.splice(idx,1);
+        }
+        entry.addedBudgetId = null;
+        entry.addedItem = null;
+      } else if(isLegacyAdded){
+        // Oude schema: addedItem staat in m[entry.target].items (een categorie van deze maand,
+        // niet een maandbudget) — ongedaan maken volgens dat oude pad.
         const bucket = m[entry.target];
-        const idx = bucket.items.indexOf(entry.addedItem);
-        if(idx>=0) bucket.items.splice(idx,1);
+        if(bucket){
+          const idx = bucket.items.indexOf(entry.addedItem);
+          if(idx>=0) bucket.items.splice(idx,1);
+        }
         entry.target = null;
         entry.addedItem = null;
       } else {
-        const chosen = select.value;
-        // Een terugboeking is altijd een kostenpost (nooit inkomsten): bij "income" gekozen tellen
-        // we 'm als negatieve inkomstenpost, zodat het saldo er hoe dan ook mee daalt.
-        const contribution = chosen === "income" ? -entry.amt : entry.amt;
-        const item = { l: entry.naam, v: Math.round(contribution*100)/100 };
-        m[chosen].items.push(item);
-        entry.target = chosen;
+        const chosenId = select.value;
+        if(!chosenId) return;
+        const targetBudget = state.budgets.find(b => b.id === chosenId);
+        if(!targetBudget) return;
+        if(!targetBudget.outstanding) targetBudget.outstanding = { items: [] };
+        const item = { l: entry.naam, v: Math.round(Math.abs(entry.amt)*100)/100 };
+        targetBudget.outstanding.items.push(item);
+        entry.budgetId = chosenId;
+        entry.addedBudgetId = chosenId;
         entry.addedItem = item;
       }
       renderAll();
@@ -3972,7 +4093,8 @@ function renderBudgetSummary(){
   const vasteLasten = vasteLastenTotalForBudget(b);
   const abonnementen = sum(b.abonnementen.items);
   const variabeleLasten = sum(b.variabeleLasten.items);
-  const totaalUitgaven = vasteLasten + abonnementen + variabeleLasten;
+  const outstanding = b.outstanding ? sum(b.outstanding.items) : 0;
+  const totaalUitgaven = vasteLasten + abonnementen + variabeleLasten + outstanding;
   const over = income - totaalUitgaven;
   el.innerHTML = `
     <h2>${b.title}</h2>
@@ -3986,6 +4108,7 @@ function renderBudgetSummary(){
     <div class="summary-line debit"><span class="l">${t("vasteLasten")}</span><span class="v">− € ${fmt(vasteLasten)}</span></div>
     <div class="summary-line debit"><span class="l">${t("abonnementen")}</span><span class="v">− € ${fmt(abonnementen)}</span></div>
     <div class="summary-line debit"><span class="l">${t("variabeleLasten")}</span><span class="v">− € ${fmt(variabeleLasten)}</span></div>
+    ${outstanding > 0 ? `<div class="summary-line debit"><span class="l">${t("outstandingTitle")}</span><span class="v">− € ${fmt(outstanding)}</span></div>` : ""}
     <div class="summary-line total"><span class="l">${t("saldo")}</span><span class="v">€ ${fmt(over)}</span></div>
 
     <div class="chart-block">
@@ -4047,7 +4170,7 @@ function renderMonthSummary(){
   let budgetLine = "";
   if(budget){
     const bIncome = sum(budget.income.items);
-    const bTotaalUitgaven = sum(budget.vasteLasten.items) + sum(budget.abonnementen.items) + sum(budget.variabeleLasten.items);
+    const bTotaalUitgaven = sum(budget.vasteLasten.items) + sum(budget.abonnementen.items) + sum(budget.variabeleLasten.items) + (budget.outstanding ? sum(budget.outstanding.items) : 0);
     const bOver = bIncome - bTotaalUitgaven;
     const diff = over - bOver;
     secondStamp = `
