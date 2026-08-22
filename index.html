@@ -300,6 +300,17 @@
     justify-content:center;
   }
   .tab-upload:hover{background:color-mix(in srgb, var(--gold) 8%, transparent); border-color:var(--gold);}
+  /* Herordenbare tabs (zie enableLongPressReorder): "grab"-cursor als signaal dat ingedrukt houden
+     iets doet, en een duidelijk "opgetild"-effect zodra het slepen daadwerkelijk is gestart. */
+  .tab-draggable{cursor:grab;}
+  .tab-dragging{
+    cursor:grabbing;
+    opacity:.6;
+    background:color-mix(in srgb, var(--gold) 14%, transparent);
+    box-shadow:0 3px 10px rgba(0,0,0,.3);
+    position:relative;
+    z-index:5;
+  }
   /* CSV- en PDF-uploadknop samen: op smal scherm (het gebruikelijke geval) gewoon onder elkaar,
      precies zoals hiervoor. Pas vanaf dezelfde 760px-drempel als de Maandbudgetten/Jaren-pair
      hierboven gaan ze naast elkaar staan — er is dan toch ruimte over. */
@@ -2758,6 +2769,101 @@ function wireGroupHeadCollapse(headEl, toggle){
   });
 }
 
+/* Herordenen van een lijstje tab-knoppen door ze ingedrukt te houden (muis) of vast te houden
+   (touch) en dan te slepen — gebruikt voor de Maandbudgetten-lijst, zodat bv. een later toegevoegde
+   "Juni" niet perse onderaan/bovenaan hoeft te blijven staan. Werkt via Pointer Events, zodat
+   muis en touch dezelfde code delen. Een gewone korte klik/tap navigeert nog altijd normaal —
+   pas na LONG_PRESS_MS stilzitten wordt het een sleep-actie; beweegt de vinger/muis te veel vóór
+   die tijd is verstreken, dan wordt de sleep-poging geannuleerd en blijft het gewoon een klik/scroll.
+   `container` moet de directe ouder zijn van de te herordenen knoppen, elk met de class
+   "tab-draggable" en een "data-drag-id". Bij loslaten na een geslaagde sleep roept dit `onReorder`
+   aan met de nieuwe volgorde van die id's, zodat de aanroeper de onderliggende array kan bijwerken. */
+function enableLongPressReorder(container, onReorder){
+  const LONG_PRESS_MS = 380;
+  const MOVE_CANCEL_PX = 10;
+  let pressTimer = null;
+  let dragBtn = null;
+  let suppressNextClick = false;
+
+  const clearPressTimer = () => { if(pressTimer){ clearTimeout(pressTimer); pressTimer = null; } };
+  const draggableSiblings = () => Array.from(container.querySelectorAll(":scope > .tab-draggable"));
+
+  // Eén click-listener op de container (capture-fase) volstaat om de synthetische klik die na een
+  // sleep-actie loskomt te onderscheppen — ongeacht op welke knop die precies terechtkomt.
+  container.addEventListener("click", (e) => {
+    if(suppressNextClick){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      suppressNextClick = false;
+    }
+  }, true);
+
+  // Sleep-beweging en loslaten worden op `document` afgeluisterd (i.p.v. op de knop zelf met
+  // setPointerCapture) — betrouwbaarder zodra de knop tijdens het slepen zelf in de DOM verplaatst
+  // wordt (insertBefore/appendChild hieronder), wat bij element-gebonden pointer capture in sommige
+  // browsers de capture voortijdig laat verlopen.
+  const onDragMove = (e) => {
+    if(!dragBtn) return;
+    e.preventDefault();
+    const y = e.clientY;
+    const others = draggableSiblings().filter(sib => sib !== dragBtn);
+    const afterEl = others.find(sib=>{
+      const rect = sib.getBoundingClientRect();
+      return y < rect.top + rect.height/2;
+    });
+    if(afterEl) container.insertBefore(dragBtn, afterEl);
+    else container.appendChild(dragBtn);
+  };
+  const endDrag = () => {
+    clearPressTimer();
+    document.removeEventListener("pointermove", onDragMove);
+    document.removeEventListener("pointerup", endDrag);
+    document.removeEventListener("pointercancel", endDrag);
+    if(dragBtn){
+      dragBtn.classList.remove("tab-dragging");
+      dragBtn.style.touchAction = "";
+      dragBtn = null;
+      suppressNextClick = true;
+      onReorder(draggableSiblings().map(sib => sib.dataset.dragId));
+    }
+  };
+
+  draggableSiblings().forEach(btn=>{
+    btn.addEventListener("pointerdown", (e)=>{
+      if(e.pointerType === "mouse" && e.button !== 0) return;
+      const startX = e.clientX, startY = e.clientY;
+      clearPressTimer();
+
+      const onEarlyMove = (ev) => {
+        if(Math.abs(ev.clientX-startX) > MOVE_CANCEL_PX || Math.abs(ev.clientY-startY) > MOVE_CANCEL_PX){
+          cleanupEarly();
+        }
+      };
+      const cleanupEarly = () => {
+        clearPressTimer();
+        document.removeEventListener("pointermove", onEarlyMove);
+        document.removeEventListener("pointerup", cleanupEarly);
+        document.removeEventListener("pointercancel", cleanupEarly);
+      };
+      document.addEventListener("pointermove", onEarlyMove);
+      document.addEventListener("pointerup", cleanupEarly);
+      document.addEventListener("pointercancel", cleanupEarly);
+
+      pressTimer = setTimeout(()=>{
+        document.removeEventListener("pointermove", onEarlyMove);
+        document.removeEventListener("pointerup", cleanupEarly);
+        document.removeEventListener("pointercancel", cleanupEarly);
+        dragBtn = btn;
+        btn.classList.add("tab-dragging");
+        btn.style.touchAction = "none";
+        document.addEventListener("pointermove", onDragMove);
+        document.addEventListener("pointerup", endDrag);
+        document.addEventListener("pointercancel", endDrag);
+      }, LONG_PRESS_MS);
+    });
+  });
+}
+
 function renderTabs(){
   const el = document.getElementById("tabs");
   el.innerHTML = "";
@@ -2800,11 +2906,27 @@ function renderTabs(){
   if(!collapsedGroups.budgets){
     state.budgets.forEach(b=>{
       const btn = document.createElement("button");
-      btn.className = "tab" + (state.activeView.type==="budget" && state.activeView.id===b.id ? " active":"");
+      btn.className = "tab tab-draggable" + (state.activeView.type==="budget" && state.activeView.id===b.id ? " active":"");
       btn.textContent = b.title;
+      btn.dataset.dragId = b.id;
       btn.onclick = ()=>{ state.activeView = {type:"budget", id:b.id}; renderAll(); };
       budgetGroup.appendChild(btn);
     });
+    // Klikken en (op muis) ingedrukt houden, of (op touch) vasthouden, laat je een maandbudget
+    // naar een andere plek in het lijstje slepen — handig omdat nieuwe maandbudgetten anders altijd
+    // bovenaan verschijnen (zie createBudget()), ook als het bv. om een terugwerkend toegevoegde
+    // "Juni" gaat die er eigenlijk qua tijdlijn middenin hoort.
+    if(state.budgets.length > 1){
+      enableLongPressReorder(budgetGroup, (newOrderIds)=>{
+        const byId = {};
+        state.budgets.forEach(b => { byId[b.id] = b; });
+        const reordered = newOrderIds.map(id => byId[id]).filter(Boolean);
+        // Defensief: als er ooit een id in newOrderIds ontbreekt in byId (zou niet moeten gebeuren),
+        // val terug op de oude volgorde in plaats van budgetten kwijt te raken.
+        state.budgets = (reordered.length === state.budgets.length) ? reordered : state.budgets;
+        renderAll();
+      });
+    }
   }
   groupPair.appendChild(budgetGroup);
 
