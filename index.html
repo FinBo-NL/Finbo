@@ -670,9 +670,12 @@
   }
   .add-row-btn:hover{text-decoration:underline;}
 
-  /* Een rij met een notitie (bijv. UN-Gas+elec) draagt zelf geen onderrand — die staat in plaats
-     daarvan onder de notitie, zodat rij + notitie visueel bij elkaar blijven horen. */
-  .row:has(+ .row-note){border-bottom:none;}
+  /* Een rij met een notitie (bijv. UN-Gas+elec, of een door "Toepassen op budget" op € 0,00 gezette
+     regel, zie applyMonthToBudget) draagt zelf geen onderrand — die staat in plaats daarvan onder de
+     notitie, zodat rij + notitie visueel bij elkaar blijven horen. De rij zit sinds de uitklapbare
+     deellijst-functionaliteit in een .row-wrap (zie renderCard); de notitie zelf staat daar als
+     sibling naast, dus de selector moet op .row-wrap letten, niet meer rechtstreeks op .row. */
+  .row-wrap:has(+ .row-note) .row{border-bottom:none;}
   .row-note{
     font-size:11px;
     color:var(--text-soft);
@@ -1231,6 +1234,7 @@ const i18n = {
     firstTimeBlankBtn: "Begin leeg",
     warmtefondsToggleLabel: "Warmtefonds aftrekken van UN-Gas+elec (voorkomt dubbeltelling)",
     warmtefondsNote: (v) => `Warmtefonds (€ ${v}) is hier al van afgetrokken`,
+    applyZeroedNote: (maand) => `€ 0,00 — geen transactie gevonden in ${maand} bij het toepassen op dit budget`,
     sourceNote: (name, n) => `Bron: ${name} — ${n} transacties automatisch ingedeeld`,
     months: MONTHS_NL,
     legendNetto: "Netto inkomsten",
@@ -1269,7 +1273,7 @@ const i18n = {
     noBudgetOption: "— geen maandbudget —",
     noBudgetSelected: "Nog geen maandbudget gekozen (of nog geen maandbudget aangemaakt). Maak op Basisdata een maandbudget aan en kies het hierboven om te vergelijken.",
     applyToBudgetBtn: (title) => `Toepassen op "${title}"`,
-    applyToBudgetNote: "Zet de werkelijke bedragen van deze maand (incl. wat je via \"Nog in te delen\" hebt toegevoegd) in de line-items van het gekoppelde maandbudget — bestaande regels worden overschreven, nieuwe labels worden toegevoegd. Kan gerust nog een keer, bijvoorbeeld nadat je meer posten hebt ingedeeld. Kan hierna ook weer ongedaan gemaakt worden.",
+    applyToBudgetNote: "Zet de werkelijke bedragen van deze maand (incl. wat je via \"Nog in te delen\" hebt toegevoegd) in de line-items van het gekoppelde maandbudget — bestaande regels worden overschreven, nieuwe labels worden toegevoegd, en een regel zonder overeenkomende transactie deze maand gaat naar € 0,00 met een toelichting erbij (geen verwijdering). Kan gerust nog een keer, bijvoorbeeld nadat je meer posten hebt ingedeeld. Kan hierna ook weer ongedaan gemaakt worden.",
     applyToBudgetConfirm: (title) => `De line-items van maandbudget "${title}" overschrijven met de werkelijke bedragen van deze maand? Je kunt dit hierna nog ongedaan maken (zolang je niet nog een keer toepast), het maandbudget blijft ook gewoon weer los bewerkbaar.`,
     applyToBudgetDone: "Toegepast op het maandbudget.",
     reverseApplyToBudgetBtn: (title) => `Toepassen op "${title}" ongedaan maken`,
@@ -1373,6 +1377,7 @@ const i18n = {
     firstTimeBlankBtn: "Start blank",
     warmtefondsToggleLabel: "Subtract Warmtefonds from UN-Gas+elec (avoids double-counting)",
     warmtefondsNote: (v) => `Warmtefonds (€ ${v}) already subtracted here`,
+    applyZeroedNote: (month) => `€ 0.00 — no matching transaction found in ${month} when applying to this budget`,
     sourceNote: (name, n) => `Source: ${name} — ${n} transactions auto-categorised`,
     months: MONTHS_EN,
     legendNetto: "Net income",
@@ -1411,7 +1416,7 @@ const i18n = {
     noBudgetOption: "— no monthly budget —",
     noBudgetSelected: "No monthly budget chosen yet (or none created yet). Create one on Basisdata and select it above to compare.",
     applyToBudgetBtn: (title) => `Apply to "${title}"`,
-    applyToBudgetNote: "Writes this month's actual amounts (including anything you've added via \"Still to be filed\") into the linked monthly budget's own line items — existing lines get overwritten, new labels get added. Safe to run again later, e.g. after filing more items. Can also be reversed afterwards.",
+    applyToBudgetNote: "Writes this month's actual amounts (including anything you've added via \"Still to be filed\") into the linked monthly budget's own line items — existing lines get overwritten, new labels get added, and a line with no matching transaction this month goes to €0.00 with a note explaining why (it isn't deleted). Safe to run again later, e.g. after filing more items. Can also be reversed afterwards.",
     applyToBudgetConfirm: (title) => `Overwrite the line items of monthly budget "${title}" with this month's actual amounts? You can still reverse this afterwards (as long as you don't apply again), and the budget stays freely editable either way.`,
     applyToBudgetDone: "Applied to the monthly budget.",
     reverseApplyToBudgetBtn: (title) => `Reverse applying to "${title}"`,
@@ -1470,11 +1475,13 @@ const DEFAULT_LOONSTIJGING = [
    "+ Nieuw jaar" wordt aangemaakt komt erachter en is wel verwijderbaar. */
 function cloneItems(items){
   // Kopieert ook "entries" (de per-transactie-details achter een samengevoegde regel, zie
-  // buildMonthFromCSV/applyMonthToBudget) wanneer aanwezig, zodat een undo-snapshot (bv. bij
-  // reverseApplyMonthToBudget) de uitklapbare deellijst niet stilzwijgend kwijtraakt.
+  // buildMonthFromCSV/applyMonthToBudget) en "note" (bv. de grijze "geen transactie gevonden"-
+  // toelichting die applyMonthToBudget op een leeggebleven regel zet) wanneer aanwezig, zodat een
+  // undo-snapshot (bv. bij reverseApplyMonthToBudget) niets stilzwijgend kwijtraakt.
   return items.map(it => {
     const clone = { l: it.l, v: it.v };
     if(it.entries && it.entries.length) clone.entries = it.entries.map(e => ({...e}));
+    if(it.note) clone.note = (typeof it.note === "object") ? {...it.note} : it.note;
     return clone;
   });
 }
@@ -1552,9 +1559,14 @@ function applyMonthToBudget(m, budget){
     },
   };
   const cats = ["income","vasteLasten","abonnementen","variabeleLasten"];
+  const monthNote = { nl: i18n.nl.applyZeroedNote(monthLabelIn(m,"nl")), en: i18n.en.applyZeroedNote(monthLabelIn(m,"en")) };
   cats.forEach(cat=>{
+    // Bijhouden welke bestaande budgetregels deze keer een echte (mogelijk nul-)overeenkomst in de
+    // maand hebben gehad, zodat de rest hieronder herkend kan worden als "geen transactie gevonden".
+    const matchedKeys = new Set();
     m[cat].items.forEach(item=>{
       const key = item.l.trim().toLowerCase();
+      matchedKeys.add(key);
       const existing = budget[cat].items.find(it => it.l.trim().toLowerCase() === key);
       // Combinatieregels (meerdere onderliggende betalingen, bv. Geldmaat/Bouwmarkt/Online) dragen
       // hun per-transactie-detail nu ook over naar het budget, zodat de budgetkaart na "Toepassen"
@@ -1565,11 +1577,28 @@ function applyMonthToBudget(m, budget){
       if(existing){
         existing.v = item.v;
         if(entries) existing.entries = entries; else delete existing.entries;
+        // Heeft weer een echt bedrag deze maand — een eerdere "geen transactie gevonden"-toelichting
+        // (zie hieronder) is dan niet meer van toepassing.
+        delete existing.note;
       } else {
         const newItem = { l: item.l, v: item.v };
         if(entries) newItem.entries = entries;
         budget[cat].items.push(newItem);
       }
+    });
+
+    // Een bestaande budgetregel zonder overeenkomende transactie deze maand blijft NIET zomaar op
+    // zijn oude bedrag staan (dat zou net doen alsof er evenveel aan is besteed als gepland) en
+    // wordt ook niet verwijderd (dan verdwijnt een onregelmatige post als bv. hondenvoer voorgoed
+    // uit het budget na één rustige maand): hij gaat naar € 0,00 met een grijze toelichting erbij
+    // (zie .row-note/renderCard) waarom hij leeg is, zodat meteen duidelijk is dat er niets voor
+    // gevonden is i.p.v. dat het een bewust ingevoerde nul lijkt.
+    budget[cat].items.forEach(it=>{
+      const key = it.l.trim().toLowerCase();
+      if(matchedKeys.has(key)) return;
+      it.v = 0;
+      delete it.entries;
+      it.note = { ...monthNote };
     });
   });
 }
@@ -1909,7 +1938,14 @@ function computeMonthTotals(m){
 }
 
 function monthLabel(m){
-  const name = t("months")[m.monthIndex-1];
+  return monthLabelIn(m, state.lang);
+}
+/* Zelfde als monthLabel(), maar in een expliciet opgegeven taal i.p.v. de actief ingestelde
+   interfacetaal — nodig voor tweetalige toelichtingen die op een item worden opgeslagen (bv.
+   applyZeroedNote, zie applyMonthToBudget) en dus zowel de nl- als en-tekst tegelijk moeten
+   kunnen opbouwen, ongeacht wat de gebruiker net aan het bekijken is. */
+function monthLabelIn(m, lang){
+  const name = i18n[lang].months[m.monthIndex-1];
   return `${m.year} ${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 }
 
@@ -3814,7 +3850,16 @@ function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
   const totBudget = rows.reduce((a,r)=>a+r.budget,0);
   const totActual = rows.reduce((a,r)=>a+r.actual,0);
   const totDiff = totActual - totBudget;
-  const diffClass = (d) => (kind==="income" ? d>=0 : d<=0) ? "good" : "bad";
+  // Voor kostenposten telt "minder uitgegeven dan begroot" normaal als goed (groen) — bv. een
+  // energierekening die deze maand toevallig lager uitviel. Maar € 0,00 werkelijk tegenover een
+  // begroot bedrag > 0 betekent meestal niet "bespaard", maar "helemaal niet betaald/gevonden deze
+  // maand" (bv. een afbetalingstermijn die is overgeslagen) — dat is geen goed nieuws en hoort dus
+  // rood te zijn, niet groen. Bij inkomsten was dit al automatisch goed: € 0,00 werkelijk tegenover
+  // een begroot inkomen geeft sowieso al een negatief verschil, dus al "bad" onder de bestaande regel.
+  const diffClass = (d, actual, budget) => {
+    if(actual === 0 && budget !== 0) return "bad";
+    return (kind==="income" ? d>=0 : d<=0) ? "good" : "bad";
+  };
   // Scope voor de uitklap-status: los per kaart (income/vasteLasten/abonnementen/variabeleLasten)
   // zodat toevallig gelijke labels in verschillende kaarten elkaar niet beïnvloeden.
   const scope = `compare:${iconKey}`;
@@ -3845,7 +3890,7 @@ function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
             </span>
             <span class="compare-col mono">€ ${fmt(r.budget)}</span>
             <span class="compare-col mono">€ ${fmt(r.actual)}</span>
-            <span class="compare-col mono compare-diff ${diffClass(r.diff)}">${r.diff>=0?'+':'−'} € ${fmt(Math.abs(r.diff))}</span>
+            <span class="compare-col mono compare-diff ${diffClass(r.diff, r.actual, r.budget)}">${r.diff>=0?'+':'−'} € ${fmt(Math.abs(r.diff))}</span>
           </div>
           ${(hasBreakdown && isOpen) ? renderBreakdownRows(r.entries) : ""}
         </div>
@@ -3854,7 +3899,7 @@ function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
         <span class="compare-name">${t("subtotaal")}</span>
         <span class="compare-col mono">€ ${fmt(totBudget)}</span>
         <span class="compare-col mono">€ ${fmt(totActual)}</span>
-        <span class="compare-col mono compare-diff ${diffClass(totDiff)}">${totDiff>=0?'+':'−'} € ${fmt(Math.abs(totDiff))}</span>
+        <span class="compare-col mono compare-diff ${diffClass(totDiff, totActual, totBudget)}">${totDiff>=0?'+':'−'} € ${fmt(Math.abs(totDiff))}</span>
       </div>
     </div>
   `;
