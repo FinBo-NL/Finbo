@@ -1281,7 +1281,8 @@ const i18n = {
     compareBudgetCol: "Begroot",
     compareActualCol: "Werkelijk",
     compareDiffCol: "Verschil",
-    begrootSaldo: (title) => `Begroot saldo (${title})`,
+    begrootSaldo: (title) => `Begroot (${title})`,
+    werkelijkStampSub: "Werkelijk (dit geïmporteerde overzicht)",
     verschilMetBudget: "Verschil met budget",
   },
   en: {
@@ -1424,7 +1425,8 @@ const i18n = {
     compareBudgetCol: "Budgeted",
     compareActualCol: "Actual",
     compareDiffCol: "Difference",
-    begrootSaldo: (title) => `Budgeted balance (${title})`,
+    begrootSaldo: (title) => `Budget (${title})`,
+    werkelijkStampSub: "Actual (this imported statement)",
     verschilMetBudget: "Difference vs. budget",
   }
 };
@@ -1921,20 +1923,17 @@ function computeMonthTotals(m){
   const vasteLasten = sum(m.vasteLasten.items);
   const abonnementen = sum(m.abonnementen.items);
   const variabeleLasten = sum(m.variabeleLasten.items);
-  // Issue #12: een toegevoegde "Openstaande terugboeking" (zie renderStornoReviewCard) belandt
-  // sinds de maandbudget-dropdown niet meer in een categorie van DEZE maand zelf, maar in het
-  // "Openstaand"-blok van het gekozen maandbudget — daardoor telde hij nergens meer mee in het
-  // eigen "Over te spenderen"-bedrag van deze maand, ook al is de terugboeking wél echt in deze
-  // maand gebeurd. Voor de eigen totalen van de maand telt een toegevoegde terugboeking daarom
-  // hier gewoon mee als extra kostenpost, los van welk maandbudget de gebruiker 'm later koos voor
-  // de planning. Oudere, nog-op-de-oude-manier toegevoegde rijen (entry.target, al in een categorie
-  // van deze maand zelf verwerkt) worden bewust NIET nogmaals meegeteld — die zaten al in
-  // vasteLasten/abonnementen/variabeleLasten hierboven.
-  const openstaandToegevoegd = (m.openTerugboekingen || [])
-    .filter(entry => entry.addedBudgetId)
-    .reduce((a,entry) => a + Math.abs(parseFloat(entry.amt)||0), 0);
-  const totaalUitgaven = vasteLasten + abonnementen + variabeleLasten + openstaandToegevoegd;
-  return { income, vasteLasten, abonnementen, variabeleLasten, openstaandToegevoegd, totaalUitgaven };
+  // Een "Openstaande terugboeking" die je bij een maandbudget indeelt (zie renderStornoReviewCard)
+  // telt bewust NIET mee in de eigen totalen van DEZE maand — hij telt alleen mee bij het
+  // maandbudget waar je 'm zelf aan toewijst (via budget.outstanding, zie renderMonthSummary's
+  // "begroot"-stempel/bTotaalUitgaven). Dat voorkomt dat hetzelfde bedrag dubbel meetelt: één keer
+  // hier in de eigen "Over te spenderen" van de maand van herkomst, én nog een keer bij het
+  // gekozen budget. (Vóór deze wijziging telde 'm op BEIDE plekken mee — dat bleek verwarrend
+  // zodra een terugboeking bij een ánder maandbudget werd ingedeeld dan het budget van de maand
+  // zelf, want dan veranderde het "Tekort per maand"-stempel van deze maand mee terwijl de
+  // gebruiker 'm juist bij dat andere budget had willen boeken.)
+  const totaalUitgaven = vasteLasten + abonnementen + variabeleLasten;
+  return { income, vasteLasten, abonnementen, variabeleLasten, totaalUitgaven };
 }
 
 function monthLabel(m){
@@ -4843,7 +4842,7 @@ function renderMonthSummary(){
       <div class="stamp ${over<0?'negative':''}">
         <div class="stamp-label">${over<0? t("tekort") : t("overTeSpenderen")}</div>
         <div class="stamp-value">€ ${fmt(Math.abs(over))}</div>
-        <div class="stamp-sub">${t("stampSub")}</div>
+        <div class="stamp-sub">${budget ? t("werkelijkStampSub") : t("stampSub")}</div>
       </div>
       ${secondStamp}
     </div>
@@ -4852,7 +4851,6 @@ function renderMonthSummary(){
     <div class="summary-line debit"><span class="l">${t("vasteLasten")}</span><span class="v">− € ${fmt(totals.vasteLasten)}</span></div>
     <div class="summary-line debit"><span class="l">${t("abonnementen")}</span><span class="v">− € ${fmt(totals.abonnementen)}</span></div>
     <div class="summary-line debit"><span class="l">${t("variabeleLasten")}</span><span class="v">− € ${fmt(totals.variabeleLasten)}</span></div>
-    ${totals.openstaandToegevoegd > 0 ? `<div class="summary-line debit"><span class="l">${t("outstandingTitle")}</span><span class="v">− € ${fmt(totals.openstaandToegevoegd)}</span></div>` : ""}
     <div class="summary-line total"><span class="l">${t("saldo")}</span><span class="v">€ ${fmt(over)}</span></div>
     ${budgetLine}
 
