@@ -188,9 +188,17 @@
     font-family:"Segoe UI",sans-serif;
     flex:1;
   }
-  .group-add-btn{
-    width:19px;
-    height:19px;
+  /* De hele groepskop (niet alleen het pijltje) is klikbaar om in/uit te klappen — zie issue #4.
+     Het "+"-knopje zelf blijft zijn eigen (andere) actie houden, zie wireGroupHeadCollapse(). */
+  .tab-group-head.collapsible{ cursor:pointer; }
+  .tab-group-head.collapsible:hover .tab-group-label{ color:var(--gold-bright); }
+  /* group-add-btn ("+") en group-collapse-btn (pijltje) zijn de twee ronde icoonknopjes in een
+     groepskop — bewust exact dezelfde breedte/hoogte/vormgeving (zie issue #4), zodat ze als een
+     nette, bij elkaar horende set ogen in plaats van twee net iets andere knopjes. */
+  .group-add-btn,
+  .group-collapse-btn{
+    width:20px;
+    height:20px;
     border-radius:50%;
     border:1px solid color-mix(in srgb, var(--text-onink) 25%, transparent);
     background:transparent;
@@ -203,32 +211,20 @@
     align-items:center;
     justify-content:center;
     flex-shrink:0;
+    transition:border-color .15s ease, color .15s ease, background .15s ease;
   }
-  .group-add-btn:hover{
+  .group-add-btn:hover,
+  .group-collapse-btn:hover{
     border-color:var(--gold);
     color:var(--gold-bright);
     background:color-mix(in srgb, var(--gold) 12%, transparent);
   }
-  .group-collapse-btn{
-    width:17px;
-    height:17px;
-    border:none;
-    background:transparent;
-    color:var(--text-onink-soft);
-    padding:0;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-shrink:0;
-  }
   .group-collapse-btn svg{
-    width:13px;
-    height:13px;
+    width:12px;
+    height:12px;
     transition:transform .15s ease;
   }
   .group-collapse-btn.collapsed svg{ transform:rotate(-90deg); }
-  .group-collapse-btn:hover{ color:var(--gold-bright); }
   /* Maandbudgetten + Jaren staan samen in deze wrapper. Op een smal scherm (het gebruikelijke
      geval, en altijd onder de 760px-drempel hieronder) gedraagt hij zich als een gewone
      .tab-group-kolom: gestapeld onder elkaar, identiek aan hoe het er al uitzag vóór deze
@@ -2237,6 +2233,17 @@ function renderHeader(){
 // probleem, en zo oogt het menu meteen rustiger bij het inloggen.
 let collapsedGroups = { budgets: true, years: true, growth: true };
 
+/* Maakt een hele groepskop (niet alleen het pijltje) klikbaar om in-/uit te klappen — zie issue
+   #4. Klikken op het "+"-knopje (indien aanwezig) doet bewust NIET mee, die heeft al zijn eigen
+   actie (nieuw jaar/maandbudget aanmaken). */
+function wireGroupHeadCollapse(headEl, toggle){
+  headEl.classList.add("collapsible");
+  headEl.addEventListener("click", (e)=>{
+    if(e.target.closest(".group-add-btn")) return;
+    toggle();
+  });
+}
+
 function renderTabs(){
   const el = document.getElementById("tabs");
   el.innerHTML = "";
@@ -2273,7 +2280,7 @@ function renderTabs(){
       <button class="group-add-btn" id="addBudgetBtn" title="${t("nieuwBudgetBtn")}">+</button>
     </div>`;
   budgetGroup.querySelector("#addBudgetBtn").onclick = () => createBudget();
-  budgetGroup.querySelector("#collapseBudgetsBtn").onclick = () => { collapsedGroups.budgets = !collapsedGroups.budgets; renderTabs(); };
+  wireGroupHeadCollapse(budgetGroup.querySelector(".tab-group-head"), () => { collapsedGroups.budgets = !collapsedGroups.budgets; renderTabs(); });
   if(!collapsedGroups.budgets){
     state.budgets.forEach(b=>{
       const btn = document.createElement("button");
@@ -2297,7 +2304,7 @@ function renderTabs(){
       <button class="group-add-btn" id="addJaarBtn" title="${t("nieuwJaarBtn")(latestScenario().jaar+1)}">+</button>
     </div>`;
   scenGroup.querySelector("#addJaarBtn").onclick = () => createNewYear();
-  scenGroup.querySelector("#collapseYearsBtn").onclick = () => { collapsedGroups.years = !collapsedGroups.years; renderTabs(); };
+  wireGroupHeadCollapse(scenGroup.querySelector(".tab-group-head"), () => { collapsedGroups.years = !collapsedGroups.years; renderTabs(); });
   if(!collapsedGroups.years){
     state.scenarios.slice(1).forEach((s,offset)=>{
       const i = offset + 1;
@@ -2339,7 +2346,7 @@ function renderTabs(){
       </button>
       <span class="tab-group-label">${t("groeiGroupLabel")}</span>
     </div>`;
-  extraGroup.querySelector("#collapseGrowthBtn").onclick = () => { collapsedGroups.growth = !collapsedGroups.growth; renderTabs(); };
+  wireGroupHeadCollapse(extraGroup.querySelector(".tab-group-head"), () => { collapsedGroups.growth = !collapsedGroups.growth; renderTabs(); });
   if(!collapsedGroups.growth){
     const loonstijgingBtn = document.createElement("button");
     loonstijgingBtn.className = "tab" + (state.activeView.type==="loonstijging" ? " active":"");
