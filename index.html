@@ -15,7 +15,3594 @@
 <title>FinBo</title>
 <style>
   /* Licht (standaard): witte/lichte achtergrond door de hele app, groen als belettering/accent.
+     --ink/--ink-2 = achtergrond van de "chrome" (header/zijbalk/zijpaneel), --paper/--paper-2 =<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinBo</title>
+<style>
+  /* Licht (standaard): witte/lichte achtergrond door de hele app, groen als belettering/accent.
      --ink/--ink-2 = achtergrond van de "chrome" (header/zijbalk/zijpaneel), --paper/--paper-2 =
+     achtergrond van kaarten. --text-onink(-soft) is de tekstkleur die bij --ink hoort, --text(-soft)
+     die bij --paper — dat koppel wisselt per modus mee, dus de rest van het stijlblad hoeft niet
+     te weten of het licht of donker is. */
+  :root{
+    --ink:#fbfcfb;
+    --ink-2:#f5f8f6;
+    --paper:#ffffff;
+    --paper-2:#f1f5f2;
+    --rule:#e2e8e3;
+    --gold:#1f6f4f;
+    --gold-bright:#2f9d6f;
+    --forest:#1a5c42;
+    --credit:#1f7a52;
+    --debit:#b0463c;
+    --text:#182620;
+    --text-soft:#5e6f65;
+    --text-onink:#182620;
+    --text-onink-soft:#5e6f65;
+    /* Grafiekkleuren per categorie (staaf/donut/legenda + Loonstijging-lijngrafiek). Bewust NIET
+       (bijna) dezelfde groentint als de rest van de UI (knoppen, positieve bedragen gebruiken al
+       overal --gold/--forest/--credit) — anders vallen "Gedeelde vaste lasten" en "Over te
+       spenderen" in de grafieken bijna niet uit elkaar. Alleen "Over" (bewust positief/goed) blijft
+       groen en sluit zo aan bij de rest van de app; de andere categorieën krijgen elk een duidelijk
+       andere kleur (blauw/oranje/paars), gevalideerd op onderling verschil (zie dataviz-methodiek). */
+    --cat-vaste:#2a78d6;
+    --cat-abon:#eb6834;
+    --cat-variabel:#4a3aa7;
+    --cat-over:#1f7a52;
+    --cat-tekort:#eda100;
+    --cat-income:#2a78d6;
+    --cat-kosten:#eb6834;
+  }
+  html[data-mode="dark"]{
+    --ink:#111a16;
+    --ink-2:#0d1512;
+    --paper:#16211c;
+    --paper-2:#1c2822;
+    --rule:rgba(255,255,255,.09);
+    --gold:#4fae86;
+    --gold-bright:#6bc79c;
+    --forest:#5fbf94;
+    --credit:#5fbf94;
+    --debit:#e2897a;
+    --text:#e7f0ea;
+    --text-soft:#9db0a5;
+    --text-onink:#eaf1ec;
+    --text-onink-soft:#9db0a5;
+    --cat-vaste:#3987e5;
+    --cat-abon:#d95926;
+    --cat-variabel:#9085e9;
+    --cat-over:#5fbf94;
+    --cat-tekort:#c98500;
+    --cat-income:#3987e5;
+    --cat-kosten:#d95926;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    color:var(--text);
+    min-height:100vh;
+    transition:background .2s ease, color .2s ease;
+  }
+  h1,h2,h3{
+    font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;
+    font-weight:600;
+    margin:0;
+  }
+  .mono{
+    font-family:"Courier New",Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* Header */
+  header{
+    background:linear-gradient(180deg,var(--ink) 0%,var(--ink-2) 100%);
+    padding:28px 32px 20px;
+    border-bottom:3px solid var(--gold);
+  }
+  .header-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  header .eyebrow{
+    color:var(--gold);
+    letter-spacing:.01em;
+    font-family:"Segoe UI",sans-serif;
+    font-weight:700;
+    font-size:28px;
+    margin-bottom:2px;
+  }
+  header h1{
+    color:var(--text-onink-soft);
+    font-size:16px;
+    font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;
+    font-weight:400;
+    letter-spacing:.01em;
+  }
+  .header-controls{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+  }
+  .lang-toggle{
+    display:flex;
+    gap:4px;
+    flex-shrink:0;
+  }
+  .mode-btn{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    border:1px solid color-mix(in srgb, var(--text-onink) 25%, transparent);
+    background:transparent;
+    color:var(--text-onink-soft);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  html[data-mode="light"] .mode-btn{ border-color:rgba(0,0,0,.15); }
+  .mode-btn:hover{border-color:var(--gold); color:var(--gold-bright);}
+  .mode-btn svg{width:16px; height:16px;}
+  .lang-btn{
+    background:transparent;
+    border:1px solid color-mix(in srgb, var(--text-onink) 25%, transparent);
+    color:var(--text-onink-soft);
+    padding:5px 11px;
+    font-size:11px;
+    letter-spacing:.06em;
+    border-radius:3px;
+    cursor:pointer;
+    font-family:"Segoe UI",sans-serif;
+  }
+  .lang-btn:hover{border-color:var(--gold); color:var(--gold-bright);}
+  .lang-btn.active{
+    border-color:var(--gold);
+    color:var(--gold-bright);
+    background:color-mix(in srgb, var(--gold) 12%, transparent);
+  }
+
+  /* Tabs */
+  .tabs{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    margin-top:20px;
+    max-width:340px;
+  }
+  .tab-group{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .tab-group + .tab-group{
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px dashed color-mix(in srgb, var(--text-onink) 12%, transparent);
+  }
+  .tab-group-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+    margin-bottom:4px;
+    padding:0 14px;
+  }
+  .tab-group-label{
+    color:var(--text-onink-soft);
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    font-family:"Segoe UI",sans-serif;
+    flex:1;
+  }
+  .group-add-btn{
+    width:19px;
+    height:19px;
+    border-radius:50%;
+    border:1px solid color-mix(in srgb, var(--text-onink) 25%, transparent);
+    background:transparent;
+    color:var(--text-onink-soft);
+    font-size:13px;
+    line-height:1;
+    padding:0;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .group-add-btn:hover{
+    border-color:var(--gold);
+    color:var(--gold-bright);
+    background:color-mix(in srgb, var(--gold) 12%, transparent);
+  }
+  .group-collapse-btn{
+    width:17px;
+    height:17px;
+    border:none;
+    background:transparent;
+    color:var(--text-onink-soft);
+    padding:0;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .group-collapse-btn svg{
+    width:13px;
+    height:13px;
+    transition:transform .15s ease;
+  }
+  .group-collapse-btn.collapsed svg{ transform:rotate(-90deg); }
+  .group-collapse-btn:hover{ color:var(--gold-bright); }
+  /* Maandbudgetten + Jaren staan samen in deze wrapper. Op een smal scherm (het gebruikelijke
+     geval, en altijd onder de 760px-drempel hieronder) gedraagt hij zich als een gewone
+     .tab-group-kolom: gestapeld onder elkaar, identiek aan hoe het er al uitzag vóór deze
+     wijziging. Pas vanaf voldoende breedte (er is toch ruime lege ruimte rechts van het menu op
+     een breed scherm) gaan de twee lijstjes naast elkaar staan. */
+  .tab-group-pair{
+    display:flex;
+    flex-direction:column;
+  }
+  @media (min-width:760px){
+    .tabs{ max-width:640px; }
+    .tab-group-pair{
+      flex-direction:row;
+      align-items:flex-start;
+      gap:28px;
+    }
+    .tab-group-pair > .tab-group{
+      flex:1 1 0;
+      min-width:0;
+    }
+    /* De verticale scheidingslijn die normaal BOVEN een volgende groep staat (zie
+       ".tab-group + .tab-group" hierboven) hoort hier niet meer boven Jaren, want die staat nu
+       naast Maandbudgetten in plaats van eronder. */
+    .tab-group-pair > .tab-group + .tab-group{
+      margin-top:0;
+      padding-top:0;
+      border-top:none;
+    }
+  }
+  .tab{
+    display:flex;
+    align-items:center;
+    text-align:left;
+    background:transparent;
+    border:none;
+    border-left:3px solid transparent;
+    color:var(--text-onink-soft);
+    font-family:Georgia,serif;
+    font-size:14px;
+    padding:10px 14px;
+    cursor:pointer;
+    transition:color .15s ease, border-color .15s ease, background .15s ease;
+    white-space:nowrap;
+  }
+  .tab:hover{color:var(--text-onink); background:color-mix(in srgb, var(--text-onink) 4%, transparent);}
+  .tab.active{
+    color:var(--gold-bright);
+    border-left-color:var(--gold);
+    background:color-mix(in srgb, var(--gold) 8%, transparent);
+  }
+  .tab .tab-idx{
+    opacity:.6;
+    font-size:11px;
+    margin-right:6px;
+  }
+  .tab-upload{
+    margin-top:10px;
+    border:1px dashed color-mix(in srgb, var(--text-onink) 30%, transparent);
+    border-radius:3px;
+    color:var(--gold-bright);
+    font-family:"Segoe UI",sans-serif;
+    font-size:12.5px;
+    justify-content:center;
+  }
+  .tab-upload:hover{background:color-mix(in srgb, var(--gold) 8%, transparent); border-color:var(--gold);}
+
+  /* Layout */
+  .layout{
+    display:grid;
+    grid-template-columns:1fr 380px;
+    gap:0;
+    align-items:start;
+  }
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    aside.summary{
+      position:static;
+      min-height:0;
+      border-left:none;
+      border-top:1px solid color-mix(in srgb, var(--text-onink) 8%, transparent);
+    }
+  }
+
+  main.categories{
+    padding:28px 24px 60px 32px;
+  }
+  @media (max-width:640px){
+    header{padding:20px 18px 16px;}
+    main.categories{padding:18px 14px 36px;}
+    aside.summary{padding:20px 16px 32px;}
+    .card-head{padding:9px 14px 7px;}
+    .rows{padding:2px 14px 8px;}
+    .row .value-input{width:78px;}
+  }
+
+  .card{
+    /* Was eerder een vast om-de-30px herhalend lijnenpatroon op de achtergrond (alsof het
+       geliniëerd papier was) — dat leek in eerste opzicht op een nette tabel, maar zodra ergens
+       een rij een extra notitieregel had (zoals bij UN-Gas+elec) klopte de 30px-aanname niet meer
+       en liepen alle lijntjes daaronder blijvend uit de pas met de échte tekst (vandaar dat
+       bijvoorbeeld "Sparen kids" en "Alimentatie" niet meer netjes tussen de lijntjes stonden).
+       Nu een échte rand ONDER elke rij zelf (zie .row hieronder) — die volgt altijd automatisch
+       de werkelijke hoogte van de inhoud, ook als een rij een notitieregel erbij krijgt. */
+    background:var(--paper);
+    border:1px solid var(--rule);
+    border-radius:2px;
+    margin-bottom:20px;
+    box-shadow:0 1px 0 rgba(0,0,0,.04);
+  }
+  .card-overig{
+    border:1px dashed var(--debit);
+  }
+  .card-overig .card-head{
+    background:color-mix(in srgb, var(--debit) 9%, transparent);
+  }
+  .card-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 18px 8px;
+    border-bottom:1px solid var(--rule);
+    background:var(--paper-2);
+  }
+  .card-head .htitle{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    color:var(--forest);
+    min-width:0;
+  }
+  .card-head h2{
+    font-size:15px;
+    color:inherit;
+    letter-spacing:.01em;
+  }
+  .cat-icon{
+    width:17px;
+    height:17px;
+    flex-shrink:0;
+    opacity:.9;
+  }
+  .card-head .cat-total{
+    font-size:15px;
+    font-weight:700;
+    color:var(--text);
+  }
+  .card-note{
+    padding:0 18px 8px;
+    font-size:11.5px;
+    color:var(--text-soft);
+    font-style:italic;
+  }
+  .card-review{
+    border:1px dashed var(--gold);
+  }
+  .card-review .card-head{
+    background:color-mix(in srgb, var(--gold) 8%, transparent);
+  }
+  .review-rows{padding:2px 18px 12px;}
+  .review-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    padding:7px 0;
+    border-bottom:1px dashed var(--rule);
+  }
+  .review-row:last-child{border-bottom:none;}
+  .review-name{
+    flex:1 1 140px;
+    min-width:0;
+    font-size:13px;
+    color:var(--text);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .review-amt{
+    width:88px;
+    text-align:right;
+    font-size:13px;
+    flex-shrink:0;
+  }
+  .review-amt.pos{color:var(--credit);}
+  .review-amt.neg{color:var(--debit);}
+  .review-select{
+    font-family:"Segoe UI",sans-serif;
+    font-size:12px;
+    padding:4px 5px;
+    border:1px solid var(--rule);
+    border-radius:3px;
+    background:var(--paper);
+    color:var(--text);
+    flex-shrink:0;
+  }
+  .review-select:disabled{opacity:.6;}
+  .review-btn{
+    background:transparent;
+    border:1px solid var(--forest);
+    color:var(--forest);
+    font-size:11.5px;
+    padding:5px 12px;
+    border-radius:3px;
+    cursor:pointer;
+    font-family:"Segoe UI",sans-serif;
+    flex-shrink:0;
+  }
+  .review-btn:hover{background:color-mix(in srgb, var(--forest) 8%, transparent);}
+  .review-btn.added{border-color:var(--debit); color:var(--debit);}
+  .review-btn.added:hover{background:color-mix(in srgb, var(--debit) 8%, transparent);}
+  .rows{padding:2px 18px 10px;}
+  .row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-height:30px;
+    padding:0;
+    border-bottom:1px solid var(--rule);
+  }
+  .row .label-input{
+    flex:1;
+    min-width:0;
+    border:none;
+    background:transparent;
+    font-family:inherit;
+    font-size:13.5px;
+    color:var(--text);
+    padding:4px 2px;
+  }
+  .row .label-input:focus{outline:none; background:color-mix(in srgb, var(--gold) 8%, transparent);}
+  .row .value-wrap{
+    display:flex;
+    align-items:center;
+    gap:2px;
+    flex-shrink:0;
+  }
+  .row .value-wrap span.euro{color:var(--text-soft); font-size:12.5px;}
+  .row .value-input{
+    width:92px;
+    text-align:right;
+    border:none;
+    border-bottom:1px solid transparent;
+    background:transparent;
+    font-family:"Courier New",Consolas,monospace;
+    font-size:13.5px;
+    padding:4px 2px;
+    color:var(--text);
+  }
+  .row .value-input:focus{outline:none; border-bottom-color:var(--gold);}
+  .row .value-input:disabled{color:var(--forest); font-weight:700; -webkit-text-fill-color:var(--forest);}
+
+  /* Loonsverhoging-blok (jaarpagina's): apart, net "tabelletje" met duidelijke rand en een
+     streepje tussen de twee regels, in plaats van los zwevende tekst. Geen onderstreepje meer
+     onder de invulvelden zelf (op eigen verzoek weggehaald) — de +/- stappers en het kader om het
+     hele blokje maken al voldoende duidelijk dat het om invoervelden gaat. */
+  .verhogingen-rows{
+    margin:0 18px 4px;
+    padding:2px 14px;
+    border:1px solid var(--rule);
+    border-radius:6px;
+    background:color-mix(in srgb, var(--paper-2) 70%, transparent);
+  }
+  .verhogingen-rows .row{border-bottom:1px dashed var(--rule);}
+  .verhogingen-rows .row:last-child{border-bottom:none;}
+  .verhogingen-rows .value-input{border-bottom-color:transparent !important;}
+
+  /* +/- stappers vóór het percentagecijfer — vervangt de onzichtbare-op-mobiel pijltjes van
+     een gewoon number-invoerveld door twee echte, goed aantikbare knoppen. */
+  .stepper-btns{
+    display:flex;
+    align-self:stretch;
+    flex-shrink:0;
+    gap:1px;
+    margin-right:6px;
+  }
+  .step-btn{
+    width:30px;
+    align-self:stretch;
+    border:1px solid var(--rule);
+    background:var(--paper);
+    color:var(--text-soft);
+    font-size:16px;
+    line-height:1;
+    cursor:pointer;
+    font-family:"Segoe UI",sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+  }
+  .step-btn:first-child{border-radius:4px 0 0 4px;}
+  .step-btn:last-child{border-radius:0 4px 4px 0; border-left:none;}
+  .step-btn:hover{background:color-mix(in srgb, var(--gold) 10%, transparent); color:var(--gold-bright); border-color:var(--gold);}
+  .step-btn:active{background:color-mix(in srgb, var(--gold) 20%, transparent);}
+  .pct-stepper{align-self:stretch;}
+  .pct-stepper .value-input{width:56px; text-align:center;}
+  /* Native op/neer-pijltjes van het getalveld verbergen — die zijn sowieso onbruikbaar op
+     mobiel/touch, en nu hebben we er eigen, altijd zichtbare/aantikbare knoppen voor. */
+  .value-input::-webkit-outer-spin-button,
+  .value-input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+  .value-input[type="number"]{-moz-appearance:textfield;}
+  .row .del-btn{
+    background:none;
+    border:none;
+    color:var(--rule);
+    cursor:pointer;
+    font-size:18px;
+    line-height:1;
+    padding:2px 6px;
+    opacity:.4;
+    flex-shrink:0;
+  }
+  .row:hover .del-btn, .row .del-btn:focus{opacity:1; color:var(--debit);}
+  .add-row-btn{
+    background:none;
+    border:none;
+    color:var(--forest);
+    font-size:12.5px;
+    cursor:pointer;
+    padding:6px 2px;
+    font-family:"Segoe UI",sans-serif;
+  }
+  .add-row-btn:hover{text-decoration:underline;}
+
+  /* Een rij met een notitie (bijv. UN-Gas+elec) draagt zelf geen onderrand — die staat in plaats
+     daarvan onder de notitie, zodat rij + notitie visueel bij elkaar blijven horen. */
+  .row:has(+ .row-note){border-bottom:none;}
+  .row-note{
+    font-size:11px;
+    color:var(--text-soft);
+    font-style:italic;
+    padding:0 2px 8px;
+    margin-top:-4px;
+    border-bottom:1px solid var(--rule);
+  }
+
+  .toggle-row{
+    margin:-10px 0 20px;
+    padding:0 4px;
+  }
+  .toggle-label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12.5px;
+    color:var(--text-soft);
+    font-family:"Segoe UI",sans-serif;
+    cursor:pointer;
+  }
+  .toggle-label input[type="checkbox"]{
+    accent-color:var(--gold);
+    width:14px;
+    height:14px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+
+  .row .label-input:disabled{color:var(--text-soft); opacity:1;}
+  .verhogingen-info{
+    padding:2px 18px 14px;
+    font-size:12.5px;
+    color:var(--text-soft);
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    border-top:1px dashed var(--rule);
+    margin-top:4px;
+    padding-top:8px;
+  }
+  .verhogingen-info .mono{color:var(--forest); font-weight:700;}
+
+  /* Summary panel */
+  aside.summary{
+    position:sticky;
+    top:0;
+    background:var(--ink);
+    color:var(--text-onink);
+    padding:28px 24px 40px;
+    min-height:100vh;
+    border-left:1px solid color-mix(in srgb, var(--text-onink) 8%, transparent);
+  }
+  aside.summary h2{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    color:var(--text-onink-soft);
+    margin-bottom:16px;
+    font-family:"Segoe UI",sans-serif;
+  }
+  .stamp{
+    border:2px solid var(--gold);
+    border-radius:4px;
+    padding:16px 18px;
+    margin-bottom:22px;
+    transform:rotate(-0.4deg);
+  }
+  .stamp.negative{border-color:var(--debit);}
+  .stamp .stamp-label{
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold-bright);
+    margin-bottom:4px;
+  }
+  .stamp.negative .stamp-label{color:#e08376;}
+  .stamp .stamp-value{
+    font-size:clamp(24px, 7vw, 32px);
+    font-family:"Courier New",Consolas,monospace;
+    font-weight:700;
+    color:var(--gold-bright);
+  }
+  .stamp.negative .stamp-value{color:#e08376;}
+  .stamp .stamp-sub{
+    font-size:11.5px;
+    color:var(--text-onink-soft);
+    margin-top:4px;
+  }
+
+  .summary-line{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:6px 0;
+    border-bottom:1px solid color-mix(in srgb, var(--text-onink) 8%, transparent);
+    font-size:13.5px;
+  }
+  .summary-line .l{color:var(--text-onink-soft);}
+  .summary-line .v{font-family:"Courier New",Consolas,monospace;}
+  .summary-line.credit .v{color:#7fd6ae;}
+  .summary-line.debit .v{color:#ef9a8c;}
+  .summary-line.total{
+    border-bottom:none;
+    border-top:1px solid color-mix(in srgb, var(--text-onink) 20%, transparent);
+    margin-top:4px;
+    padding-top:10px;
+    font-size:15px;
+    font-weight:700;
+  }
+
+  .source-note{
+    font-size:11px;
+    color:var(--text-onink-soft);
+    margin:-14px 0 18px;
+  }
+
+  .chart-block{margin-top:26px;}
+  .chart-block h2{margin-bottom:10px;}
+  .chart-block svg{max-width:100%; height:auto; display:block;}
+
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:10px;
+    font-size:11px;
+    color:var(--text-onink-soft);
+  }
+  .legend span.dot{
+    display:inline-block;
+    width:8px;height:8px;
+    border-radius:50%;
+    margin-right:5px;
+  }
+  .legend span.line-swatch{
+    display:inline-block;
+    width:14px;height:2px;
+    border-radius:1px;
+    margin-right:5px;
+    vertical-align:middle;
+  }
+
+  /* Loonstijging: gegevenstabel */
+  .table-wrap{overflow-x:auto; padding:2px 0 12px;}
+  .loonstijging-table{width:100%; border-collapse:collapse; font-size:11.5px; white-space:nowrap;}
+  .loonstijging-table th{
+    text-align:right; padding:7px 12px 6px; color:var(--text-soft);
+    font-weight:600; font-size:10.5px; letter-spacing:.01em;
+    border-bottom:1px solid var(--rule);
+  }
+  .loonstijging-table th:first-child, .loonstijging-table td:first-child{text-align:left;}
+  .loonstijging-table td{
+    text-align:right; padding:6px 12px;
+    border-bottom:1px solid rgba(216,205,180,.6);
+  }
+  .loonstijging-table td.strong{font-weight:700; color:var(--forest);}
+  .loonstijging-table tbody tr:hover{background:color-mix(in srgb, var(--gold) 7%, transparent);}
+  .loonstijging-table tr.synced-row{background:color-mix(in srgb, var(--credit) 8%, transparent);}
+  .loonstijging-table tr.synced-row:hover{background:color-mix(in srgb, var(--credit) 14%, transparent);}
+  .synced-dot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--credit); vertical-align:middle; margin-left:2px;}
+  /* Jaartal van een gekoppelde (groen-bolletje) rij is een echte knop geworden — springt direct
+     naar dat jaar-tabblad, zonder de omweg via het menu. Oogt verder als gewone tekst totdat je
+     eroverheen hovert, zodat de tabel niet ineens vol "knoppen" oogt. */
+  .jaar-link{
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .jaar-link:hover{ color: var(--gold-bright); text-decoration: underline; }
+  .jaar-link:focus-visible{ outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
+
+  /* Loonstijging: lijngrafiek met hover-crosshair + tooltip */
+  .lchart-wrap{
+    position:relative;
+    /* Ruimte reserveren bovenaan speciaal voor het tooltipje, zodat het nooit over de bolletjes
+       of hun klikbare cirkel heen kan vallen — het tooltipje (top:0, hieronder) staat altijd in
+       deze strook, los van de grafiek zelf die daaronder begint. */
+    padding-top:76px;
+  }
+  .lchart-tooltip{
+    position:absolute;
+    pointer-events:none;
+    background:color-mix(in srgb, var(--ink) 96%, transparent);
+    border:1px solid color-mix(in srgb, var(--text-onink) 15%, transparent);
+    border-radius:4px;
+    padding:8px 10px;
+    font-family:"Segoe UI",sans-serif;
+    font-size:11px;
+    color:var(--text-onink-soft);
+    white-space:nowrap;
+    opacity:0;
+    transition:opacity .1s;
+    z-index:5;
+  }
+  .lchart-tooltip.visible{opacity:1;}
+  .lchart-tooltip .tt-year{font-weight:700; color:var(--text-onink); margin-bottom:5px; font-size:12px;}
+  .lchart-tooltip .tt-row{display:flex; align-items:center; gap:6px; margin-top:3px;}
+  .lchart-tooltip .tt-key{width:12px; height:2px; border-radius:1px; flex-shrink:0;}
+  .lchart-tooltip .tt-val{font-weight:700; color:var(--text-onink); font-family:"Courier New",monospace; font-size:11.5px;}
+  .lchart-tooltip .tt-label{color:var(--text-onink-soft);}
+
+  .actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:26px;
+  }
+  .actions button{
+    flex:1 1 100px;
+    background:transparent;
+    border:1px solid color-mix(in srgb, var(--text-onink) 25%, transparent);
+    color:var(--text-onink-soft);
+    padding:8px 10px;
+    font-size:12px;
+    border-radius:3px;
+    cursor:pointer;
+    font-family:"Segoe UI",sans-serif;
+  }
+  .actions button:hover{border-color:var(--gold); color:var(--gold-bright);}
+  .actions button.danger:hover{border-color:var(--debit); color:#e08376;}
+  .actions button.primary{background:var(--gold); border-color:var(--gold); color:var(--ink);}
+  .actions button.primary:hover{background:var(--gold-bright); border-color:var(--gold-bright); color:var(--ink);}
+  .actions button:disabled{opacity:.6; cursor:default;}
+
+  /* Login/versleutelings-overlay — staat bovenop alles totdat je bent ingelogd én je
+     versleutelingswachtwoord hebt ingevoerd. */
+  .auth-gate{
+    position:fixed; inset:0; z-index:1000;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--paper-2);
+    padding:20px;
+  }
+  .auth-gate-box{
+    width:100%; max-width:360px;
+    background:var(--paper);
+    border:1px solid var(--rule);
+    border-radius:8px;
+    padding:28px 26px;
+    box-shadow:0 8px 30px rgba(0,0,0,.12);
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .auth-gate-title{font-size:22px; font-weight:700; color:var(--forest); margin-bottom:2px;}
+  .auth-gate-title2{font-size:15px; font-weight:700; color:var(--text);}
+  .auth-gate-subtitle{font-size:12.5px; color:var(--text-soft); line-height:1.5; margin:0 0 6px;}
+  .auth-gate-box label{display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--text-soft);}
+  .auth-gate-box input{
+    font-family:inherit; font-size:14px; padding:8px 10px;
+    border:1px solid var(--rule); border-radius:4px; background:var(--paper); color:var(--text);
+  }
+  .auth-gate-box input:focus{outline:none; border-color:var(--gold);}
+  .auth-gate-box button{
+    font-family:"Segoe UI",sans-serif; font-size:13.5px; padding:9px 12px;
+    border-radius:4px; border:1px solid var(--rule); background:transparent; color:var(--text);
+    cursor:pointer;
+  }
+  .auth-gate-box button.primary{background:var(--forest); border-color:var(--forest); color:#fff;}
+  .auth-gate-box button.primary:hover{opacity:.9;}
+  .auth-gate-box button.ghost{background:transparent; color:var(--text-soft); border-color:transparent; font-size:12px;}
+  .auth-gate-box button.ghost:hover{text-decoration:underline;}
+  .auth-gate-box button:disabled{opacity:.6; cursor:default;}
+  .auth-gate-error{font-size:12px; color:var(--debit); background:color-mix(in srgb, var(--debit) 12%, transparent); border-radius:4px; padding:8px 10px;}
+  .auth-gate-notice{font-size:12px; color:var(--forest); background:color-mix(in srgb, var(--forest) 12%, transparent); border-radius:4px; padding:8px 10px;}
+
+  .save-status{
+    margin-top:10px;
+    font-size:11px;
+    color:var(--text-onink-soft);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .save-status .dot{
+    display:inline-block;
+    width:7px;height:7px;
+    border-radius:50%;
+    background:var(--text-onink-soft);
+    flex-shrink:0;
+  }
+  .save-status.on .dot{background:#7fd6ae;}
+  .save-status.error{color:#ef9a8c;}
+  .save-status.error .dot{background:#ef9a8c;}
+
+  /* Maandbudget-vergelijking (CSV vs. gekozen maandbudget) */
+  .compare-picker{padding:2px 18px 14px;}
+  .compare-picker select{
+    font-family:"Segoe UI",sans-serif;
+    font-size:13px;
+    padding:6px 8px;
+    border:1px solid var(--rule);
+    border-radius:3px;
+    background:var(--paper);
+    color:var(--text);
+  }
+  .compare-head-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:4px 18px 6px;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--text-soft);
+    font-family:"Segoe UI",sans-serif;
+  }
+  .compare-head-row .compare-name{flex:1 1 120px;}
+  .compare-head-row .compare-col{width:78px; text-align:right; flex-shrink:0;}
+  .compare-rows{padding:2px 18px 10px;}
+  .compare-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:6px 0;
+    border-bottom:1px dashed var(--rule);
+    font-size:13px;
+  }
+  .compare-row:last-child{border-bottom:none;}
+  .compare-row .compare-name{
+    flex:1 1 120px;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .compare-row .compare-col{width:78px; text-align:right; flex-shrink:0;}
+  .compare-row.compare-total{
+    font-weight:700;
+    border-top:1px solid var(--rule);
+    border-bottom:none;
+    padding-top:8px;
+    margin-top:2px;
+  }
+  .compare-diff.good{color:var(--credit);}
+  .compare-diff.bad{color:var(--debit);}
+
+  footer.note{
+    padding:16px 32px 32px;
+    color:var(--text-onink-soft);
+    font-size:11.5px;
+    max-width:700px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Overlay die bovenop alles staat totdat er is ingelogd én het versleutelingswachtwoord is
+     ingevoerd — de inhoud wordt volledig door JS (renderAuthGate()) opgebouwd. -->
+<div id="authGate" class="auth-gate" style="display:none;"></div>
+
+<header>
+  <div class="header-top">
+    <div class="header-main">
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 id="mainTitle"></h1>
+    </div>
+    <div class="header-controls">
+      <div class="lang-toggle" id="langToggle">
+        <button class="lang-btn" data-lang="nl">NL</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+      </div>
+      <button class="mode-btn" id="modeBtn" title="Donkere modus">
+        <svg id="modeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.7 6.7 0 0 0 10.5 10.5z"/></svg>
+        <svg id="modeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="display:none;"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<input type="file" id="csvUploadInput" accept=".csv" style="display:none"/>
+
+<div class="layout">
+  <main class="categories" id="categories"></main>
+  <aside class="summary" id="summary"></aside>
+</div>
+
+<footer class="note" id="footerNote"></footer>
+
+<!-- Hier wordt bij het opslaan de laatste stand van de gegevens in dit bestand zelf gezet
+     (zie buildHtmlWithEmbeddedData() verderop) — zo is dit ene HTML-bestand altijd de volledige
+     app mét de laatste data ineen, overal te openen, ook zonder los opslagbestand. -->
+<script type="application/json" id="finbo-embedded-data">{"lang":"en","darkMode":true,"activeView":{"type":"budget","id":"b1787176078472_2705"},"activeScenario":2,"warmtefondsAftrek":false,"loonstijgingSelectedYear":2026,"months":[],"budgets":[{"id":"b1787177505545_3181","title":"December 2026","createdAt":1787177505545,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]}},{"id":"b1787177392616_9265","title":"November 2026","createdAt":1787177392616,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]}},{"id":"b1787176968403_4650","title":"Oktober 2026","createdAt":1787176968403,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]}},{"id":"b1787176139522_5031","title":"September 2026","createdAt":1787176139522,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]}},{"id":"b1787176078472_2705","title":"Augustus 2026","createdAt":1787176078472,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"United 85","v":85},{"l":"united 146","v":146},{"l":"ziggo","v":57}]}}],"loonstijging":[{"jaar":2018,"totaal":19200,"gemPerMaand":1600,"groeiPct":100,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":1600},{"jaar":2019,"totaal":22300,"gemPerMaand":1858.33,"groeiPct":16.15,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":1858.33},{"jaar":2020,"totaal":25600,"gemPerMaand":2133.33,"groeiPct":14.8,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":2133.33},{"jaar":2021,"totaal":30471,"gemPerMaand":2539.25,"groeiPct":19.03,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":2539.25},{"jaar":2022,"totaal":34615,"gemPerMaand":2884.58,"groeiPct":13.6,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":2884.58},{"jaar":2023,"totaal":41982,"gemPerMaand":3498.5,"groeiPct":21.28,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":3498.5},{"jaar":2024,"totaal":45123,"gemPerMaand":3760.25,"groeiPct":7.48,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":3760.25},{"jaar":2025,"totaal":47024,"gemPerMaand":3918.67,"groeiPct":4.21,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4168.67},{"jaar":2026,"totaal":48830,"gemPerMaand":4069.17,"groeiPct":3.84,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4319.17},{"jaar":2027,"totaal":50310,"gemPerMaand":4192.5,"groeiPct":3.03,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4442.5},{"jaar":2028,"totaal":51820,"gemPerMaand":4318.33,"groeiPct":3,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4568.33},{"jaar":2029,"totaal":52974,"gemPerMaand":4414.5,"groeiPct":2.23,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4664.5},{"jaar":2030,"totaal":53783,"gemPerMaand":4481.92,"groeiPct":1.53,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4731.92}],"scenarios":[{"label":"Basisdata","jaar":2026,"locked":true,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]},"loonstijging":null},{"label":"2027","jaar":2027,"locked":true,"income":{"items":[{"l":"Loon","v":3952.73,"note":{"nl":"Berekend via het loonsverhoging-blok 2027 hierboven (loon vorig jaar + vast bedrag, dan percentage)","en":"Calculated via the 2027 raise block above (previous year's salary + fixed amount, then percentage)"}},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]},"loonstijging":{"vast":100,"pct":0}},{"label":"2028","jaar":2028,"locked":true,"income":{"items":[{"l":"Loon","v":4052.73,"note":{"nl":"Berekend via het loonsverhoging-blok 2028 hierboven (loon vorig jaar + vast bedrag, dan percentage)","en":"Calculated via the 2028 raise block above (previous year's salary + fixed amount, then percentage)"}},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]},"loonstijging":{"vast":100,"pct":0}},{"label":"2029","jaar":2029,"locked":false,"income":{"items":[{"l":"Loon","v":4152.73,"note":{"nl":"Berekend via het loonsverhoging-blok 2029 hierboven (loon vorig jaar + vast bedrag, dan percentage)","en":"Calculated via the 2029 raise block above (previous year's salary + fixed amount, then percentage)"}},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]},"loonstijging":{"vast":100,"pct":0}},{"label":"2030","jaar":2030,"locked":false,"income":{"items":[{"l":"Loon","v":4252.73,"note":{"nl":"Berekend via het loonsverhoging-blok 2030 hierboven (loon vorig jaar + vast bedrag, dan percentage)","en":"Calculated via the 2030 raise block above (previous year's salary + fixed amount, then percentage)"}},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]},"loonstijging":{"vast":100,"pct":0}}]}</script>
+
+<!-- Supabase-client (cloud-database + inloggen) — moet vóór het hoofdscript geladen zijn. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<script>
+/* Allereerste statement: leg de pagina exact vast zoals hij statisch is geladen (nog vóórdat er
+   ook maar iets door JS is gerenderd/gewijzigd). Dit is de "schone mal" die bij het opslaan wordt
+   hergebruikt — steeds mal + verse data, nooit de inmiddels dooer JS opgebouwde/gemuteerde DOM. */
+const PRISTINE_HTML = document.documentElement.outerHTML;
+
+/* ---------- TRANSLATIONS ---------- */
+const MONTHS_NL = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
+const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+const i18n = {
+  nl: {
+    eyebrow: "FinBo",
+    title: "Waar gaat het geld heen?",
+    darkModeBtn: "Donkere modus",
+    lightModeBtn: "Lichte modus",
+    footer: "Let op: dit is een werkkopie van de Basistabel, opnieuw opgebouwd als losstaande app. Vier onderdelen zijn bewust weggelaten t.o.v. het origineel: het inkomstenblok van Krien (stond op € 0), de gezamenlijke inkomsten/toeslagen, het kindgebonden budget en het aparte bruto/hypotheekcapaciteit-blok onderaan het tabblad (bevatte een kapotte formule en een link naar een extern bestand) — die kunnen in een volgende versie alsnog worden toegevoegd. Maandoverzichten worden automatisch ingedeeld met een vertaallijst van bekende tegenpartijen; niet-herkende posten belanden in “Overig” zodat je ze kunt controleren.",
+    scenariosLabel: "Scenario's",
+    monthsLabel: "Maandoverzichten",
+    uploadBtn: "+ Upload maand-CSV",
+    income: "Inkomsten",
+    vasteLasten: "Gedeelde vaste lasten",
+    abonnementen: "Abonnementen",
+    variabeleLasten: "Gedeelde variabele lasten",
+    overigUitgaven: "Overige uitgaven (niet herkend)",
+    overigInkomsten: "Overige inkomsten (niet herkend)",
+    reviewTitle: "Nog in te delen",
+    reviewNote: "Niet automatisch herkend. Kies per post een blok en klik op Toevoegen — deze lijst telt zelf niet mee in het saldo, pas na toevoegen wel.",
+    addBtn: "Toevoegen",
+    reverseBtn: "Ongedaan maken",
+    verhogingen: "Nieuw jaar",
+    indexLabel: "Indexverhoging (vast bruto bedrag)",
+    pctLabel: "Percentage (over loon + indexcijfer)",
+    loonNaIndex: "Loon na indexverhoging",
+    loonNaPct: "Loon na loonsverhoging 2 (percentage over bovenstaande)",
+    nieuwJaarInfo: (nextJaar, latestJaar) => `Maakt ${nextJaar} aan als kopie van ${latestJaar}, met een eigen loonsverhoging-blok (start gelijk aan dat van ${latestJaar}) dat je daarna op de nieuwe jaar-pagina zelf kunt aanpassen.`,
+    nieuwJaarBtn: (jaar) => `+ Nieuw jaar toevoegen (${jaar})`,
+    loonsverhogingTitle: (jaar) => `Loonsverhoging ${jaar}`,
+    vorigJaarLoon: (jaar) => `Loon ${jaar}`,
+    nieuwLoonResultaat: (jaar) => `Loon ${jaar}`,
+    loonBerekendNote: (jaar) => `Berekend via het loonsverhoging-blok ${jaar} hierboven (loon vorig jaar + vast bedrag, dan percentage)`,
+    deleteScenarioBtn: "Verwijder dit jaar",
+    deleteScenarioConfirm: "Dit jaar verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    addRow: "+ regel toevoegen",
+    delRow: "Verwijderen",
+    newItem: "Nieuwe post",
+    inclVerhoging: "incl. verhoging",
+    overTeSpenderen: "Over te spenderen",
+    tekort: "Tekort per maand",
+    stampSub: "Netto inkomsten − totale uitgaven",
+    nettoInkomsten: "Netto inkomsten",
+    saldo: "Saldo",
+    chartTitle1: "Opbouw budget per scenario",
+    chartTitle1Month: "Opbouw budget",
+    chartTitle2: "Verdeling uitgaven",
+    totaal: "Totaal",
+    exportBtn: "Exporteer kopie",
+    importBtn: "Importeer bestand",
+    resetBtn: "Reset",
+    deleteMonthBtn: "Verwijder deze maand",
+    deleteMonthConfirm: "Dit maandoverzicht verwijderen?",
+    resetConfirm: "Alle wijzigingen ongedaan maken en teruggaan naar de basiswaarden?",
+    importError: "Kon dit bestand niet lezen: ",
+    csvParseError: "Kon deze CSV niet verwerken: ",
+    saveNowBtn: "Opslaan",
+    saveNowSaving: "Bezig met opslaan…",
+    saveNowSaved: "Opgeslagen ✓",
+    cloudSaveStatus: (email) => `Cloud-sync actief (${email})`,
+    cloudSaveOff: "Niet ingelogd.",
+    cloudSaveErrorStatus: "Opslaan naar de cloud mislukt — controleer je internetverbinding. Je wijzigingen staan nog wel lokaal in de app en worden opnieuw geprobeerd.",
+    logoutBtn: "Uitloggen",
+    loginTitle: "Inloggen bij FinBo",
+    loginSubtitle: "Je data wordt lokaal versleuteld vóórdat 'm de cloud in gaat — alleen jij kunt 'm lezen.",
+    loginEmailLabel: "E-mailadres",
+    loginPasswordLabel: "Wachtwoord",
+    loginSignInBtn: "Inloggen",
+    loginSignUpBtn: "Account aanmaken",
+    loginToggleToSignUp: "Nog geen account? Account aanmaken",
+    loginToggleToSignIn: "Al een account? Inloggen",
+    loginErrorPrefix: "Inloggen mislukt: ",
+    loginConfirmEmailNotice: "Bijna klaar — check je e-mail voor een bevestigingslink, en log daarna in.",
+    encryptionPromptTitleExisting: "Versleutelingswachtwoord",
+    encryptionPromptTextExisting: "Voer je versleutelingswachtwoord in om je data te ontsleutelen.",
+    encryptionPromptTitleNew: "Kies een versleutelingswachtwoord",
+    encryptionPromptTextNew: "Dit wachtwoord versleutelt je data lokaal, vóórdat 'm naar de cloud gaat — bewaar het goed. Zonder dit wachtwoord is je data later niet meer terug te halen, ook niet door ons.",
+    encryptionPasswordLabel: "Versleutelingswachtwoord",
+    encryptionConfirmLabel: "Bevestig wachtwoord",
+    encryptionSubmitBtn: "Doorgaan",
+    encryptionMismatch: "De wachtwoorden komen niet overeen.",
+    encryptionWrongPassword: "Kon niet ontsleutelen — waarschijnlijk is het wachtwoord onjuist.",
+    firstTimeChoiceTitle: "Nog geen cloud-data voor dit account",
+    firstTimeChoiceText: "Wil je de data uit dit geopende bestand als beginpunt gebruiken, of leeg beginnen?",
+    firstTimeImportBtn: "Gebruik data uit dit bestand",
+    firstTimeBlankBtn: "Begin leeg",
+    warmtefondsToggleLabel: "Warmtefonds aftrekken van UN-Gas+elec (voorkomt dubbeltelling)",
+    warmtefondsNote: (v) => `Warmtefonds (€ ${v}) is hier al van afgetrokken`,
+    sourceNote: (name, n) => `Bron: ${name} — ${n} transacties automatisch ingedeeld`,
+    months: MONTHS_NL,
+    legendNetto: "Netto inkomsten",
+    legendUitgaven: "Totale uitgaven",
+    legendOver: "Over te spenderen",
+    legendTekort: "Tekort",
+    navLoonstijging: "Salaris groei",
+    groeiGroupLabel: "Groei",
+    loonstijgingEyebrow: "Loonstijgingstabel",
+    loonstijgingTitle: "Netto inkomen vs kosten per maand",
+    loonstijgingSub: "Bron: tabblad “Loonstijging 2021-2030” uit Rekensheet 2026.xlsx. Jaren met een groen bolletje (2026 en verder) zijn gekoppeld aan een tabblad hierboven — Gemiddeld/Totaal per maand en Totaal per jaar komen dan live uit dat tabblad, niet uit de Excel. De kolom Kosten komt nooit uit de Excel: die is altijd de actuele totale uitgaven van Basisdata.",
+    colJaar: "Jaar",
+    colTotaalJaar: "Totaal per jaar",
+    colGemPerMaand: "Gemiddeld per maand",
+    colGroeiPct: "Groei %",
+    colKosten: "Kosten",
+    colExtra: "Extra inkomsten",
+    colTotaalPerMaand: "Totaal inkomsten per maand",
+    legendNettoInkomen: "Netto inkomen per maand",
+    legendKosten: "Kosten",
+    loonstijgingClickHint: "Klik op een bolletje in de grafiek om dat jaar hierboven te tonen.",
+    loonstijgingSyncedRowTitle: "Dit jaar is gekoppeld aan een tabblad en wordt live bijgewerkt. Klik op het jaartal om er direct naartoe te gaan.",
+    kostenUitBasisdata: "Kosten (uit Basisdata)",
+    kostenUitBasisdataNote: "Vaste lasten, abonnementen en variabele lasten volgen altijd Basisdata. Wijzig ze daar — dat werkt hier direct door.",
+    maandbudgettenLabel: "Maandbudgetten",
+    jarenLabel: "Jaren",
+    collapseGroupBtn: "In-/uitklappen",
+    maandbudgetCardTitle: "Maandbudget",
+    maandbudgetCardInfo: "Maakt een nieuwe, losse momentopname van de huidige Basisdata-waarden (inkomsten + alle kosten). Verandert daarna niet meer mee met latere wijzigingen in Basisdata.",
+    nieuwBudgetBtn: "+ Nieuw maandbudget",
+    maandbudgetTitleLabel: "Titel",
+    deleteBudgetBtn: "Verwijder dit maandbudget",
+    deleteBudgetConfirm: "Dit maandbudget verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    compareWithLabel: "Vergelijk met maandbudget",
+    noBudgetOption: "— geen maandbudget —",
+    noBudgetSelected: "Nog geen maandbudget gekozen (of nog geen maandbudget aangemaakt). Maak op Basisdata een maandbudget aan en kies het hierboven om te vergelijken.",
+    compareBudgetCol: "Begroot",
+    compareActualCol: "Werkelijk",
+    compareDiffCol: "Verschil",
+    begrootSaldo: (title) => `Begroot saldo (${title})`,
+    verschilMetBudget: "Verschil met budget",
+  },
+  en: {
+    eyebrow: "FinBo",
+    title: "Where does the money go?",
+    darkModeBtn: "Dark mode",
+    lightModeBtn: "Light mode",
+    footer: "Note: this is a working copy of the Basistabel, rebuilt as a standalone app. Four parts were deliberately left out compared to the original: Krien's income block (was € 0), joint income/benefits, the child budget, and the separate gross/mortgage-capacity block at the bottom of the tab (contained a broken formula and a link to an external file) — these could still be added in a future version. Monthly overviews are auto-categorised using a lookup list of known counterparties; unrecognised items land in “Other” so you can review them.",
+    scenariosLabel: "Scenarios",
+    monthsLabel: "Monthly overviews",
+    uploadBtn: "+ Upload month CSV",
+    income: "Income",
+    vasteLasten: "Shared fixed costs",
+    abonnementen: "Subscriptions",
+    variabeleLasten: "Shared variable costs",
+    overigUitgaven: "Other expenses (unrecognised)",
+    overigInkomsten: "Other income (unrecognised)",
+    reviewTitle: "Still to be filed",
+    reviewNote: "Not auto-categorised. Pick a block for each item and click Add — this list doesn't count toward the balance itself, only once added.",
+    addBtn: "Add",
+    reverseBtn: "Reverse",
+    verhogingen: "New year",
+    indexLabel: "Index increase (fixed gross amount)",
+    pctLabel: "Percentage (over salary + index figure)",
+    loonNaIndex: "Salary after index increase",
+    loonNaPct: "Salary after raise 2 (percentage over the above)",
+    nieuwJaarInfo: (nextJaar, latestJaar) => `Creates ${nextJaar} as a copy of ${latestJaar}, with its own raise block (starts equal to ${latestJaar}'s) that you can then edit independently on the new year's page.`,
+    nieuwJaarBtn: (jaar) => `+ Add new year (${jaar})`,
+    loonsverhogingTitle: (jaar) => `Raise ${jaar}`,
+    vorigJaarLoon: (jaar) => `Salary ${jaar}`,
+    nieuwLoonResultaat: (jaar) => `Salary ${jaar}`,
+    loonBerekendNote: (jaar) => `Calculated via the ${jaar} raise block above (previous year's salary + fixed amount, then percentage)`,
+    deleteScenarioBtn: "Delete this year",
+    deleteScenarioConfirm: "Delete this year? This cannot be undone.",
+    addRow: "+ add line",
+    delRow: "Delete",
+    newItem: "New item",
+    inclVerhoging: "incl. raise",
+    overTeSpenderen: "Left to spend",
+    tekort: "Shortfall per month",
+    stampSub: "Net income − total expenses",
+    nettoInkomsten: "Net income",
+    saldo: "Balance",
+    chartTitle1: "Budget breakdown per scenario",
+    chartTitle1Month: "Budget breakdown",
+    chartTitle2: "Expense breakdown",
+    totaal: "Total",
+    exportBtn: "Export a copy",
+    importBtn: "Import file",
+    resetBtn: "Reset",
+    deleteMonthBtn: "Delete this month",
+    deleteMonthConfirm: "Delete this month overview?",
+    resetConfirm: "Undo all changes and go back to the base values?",
+    importError: "Could not read this file: ",
+    csvParseError: "Could not process this CSV: ",
+    saveNowBtn: "Save",
+    saveNowSaving: "Saving…",
+    saveNowSaved: "Saved ✓",
+    cloudSaveStatus: (email) => `Cloud sync active (${email})`,
+    cloudSaveOff: "Not signed in.",
+    cloudSaveErrorStatus: "Saving to the cloud failed — check your internet connection. Your changes are still in the app locally and will be retried.",
+    logoutBtn: "Sign out",
+    loginTitle: "Sign in to FinBo",
+    loginSubtitle: "Your data is encrypted locally before it goes to the cloud — only you can read it.",
+    loginEmailLabel: "Email address",
+    loginPasswordLabel: "Password",
+    loginSignInBtn: "Sign in",
+    loginSignUpBtn: "Create account",
+    loginToggleToSignUp: "No account yet? Create one",
+    loginToggleToSignIn: "Already have an account? Sign in",
+    loginErrorPrefix: "Sign-in failed: ",
+    loginConfirmEmailNotice: "Almost done — check your email for a confirmation link, then sign in.",
+    encryptionPromptTitleExisting: "Encryption password",
+    encryptionPromptTextExisting: "Enter your encryption password to decrypt your data.",
+    encryptionPromptTitleNew: "Choose an encryption password",
+    encryptionPromptTextNew: "This password encrypts your data locally, before it's sent to the cloud — keep it safe. Without this password your data can't be recovered later, not even by us.",
+    encryptionPasswordLabel: "Encryption password",
+    encryptionConfirmLabel: "Confirm password",
+    encryptionSubmitBtn: "Continue",
+    encryptionMismatch: "The passwords don't match.",
+    encryptionWrongPassword: "Couldn't decrypt — the password is probably wrong.",
+    firstTimeChoiceTitle: "No cloud data yet for this account",
+    firstTimeChoiceText: "Use the data from this open file as a starting point, or start blank?",
+    firstTimeImportBtn: "Use data from this file",
+    firstTimeBlankBtn: "Start blank",
+    warmtefondsToggleLabel: "Subtract Warmtefonds from UN-Gas+elec (avoids double-counting)",
+    warmtefondsNote: (v) => `Warmtefonds (€ ${v}) already subtracted here`,
+    sourceNote: (name, n) => `Source: ${name} — ${n} transactions auto-categorised`,
+    months: MONTHS_EN,
+    legendNetto: "Net income",
+    legendUitgaven: "Total expenses",
+    legendOver: "Left to spend",
+    legendTekort: "Shortfall",
+    navLoonstijging: "Salary growth",
+    groeiGroupLabel: "Growth",
+    loonstijgingEyebrow: "Salary growth table",
+    loonstijgingTitle: "Net income vs. costs per month",
+    loonstijgingSub: "Source: “Loonstijging 2021-2030” tab from Rekensheet 2026.xlsx. Years with a green dot (2026 onward) are linked to a tab above — Average/Total per month and Total per year then come live from that tab, not from the Excel. The Costs column never comes from the Excel — it's always the current total expenses from Basisdata.",
+    colJaar: "Year",
+    colTotaalJaar: "Total per year",
+    colGemPerMaand: "Average per month",
+    colGroeiPct: "Growth %",
+    colKosten: "Costs",
+    colExtra: "Extra income",
+    colTotaalPerMaand: "Total income per month",
+    legendNettoInkomen: "Net income per month",
+    legendKosten: "Costs",
+    loonstijgingClickHint: "Click a dot in the chart to show that year above.",
+    loonstijgingSyncedRowTitle: "This year is linked to a tab and updates live. Click the year to jump straight there.",
+    kostenUitBasisdata: "Costs (from Basisdata)",
+    kostenUitBasisdataNote: "Fixed costs, subscriptions and variable costs always follow Basisdata. Edit them there — it updates here immediately.",
+    maandbudgettenLabel: "Monthly budgets",
+    jarenLabel: "Years",
+    collapseGroupBtn: "Collapse/expand",
+    maandbudgetCardTitle: "Monthly budget",
+    maandbudgetCardInfo: "Creates a fresh, standalone snapshot of the current Basisdata values (income + all costs). Won't change again with later edits to Basisdata.",
+    nieuwBudgetBtn: "+ New monthly budget",
+    maandbudgetTitleLabel: "Title",
+    deleteBudgetBtn: "Delete this monthly budget",
+    deleteBudgetConfirm: "Delete this monthly budget? This cannot be undone.",
+    compareWithLabel: "Compare with monthly budget",
+    noBudgetOption: "— no monthly budget —",
+    noBudgetSelected: "No monthly budget chosen yet (or none created yet). Create one on Basisdata and select it above to compare.",
+    compareBudgetCol: "Budgeted",
+    compareActualCol: "Actual",
+    compareDiffCol: "Difference",
+    begrootSaldo: (title) => `Budgeted balance (${title})`,
+    verschilMetBudget: "Difference vs. budget",
+  }
+};
+function t(key){ return i18n[state.lang][key]; }
+
+/* Losse vertalingen voor specifieke posten (niet alle labels — alleen deze zijn gevraagd).
+   De onderliggende data blijft altijd het Nederlandse label; dit is alleen voor de weergave
+   in EN-modus. Als een gebruiker een vertaald label handmatig bewerkt, wordt dat de nieuwe
+   waarde (net als bij elk ander bewerkbaar veld). */
+const ITEM_LABEL_TRANSLATIONS = {
+  "Loon": "Income",
+  "Hypotheekrenteaftrek": "Mortgage interest deduction",
+  "Hypotheek": "Mortgage",
+  "Autoverzekering": "Car insurance",
+  "Zorgverzekering": "Medical care insurance",
+  "Eten": "Food",
+  "Hond eten": "Dog food",
+};
+function translateLabel(label){
+  if(state.lang !== "en") return label;
+  const key = (label||"").trim();
+  return ITEM_LABEL_TRANSLATIONS[key] || label;
+}
+
+/* Bron: tabblad "Loonstijging 2021-2030" uit Rekensheet 2026.xlsx (kolommen F t/m L).
+   "kosten" is in dat tabblad een vaste jaarlijkse aanname (niet per jaar herrekend);
+   "totaalPerMaand" = gemiddeld loon per maand + extra inkomsten. */
+const DEFAULT_LOONSTIJGING = [
+  { jaar:2018, totaal:19200,   gemPerMaand:1600,    groeiPct:100,  kosten:3922.46, extraInkomsten:0,   totaalPerMaand:1600 },
+  { jaar:2019, totaal:22300,   gemPerMaand:1858.33, groeiPct:16.15, kosten:3922.46, extraInkomsten:0,   totaalPerMaand:1858.33 },
+  { jaar:2020, totaal:25600,   gemPerMaand:2133.33, groeiPct:14.80, kosten:3922.46, extraInkomsten:0,   totaalPerMaand:2133.33 },
+  { jaar:2021, totaal:30471,   gemPerMaand:2539.25, groeiPct:19.03, kosten:3922.46, extraInkomsten:0,   totaalPerMaand:2539.25 },
+  { jaar:2022, totaal:34615,   gemPerMaand:2884.58, groeiPct:13.60, kosten:3922.46, extraInkomsten:0,   totaalPerMaand:2884.58 },
+  { jaar:2023, totaal:41982,   gemPerMaand:3498.50, groeiPct:21.28, kosten:3922.46, extraInkomsten:0,   totaalPerMaand:3498.50 },
+  { jaar:2024, totaal:45123,   gemPerMaand:3760.25, groeiPct:7.48,  kosten:3922.46, extraInkomsten:0,   totaalPerMaand:3760.25 },
+  { jaar:2025, totaal:47024,   gemPerMaand:3918.67, groeiPct:4.21,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4168.67 },
+  { jaar:2026, totaal:48830,   gemPerMaand:4069.17, groeiPct:3.84,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4319.17 },
+  { jaar:2027, totaal:50310,   gemPerMaand:4192.50, groeiPct:3.03,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4442.50 },
+  { jaar:2028, totaal:51820,   gemPerMaand:4318.33, groeiPct:3.00,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4568.33 },
+  { jaar:2029, totaal:52974,   gemPerMaand:4414.50, groeiPct:2.23,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4664.50 },
+  { jaar:2030, totaal:53783,   gemPerMaand:4481.92, groeiPct:1.53,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4731.92 },
+];
+
+/* ---------- STATE ---------- */
+/* Elk scenario/jaar heeft z'n eigen volledig onafhankelijke inkomsten/vaste lasten/abonnementen/
+   variabele lasten (geen gedeelde data meer tussen scenario's). Basisdata (2026), 2027 en 2028
+   zijn "locked" (niet verwijderbaar); alles wat via de knop
+   "+ Nieuw jaar" wordt aangemaakt komt erachter en is wel verwijderbaar. */
+function cloneItems(items){
+  return items.map(it => ({ l: it.l, v: it.v }));
+}
+function makeScenario(label, jaar, locked, incomeItems, vasteLastenItems, abonnementenItems, variabeleLastenItems, loonstijging){
+  return {
+    label, jaar, locked,
+    income: { items: cloneItems(incomeItems) },
+    vasteLasten: { items: cloneItems(vasteLastenItems) },
+    abonnementen: { items: cloneItems(abonnementenItems) },
+    variabeleLasten: { items: cloneItems(variabeleLastenItems) },
+    // Alleen voor niet-Basisdata jaren: eigen loonsverhoging-blok van dát jaar
+    // (vast bedrag + percentage), werkt door op het loon van dát jaar t.o.v. het jaar ervoor.
+    loonstijging: loonstijging ? { vast: loonstijging.vast, pct: loonstijging.pct } : null,
+  };
+}
+
+/* ---------- MAANDBUDGET ---------- */
+/* Een "maandbudget" is een losse, bevroren momentopname van de op dat moment actuele
+   Basisdata-waarden (inkomsten + alle kosten, per regel). Eenmaal aangemaakt verandert hij niet
+   meer mee met latere wijzigingen in Basisdata — een volgende momentopname pakt wél weer de dan
+   actuele waarden. Wordt gebruikt om een geüploade maand-CSV tegen te vergelijken (zie 3.3). */
+function makeBudget(title, source){
+  return {
+    id: "b" + Date.now() + "_" + Math.floor(Math.random()*10000),
+    title,
+    createdAt: Date.now(),
+    income: { items: cloneItems(source.income.items) },
+    vasteLasten: { items: cloneItems(source.vasteLasten.items) },
+    abonnementen: { items: cloneItems(source.abonnementen.items) },
+    variabeleLasten: { items: cloneItems(source.variabeleLasten.items) },
+  };
+}
+function createBudget(){
+  const bd = basisdataScenario();
+  const now = new Date();
+  const defaultTitle = `${t("months")[now.getMonth()]} ${now.getFullYear()}`;
+  const budget = makeBudget(defaultTitle, bd);
+  state.budgets.unshift(budget); // nieuwste bovenaan
+  state.activeView = { type:"budget", id: budget.id };
+  renderAll();
+}
+function budgetObjFromView(){
+  if(state.activeView.type !== "budget") return null;
+  return state.budgets.find(b=>b.id===state.activeView.id) || null;
+}
+
+const BASISDATA_INCOME = [
+  { l: "Loon", v: 3852.73 },
+  { l: "Hypotheekrenteaftrek", v: 568 },
+  { l: "Carina Blochberger", v: 77.29 },
+];
+const BASISDATA_VASTELASTEN = [
+  { l: "Hypotheek", v: 1258.01 },
+  { l: "UN-Gas+elec", v: 231.00 },
+  { l: "Water", v: 21.40 },
+  { l: "BsGW", v: 123.41 },
+  { l: "NN pakketverzekering", v: 77.04 },
+  { l: "Zorgverzekering", v: 184.38 },
+  { l: "Autoverzekering", v: 36.16 },
+  { l: "Wegenbelasting", v: 68.00 },
+  { l: "Dela", v: 11.47 },
+  { l: "TAF", v: 31.88 },
+  { l: "Warmtefonds", v: 156.45 },
+  { l: "Belasting Afbet", v: 93.00 },
+  { l: "Schenking", v: 225.00 },
+  { l: "Alimentatie", v: 420.00 },
+  { l: "Sparen kids", v: 17.00 },
+];
+const BASISDATA_ABONNEMENTEN = [
+  { l: "Viaplay", v: 19.99 },
+  { l: "Netflix", v: 9.99 },
+  { l: "Amazon Prime", v: 4.99 },
+  { l: "Vodafone", v: 75.67 },
+  { l: "Ziggo", v: 56.81 },
+  { l: "Boogschieten", v: 10.00 },
+  { l: "Scouting", v: 8.50 },
+  { l: "Tulip Assist", v: 20.95 },
+  { l: "Tulip Assist 2", v: 5.35 },
+];
+const BASISDATA_VARIABELELASTEN = [
+  { l: "Hond eten", v: 50.98 },
+  { l: "Cigaretten", v: 260.03 },
+  { l: "Eten", v: 470.79 },
+  { l: "Online", v: 114.74 },
+];
+let state = {
+  lang: "nl",
+  darkMode: false, // licht/donker-modus (hele UI, niet alleen de kaarten) — knop naast NL/EN in de header
+  activeView: { type: "scenario", index: 0 },
+  activeScenario: 0,
+  warmtefondsAftrek: true, // trekt Warmtefonds af van UN-Gas+elec (voorkomt dubbeltelling); alleen zichtbaar/instelbaar op Basisdata
+  loonstijgingSelectedYear: null, // jaar dat is aangeklikt op de Loonstijging-grafiek; null = huidig kalenderjaar (of laatste jaar als dat buiten bereik valt)
+  months: [],
+  budgets: [], // maandbudgetten: losse momentopnames van Basisdata (nieuwste eerst), zie makeBudget()
+  loonstijging: DEFAULT_LOONSTIJGING,
+  scenarios: [
+    // Basisdata: 2026, het basisjaar — inkomen hier is altijd direct bewerkbaar (geen eigen loonsverhoging-blok).
+    makeScenario("Basisdata", 2026, true, BASISDATA_INCOME, BASISDATA_VASTELASTEN, BASISDATA_ABONNEMENTEN, BASISDATA_VARIABELELASTEN),
+    // 2027: loon = loon Basisdata (2026) + eigen loonsverhoging-blok van 2027 (125 vast, 0%).
+    makeScenario("2027", 2027, true,
+      [{ l:"Loon", v: 3852.73 + 125 }, { l:"Hypotheekrenteaftrek", v:568 }, { l:"Carina Blochberger", v:77.29 }],
+      BASISDATA_VASTELASTEN, BASISDATA_ABONNEMENTEN, BASISDATA_VARIABELELASTEN,
+      { vast: 125, pct: 0 }),
+    // 2028: loon = loon 2027 + eigen loonsverhoging-blok van 2028 (0 vast, 2%).
+    makeScenario("2028", 2028, true,
+      [{ l:"Loon", v: Math.round((3852.73 + 125) * 1.02 * 100) / 100 }, { l:"Hypotheekrenteaftrek", v:568 }, { l:"Carina Blochberger", v:77.29 }],
+      BASISDATA_VASTELASTEN, BASISDATA_ABONNEMENTEN, BASISDATA_VARIABELELASTEN,
+      { vast: 0, pct: 2 }),
+  ],
+};
+
+/* Migratie voor oudere opgeslagen bestanden (vóór de onafhankelijke jaren): als het geladen bestand
+   nog de oude platte state.income/vasteLasten/abonnementen/variabeleLasten heeft, zet dat om naar
+   het nieuwe model zodat oude opslagbestanden/exports bruikbaar blijven. */
+function migrateState(){
+  if(!state.scenarios || !state.scenarios.length) return;
+  const legacy = state.income && state.vasteLasten && state.abonnementen && state.variabeleLasten;
+  if(legacy && !state.scenarios[0].income){
+    state.scenarios = state.scenarios.map((s,i) => makeScenario(
+      s.label, s.jaar || (2026+i), s.locked !== undefined ? s.locked : i < 3,
+      state.income.items, state.vasteLasten.items, state.abonnementen.items, state.variabeleLasten.items
+    ));
+    delete state.income; delete state.vasteLasten; delete state.abonnementen; delete state.variabeleLasten;
+  }
+  state.scenarios.forEach((s,i) => {
+    if(s.jaar === undefined) s.jaar = 2026 + i;
+    if(s.locked === undefined) s.locked = i < 3;
+  });
+  // Migratie naar per-jaar loonsverhoging-blokken: oudere opslagbestanden kennen dit veld nog niet.
+  // Voor elk niet-Basisdata jaar zonder "loonstijging" wordt een blok afgeleid dat het al opgeslagen
+  // loon exact reproduceert (vast bedrag = loon − loon vorig jaar, 0%), zodat bestaande cijfers bij
+  // het laden niet stilzwijgend veranderen. Vanaf dat moment is het blok gewoon los aanpasbaar.
+  state.scenarios.forEach((s,i) => {
+    if(i === 0){ s.loonstijging = null; return; }
+    if(s.loonstijging) return;
+    const prev = state.scenarios[i-1];
+    const huidigLoon = baseLoonRaw(s);
+    const vorigLoon = baseLoonRaw(prev);
+    s.loonstijging = { vast: Math.round((huidigLoon - vorigLoon) * 100) / 100, pct: 0 };
+  });
+  if(!state.verhogingen) state.verhogingen = undefined; // oud globaal blok wordt niet meer gebruikt
+  if(!state.budgets) state.budgets = [];
+  if(state.darkMode === undefined) state.darkMode = false;
+  // Oudere opslagbestanden kennen "budgetId" op een maand nog niet, of hadden nog geen maandbudget
+  // toen de maand werd geüpload. Koppel in dat geval automatisch aan het nieuwste maandbudget (als
+  // die er inmiddels is) zodat de vergelijking meteen iets zinvols toont; de gebruiker kan dit
+  // altijd nog wijzigen via de kiezer boven de vergelijking.
+  state.months.forEach(m=>{
+    if(m.budgetId === undefined) m.budgetId = state.budgets.length ? state.budgets[0].id : null;
+  });
+  syncComputedLoons();
+}
+
+const fmt = n => (isNaN(n) ? 0 : n).toLocaleString("nl-NL", {minimumFractionDigits:2, maximumFractionDigits:2});
+const sum = items => items.reduce((a,b)=>a+(parseFloat(b.v)||0),0);
+
+function activeScenarioObj(){
+  return state.scenarios[state.activeScenario] || state.scenarios[0];
+}
+function basisdataScenario(){
+  return state.scenarios[0];
+}
+function latestScenario(){
+  return state.scenarios[state.scenarios.length-1];
+}
+
+/* Loon wordt herkend aan het label "Loon" binnen Inkomsten van een scenario; overige
+   inkomstenposten (zoals hypotheekrenteaftrek) tellen ongewijzigd mee. */
+function getLoonItem(s){
+  return s.income.items.find(it => it.l.trim().toLowerCase() === "loon");
+}
+
+/* Ruwe, opgeslagen loonwaarde van een scenario (zonder de loonsverhoging-formule toe te passen).
+   Voor Basisdata is dit de daadwerkelijke, direct bewerkbare waarde. Voor andere jaren wordt dit
+   veld door syncComputedLoons() overschreven met computedLoon(s) — baseLoonRaw dient alleen als
+   ruwe lees-functie (o.a. bij migratie, vóórdat er een loonstijging-blok bestaat). */
+function baseLoonRaw(s){
+  const loonItem = getLoonItem(s);
+  return loonItem ? (parseFloat(loonItem.v)||0) : 0;
+}
+
+/* Het daadwerkelijke loon van een scenario. Basisdata (2026): direct bewerkbare waarde. Elk ander
+   jaar: loon van het jaar ervoor + het eigen loonsverhoging-blok van dát jaar (vast bedrag, dan
+   percentage) — cascadeert dus automatisch door: wijzig je 2027, dan werkt dat door in 2028, 2029, ... */
+function computedLoon(s){
+  const idx = state.scenarios.indexOf(s);
+  if(idx <= 0) return baseLoonRaw(s);
+  const prev = state.scenarios[idx-1];
+  const prevLoon = computedLoon(prev);
+  const vast = s.loonstijging ? (parseFloat(s.loonstijging.vast) || 0) : 0;
+  const pct = s.loonstijging ? (parseFloat(s.loonstijging.pct) || 0) : 0;
+  return Math.round((prevLoon + vast) * (1 + pct/100) * 100) / 100;
+}
+
+/* Zet voor elk niet-Basisdata jaar de opgeslagen Loon-waarde gelijk aan computedLoon(s), zodat
+   sum(items)/totalen/grafieken/Loonstijging-pagina overal automatisch de juiste, actuele waarde
+   zien zonder dat elke plek zelf de cascade hoeft te kennen. Wordt aan het begin van renderAll()
+   aangeroepen, dus altijd in sync na elke wijziging. */
+function syncComputedLoons(){
+  state.scenarios.forEach(s => {
+    if(s === basisdataScenario()) return;
+    const loonItem = getLoonItem(s);
+    if(loonItem) loonItem.v = computedLoon(s);
+  });
+}
+
+/* Alle kosten (vaste lasten, abonnementen, variabele lasten) komen altijd live van Basisdata —
+   ongeacht welk jaar er bekeken wordt. Elk jaar heeft dus identieke kosten; alleen het (eigen,
+   los aanpasbare) inkomen per jaar verschilt. Zie ontwerp-doc §3.1. */
+function vasteLastenTotal(){
+  const bd = basisdataScenario();
+  const warmtefondsItem = bd.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "warmtefonds");
+  const warmtefondsVal = (state.warmtefondsAftrek && warmtefondsItem) ? (parseFloat(warmtefondsItem.v)||0) : 0;
+  return sum(bd.vasteLasten.items) - warmtefondsVal;
+}
+function basisdataCostTotals(){
+  const bd = basisdataScenario();
+  const vasteLasten = vasteLastenTotal();
+  const abonnementen = sum(bd.abonnementen.items);
+  const variabeleLasten = sum(bd.variabeleLasten.items);
+  return { vasteLasten, abonnementen, variabeleLasten, totaalUitgaven: vasteLasten + abonnementen + variabeleLasten };
+}
+
+function scenarioTotals(s){
+  const costs = basisdataCostTotals();
+  const netIncome = sum(s.income.items);
+  const overTeSpenderen = netIncome - costs.totaalUitgaven;
+  return { vasteLasten: costs.vasteLasten, abonnementen: costs.abonnementen, variabeleLasten: costs.variabeleLasten,
+    totaalUitgaven: costs.totaalUitgaven, netIncome, overTeSpenderen };
+}
+
+/* computeTotals() geeft de cijfers van het ACTIEVE scenario terug (zoals voorheen), plus arrays
+   met de waarden van alle scenario's samen (nodig voor de staafgrafiek die alle jaren toont). */
+function computeTotals(){
+  const perScenario = state.scenarios.map(scenarioTotals);
+  const active = perScenario[state.activeScenario] || perScenario[0];
+  return {
+    ...active,
+    netIncome: perScenario.map(p=>p.netIncome),
+    overTeSpenderen: perScenario.map(p=>p.overTeSpenderen),
+    vasteLastenPerScenario: perScenario.map(p=>p.vasteLasten),
+    abonnementenPerScenario: perScenario.map(p=>p.abonnementen),
+    variabeleLastenPerScenario: perScenario.map(p=>p.variabeleLasten),
+    totaalUitgavenPerScenario: perScenario.map(p=>p.totaalUitgaven),
+  };
+}
+
+/* Actuele totale vaste kosten van Basisdata (2026) — ongeacht welk tabblad actief is. Basisdata
+   staat altijd op index 0. Gebruikt door de Loonstijging-pagina in plaats van de vaste Excel-aanname. */
+function huidigKosten(){
+  return basisdataCostTotals().totaalUitgaven;
+}
+
+/* Loonstijging 2018-2030, waarbij elk jaar dat een scenario heeft (Basisdata 2026, 2027, 2028,
+   en elk zelf aangemaakt jaar erna) "Gemiddeld per maand" en "Totaal
+   inkomsten per maand" live overneemt uit dat scenario's inkomsten, i.p.v. de vaste Excel-waarde.
+   "Totaal per jaar" is steeds gemiddelde × 12 (netto-naar-jaar-omrekening — bevestigd te kloppen
+   met de originele Excel-cijfers, bijv. 2025: 3.918,67 × 12 = 47.024,04 ≈ 47.024). "Groei %" wordt
+   voor elk jaar herberekend t.o.v. het vorige jaar in deze reeks, zodat een gekoppeld jaar ook de
+   groei van het jaar erna correct laat zien (i.p.v. de nu mogelijk achterhaalde vaste Excel-waarde). */
+function effectiveLoonstijgingRows(){
+  // Unie van de statische Excel-jaren (2018-2030) en alle jaren die een scenario hebben — zo
+  // krijgt bijv. een zelf aangemaakt jaar 2031 (buiten de oorspronkelijke Excel-reeks) ook
+  // automatisch een rij, puur op basis van dat scenario, zonder statische Excel-data nodig te hebben.
+  const staticByYear = {};
+  state.loonstijging.forEach(r => { staticByYear[r.jaar] = r; });
+  const years = new Set(state.loonstijging.map(r => r.jaar));
+  state.scenarios.forEach(s => years.add(s.jaar));
+  const sortedYears = Array.from(years).sort((a,b) => a - b);
+
+  let prevGem = null;
+  return sortedYears.map(jaar => {
+    const row = staticByYear[jaar];
+    const matchedScenario = state.scenarios.find(s => s.jaar === jaar);
+    let gemPerMaand, extraInkomsten, totaalPerMaand, synced, kosten;
+    if(matchedScenario){
+      gemPerMaand = sum(matchedScenario.income.items);
+      extraInkomsten = 0;
+      totaalPerMaand = gemPerMaand;
+      synced = true;
+      kosten = row ? row.kosten : huidigKosten();
+    } else {
+      gemPerMaand = row.gemPerMaand;
+      extraInkomsten = row.extraInkomsten;
+      totaalPerMaand = row.totaalPerMaand;
+      synced = false;
+      kosten = row.kosten;
+    }
+    const totaal = Math.round(gemPerMaand * 12 * 100) / 100;
+    const groeiPct = prevGem !== null ? Math.round(((gemPerMaand/prevGem - 1) * 100) * 100) / 100 : (row ? row.groeiPct : 0);
+    prevGem = gemPerMaand;
+    return { jaar, totaal, gemPerMaand, groeiPct, kosten, extraInkomsten, totaalPerMaand, synced };
+  });
+}
+
+function computeMonthTotals(m){
+  const income = sum(m.income.items);
+  const vasteLasten = sum(m.vasteLasten.items);
+  const abonnementen = sum(m.abonnementen.items);
+  const variabeleLasten = sum(m.variabeleLasten.items);
+  const totaalUitgaven = vasteLasten + abonnementen + variabeleLasten;
+  return { income, vasteLasten, abonnementen, variabeleLasten, totaalUitgaven };
+}
+
+function monthLabel(m){
+  const name = t("months")[m.monthIndex-1];
+  return `${m.year} ${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+}
+
+/* ---------- CSV IMPORT: parsing & vertaallijst (translation list) ---------- */
+function parseCSV(text){
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+  const s = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  for(let i=0;i<s.length;i++){
+    const c = s[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(s[i+1] === '"'){ field += '"'; i++; }
+        else { inQuotes = false; }
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ","){ row.push(field); field=""; }
+      else if(c === "\n"){ row.push(field); rows.push(row); row=[]; field=""; }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  const cleanRows = rows.filter(r => r.length>1 || (r.length===1 && r[0]!==""));
+  if(!cleanRows.length) return [];
+  const header = cleanRows[0];
+  return cleanRows.slice(1).map(r=>{
+    const obj = {};
+    header.forEach((h,idx)=>{ obj[h] = r[idx] !== undefined ? r[idx] : ""; });
+    return obj;
+  });
+}
+
+function parseNLAmount(s){
+  if(!s) return 0;
+  const cleaned = String(s).trim().replace(/\./g,"").replace(",", ".");
+  const v = parseFloat(cleaned);
+  return isNaN(v) ? 0 : v;
+}
+
+function detectMonthFromFilename(name){
+  const base = name.replace(/\.csv$/i,"");
+  const m = base.match(/(\d{4})(\d{2})$/);
+  if(m){
+    const year = parseInt(m[1],10);
+    const month = parseInt(m[2],10);
+    if(month>=1 && month<=12) return {year, month};
+  }
+  return null;
+}
+
+function detectMonthFromRows(rows){
+  const counts = {};
+  rows.forEach(r=>{
+    const d = r["Datum"];
+    if(d && /^\d{4}-\d{2}-\d{2}/.test(d)){
+      const key = d.slice(0,7);
+      counts[key] = (counts[key]||0)+1;
+    }
+  });
+  let best=null, bestCount=0;
+  Object.entries(counts).forEach(([k,c])=>{ if(c>bestCount){best=k;bestCount=c;} });
+  if(!best) return null;
+  const [y,mo] = best.split("-").map(Number);
+  return {year:y, month:mo};
+}
+
+/* Vertaallijst: koppelt bekende tegenpartijen/omschrijvingen aan een categorie + label,
+   gebaseerd op de posten die al in de Basistabel staan. Voeg hier gerust regels toe. */
+const CATEGORY_RULES = [
+  [["florius"], "vasteLasten","Hypotheek"],
+  [["unitedconsumers"], "vasteLasten","UN-Gas+elec"],
+  [["waterleiding maatschappij limburg"], "vasteLasten","Water"],
+  [["bsgw"], "vasteLasten","BsGW"],
+  [["confident limburg"], "vasteLasten","NN pakketverzekering"],
+  [["nationale-nederlanden zorg"], "vasteLasten","Zorgverzekering"],
+  [["voogd voogd verzekering"], "vasteLasten","Autoverzekering"],
+  [["dela"], "vasteLasten","Dela"],
+  [["taf bv"], "vasteLasten","TAF"],
+  [["jl boon cj"], "vasteLasten","Schenking"],
+  [["sophie"], "vasteLasten","Sparen kids"],
+  [["l.j.m.n. boon"], "vasteLasten","Sparen kids"],
+  [["s.e.s. boon"], "vasteLasten","Sparen kids"],
+
+  [["netflix"], "abonnementen","Netflix"],
+  [["amazon eu sarl"], "abonnementen","Amazon Prime"],
+  [["vodafone"], "abonnementen","Vodafone"],
+  [["ziggo"], "abonnementen","Ziggo"],
+  [["robin hood"], "abonnementen","Boogschieten"],
+  [["scouting amicus"], "abonnementen","Scouting"],
+  [["nent group","viaplay"], "abonnementen","Viaplay"],
+  [["lexa"], "abonnementen","Lexa"],
+
+  [["jumbo"], "variabeleLasten","Eten"],
+  [["ah-","ah jan linders","albert heijn"], "variabeleLasten","Eten"],
+  [["plus tim"], "variabeleLasten","Eten"],
+  [["aldi"], "variabeleLasten","Eten"],
+  [["lidl"], "variabeleLasten","Eten"],
+  [["pappie's meals","thuisbezorgd","takeaway","du chef"], "variabeleLasten","Eten"],
+
+  [["total nn001240"], "variabeleLasten","Cigaretten"],
+
+  [["hornbach"], "variabeleLasten","Bouwmarkten"],
+  [["action "], "variabeleLasten","Bouwmarkten"],
+  [["praxis"], "variabeleLasten","Bouwmarkten"],
+  [["gamma"], "variabeleLasten","Bouwmarkten"],
+  [["karwei"], "variabeleLasten","Bouwmarkten"],
+
+  [["paypal"], "variabeleLasten","Online"],
+  [["klarna"], "variabeleLasten","Online"],
+  [["coolblue"], "variabeleLasten","Online"],
+  [["amazon payments"], "variabeleLasten","Online"],
+  [["bol.com"], "variabeleLasten","Online"],
+  [["wehkamp"], "variabeleLasten","Online"],
+  [["tikkie"], "variabeleLasten","Online"],
+
+  [["maxi zoo"], "variabeleLasten","Hond eten"],
+  [["dierenzor"], "variabeleLasten","Hond eten"],
+
+  [["shell"], "variabeleLasten","Benzine"],
+  [["tinq"], "variabeleLasten","Benzine"],
+  [["esso"], "variabeleLasten","Benzine"],
+];
+
+function classifyTransaction(tx){
+  const partij = (tx["Naam tegenpartij"]||"").trim();
+  const initieel = (tx["Naam initiërende partij"]||"").trim();
+  const omschr = ((tx["Omschrijving-1"]||"") + " " + (tx["Omschrijving-2"]||"")).trim();
+  const naam = partij || initieel || (omschr ? omschr.slice(0,40) : "Onbekend");
+  const blobNaam = naam.toLowerCase();
+  const blobOmschr = omschr.toLowerCase();
+  const blob = blobNaam + " " + blobOmschr;
+  const amt = parseNLAmount(tx["Bedrag"]);
+  const redenRetour = (tx["Reden retour"]||"").trim();
+
+  // Herincasso/terugboeking: de bank markeert dit expliciet in "Reden retour"
+  // (bv. "MD06-Oneens met incasso"). Dit is technische ruis, geen echte kostenpost.
+  if(redenRetour){
+    return {cat:"ignore", naam, amt};
+  }
+
+  // Speciale gevallen die op bedrag/tekst binnen dezelfde tegenpartij splitsen
+  if(blobNaam.includes("belastingdienst")){
+    if(blobOmschr.includes("nj-dg-53")) return {cat:"vasteLasten", label:"Wegenbelasting", naam, amt};
+    if(blobOmschr.includes("ib/pvv") && amt>0) return {cat:"income", label:"Hypotheekrenteaftrek", naam, amt};
+    if(blobOmschr.includes("zorgtoeslag")) return {cat: amt>0 ? "income":"review", label:"Zorgtoeslag", naam, amt};
+    return {cat: amt<0 ? "vasteLasten":"review", label:"Belasting Afbet", naam, amt};
+  }
+  if(blobNaam.includes("blochberger")){
+    return amt<0 ? {cat:"vasteLasten", label:"Alimentatie", naam, amt} : {cat:"income", label:"Carina Blochberger", naam, amt};
+  }
+  if(blobNaam.includes("tulip assist")){
+    const isSmall = Math.abs(amt) < 12;
+    return {cat:"abonnementen", label: isSmall ? "Tulip Assist 2" : "Tulip Assist", naam, amt};
+  }
+  if(blobNaam.includes("xedule") || blobOmschr.includes("salaris")){
+    return {cat:"income", label:"Loon", naam, amt};
+  }
+  // Warmtefonds komt binnen via "Entrust Netherlands B.V." met de herkenning in de omschrijving,
+  // dus deze regel kijkt (als enige) ook naar de omschrijving i.p.v. alleen de tegenpartijnaam.
+  if(blob.includes("nationaalwarmtef") || blob.includes("warmtefonds")){
+    return {cat:"vasteLasten", label:"Warmtefonds", naam, amt};
+  }
+
+  // De algemene regels matchen bewust alleen op de tegenpartijnaam (niet de vrije omschrijving),
+  // zodat een toevallig woord in een omschrijving (bv. een voornaam) geen andere tegenpartij kaapt.
+  for(const [keys,cat,label] of CATEGORY_RULES){
+    if(keys.some(k=>blobNaam.includes(k))) return {cat,label,naam,amt};
+  }
+
+  return {cat:"review", label:naam, naam, amt};
+}
+
+function buildMonthFromCSV(rows, filename){
+  const ym = detectMonthFromFilename(filename) || detectMonthFromRows(rows);
+  if(!ym) throw new Error("Kon geen maand herkennen uit de bestandsnaam of de datums in het bestand.");
+  const key = `${ym.year}-${String(ym.month).padStart(2,"0")}`;
+
+  const cats = ["income","vasteLasten","abonnementen","variabeleLasten"];
+  const buckets = {}; cats.forEach(c=>buckets[c]={});
+  const reviewBucket = {};
+
+  let rowCount = 0;
+  rows.forEach(r=>{
+    if(r["Bedrag"] === undefined || r["Bedrag"] === "") return;
+    rowCount++;
+    const result = classifyTransaction(r);
+    const {cat,label,amt} = result;
+
+    if(cat === "ignore") return; // terugboeking/herincasso: bewust genegeerd
+
+    if(cat === "review"){
+      reviewBucket[label] = (reviewBucket[label]||0) + amt;
+      return;
+    }
+
+    // Een creditbedrag op een tegenpartij die normaal alleen kosten afschrijft, is zo goed als
+    // altijd een terugbetaling/correctie van een eerdere afschrijving — geen echte kostenpost.
+    // Alleen de "originele" afschrijvingen (en echte inkomsten) tellen dus mee.
+    if(cat !== "income" && amt > 0) return;
+
+    const isIncome = (cat === "income");
+    const contribution = isIncome ? amt : -amt; // kostenposten worden als positief bedrag opgeslagen
+    buckets[cat][label] = (buckets[cat][label]||0) + contribution;
+  });
+
+  const toItems = bucket => Object.entries(bucket)
+    .map(([l,v])=>({l, v: Math.round(v*100)/100}))
+    .filter(it=>Math.abs(it.v) > 0.001)
+    .sort((a,b)=> b.v - a.v);
+
+  const review = Object.entries(reviewBucket)
+    .map(([naam,amt])=>({ naam, amt: Math.round(amt*100)/100, target:null, addedItem:null }))
+    .filter(it=>Math.abs(it.amt) > 0.001)
+    .sort((a,b)=> Math.abs(b.amt) - Math.abs(a.amt));
+
+  return {
+    key,
+    year: ym.year,
+    monthIndex: ym.month,
+    sourceFile: filename,
+    rowCount,
+    income: { items: toItems(buckets.income) },
+    vasteLasten: { items: toItems(buckets.vasteLasten) },
+    abonnementen: { items: toItems(buckets.abonnementen) },
+    variabeleLasten: { items: toItems(buckets.variabeleLasten) },
+    review,
+  };
+}
+
+function upsertMonth(monthObj){
+  const idx = state.months.findIndex(m=>m.key===monthObj.key);
+  // Bij een hernieuwde upload van dezelfde maand: koppeling met een eerder gekozen maandbudget
+  // blijft behouden. Anders: standaard het nieuwste maandbudget (of geen, als er nog geen is).
+  monthObj.budgetId = (idx>=0 && state.months[idx].budgetId) ? state.months[idx].budgetId
+    : (state.budgets.length ? state.budgets[0].id : null);
+  if(idx>=0) state.months[idx] = monthObj; else state.months.push(monthObj);
+  state.months.sort((a,b)=> a.key.localeCompare(b.key));
+}
+
+function handleCSVUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try{
+      const bytes = new Uint8Array(ev.target.result);
+      const text = new TextDecoder("windows-1252").decode(bytes);
+      const rows = parseCSV(text);
+      const monthObj = buildMonthFromCSV(rows, file.name);
+      upsertMonth(monthObj);
+      state.activeView = { type:"month", key: monthObj.key };
+      renderAll();
+    }catch(err){
+      alert(t("csvParseError") + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = "";
+}
+
+/* ---------- OPSLAAN: DE DATA ZIT IN DIT HTML-BESTAND ZELF ----------
+   Geen los JSON-bestand meer. Bij het opslaan wordt dit hele HTML-bestand herschreven: de statische
+   "mal" (PRISTINE_HTML, hierboven als allereerste vastgelegd) met daarin de huidige `state` als JSON
+   ingebed in het lege <script type="application/json" id="finbo-embedded-data"> blokje. Zo blijft
+   het altijd één bestand — app + laatste data ineen — dat overal te openen is (ook op een telefoon,
+   die de data dan gewoon meteen ziet, zonder dat er iets hoeft te worden verbonden). Alleen om dat
+   ene bestand ook automatisch te kunnen wégschrijven is, net als eerst, een expliciete koppeling
+   (File System Access API) nodig — dat kan alleen in een desktopbrowser die dat ondersteunt.
+   Nog steeds bewust GEEN localStorage/sessionStorage voor de data zelf. Wél wordt, net als in de
+   vorige opzet, een kleine VERWIJZING naar het gekoppelde bestand (een FileSystemFileHandle, geen
+   data) in IndexedDB onthouden, zodat je niet elke keer opnieuw hoeft te verbinden. */
+
+/* Elke "<" moet ge-escaped worden zodat een categorienaam met daarin toevallig een scriptsluit-tag
+   het ingebedde datablok niet kan afbreken — < is een geldige JSON-escape en levert bij het
+   uitlezen gewoon weer het teken "<" op. */
+function buildHtmlWithEmbeddedData(){
+  const dataJson = JSON.stringify(state).replace(/</g, "\\u003C");
+  const withData = PRISTINE_HTML.replace(
+    /(<script type="application\/json" id="finbo-embedded-data">)[\s\S]*?(<\/script>)/,
+    (_m, open, close) => open + dataJson + close
+  );
+  return "<!DOCTYPE html>\n" + withData;
+}
+
+function readEmbeddedData(){
+  try{
+    const el = document.getElementById("finbo-embedded-data");
+    if(!el) return null;
+    const txt = el.textContent.trim();
+    if(!txt || txt === "{}") return null;
+    return JSON.parse(txt);
+  }catch(err){ console.error("Kon ingebedde data niet lezen:", err); return null; }
+}
+
+/* Zelfde truc, maar dan om de embedded data uit een extern HTML-bestand te lezen (bij handmatig
+   verbinden/importeren van een andere kopie van dit bestand). */
+function extractEmbeddedDataFromHtml(text){
+  const m = text.match(/<script type="application\/json" id="finbo-embedded-data">([\s\S]*?)<\/script>/);
+  if(!m) return null;
+  const txt = m[1].trim();
+  if(!txt || txt === "{}") return null;
+  return JSON.parse(txt);
+}
+
+/* ---------- CLOUD-SYNC: Supabase + client-side versleuteling ----------
+   Vervangt de oude "verbind een bestand op schijf"-opzet volledig. Dataflow:
+   - Inloggen (e-mail/wachtwoord) bij Supabase geeft een sessie — bepaalt WIE je bent.
+   - Een apart versleutelingswachtwoord (nooit naar Supabase gestuurd, nooit opgeslagen) bepaalt
+     of je de data kunt LEZEN — zelfs Supabase zelf ziet alleen de versleutelde blob.
+   - Bij elke wijziging (via scheduleAutoSave(), net als voorheen) wordt de state versleuteld en
+     naar je eigen rij in `finbo_state` geschreven (Row Level Security zorgt dat dat ook echt
+     alleen jouw rij kan zijn — zie finbo_supabase_setup.sql). */
+
+const SUPABASE_URL = "https://qlsnjlnzvbgwvyjnswvd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsc25qbG56dmJnd3Z5am5zd3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczOTIwNjQsImV4cCI6MjEwMjk2ODA2NH0.5kByeZpQjtB7DPeQtFidOUSrdGst1Ox5_wyUZ9g9wKo";
+
+/* ---- Versleuteling (WebCrypto: PBKDF2 sleutelafleiding + AES-GCM) ----
+   Zie finbo_crypto_module.js voor de losstaand geteste versie hiervan — functioneel identiek. */
+const FINBO_PBKDF2_ITERATIONS = 300000;
+function bufToBase64(buf){ const b=new Uint8Array(buf); let s=""; for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+function base64ToBuf(b64){ const bin=atob(b64); const b=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) b[i]=bin.charCodeAt(i); return b.buffer; }
+async function finboDeriveKey(password, saltBytes){
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name:"PBKDF2", salt:saltBytes, iterations:FINBO_PBKDF2_ITERATIONS, hash:"SHA-256" }, baseKey, { name:"AES-GCM", length:256 }, false, ["encrypt","decrypt"]);
+}
+async function finboEncryptState(stateObj, password){
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await finboDeriveKey(password, salt);
+  const plaintext = new TextEncoder().encode(JSON.stringify(stateObj));
+  const ciphertextBuf = await crypto.subtle.encrypt({ name:"AES-GCM", iv }, key, plaintext);
+  return { ciphertext: bufToBase64(ciphertextBuf), salt: bufToBase64(salt), iv: bufToBase64(iv) };
+}
+async function finboDecryptState(record, password){
+  const salt = base64ToBuf(record.salt);
+  const iv = base64ToBuf(record.iv);
+  const key = await finboDeriveKey(password, salt);
+  const ciphertext = base64ToBuf(record.ciphertext);
+  let plainBuf;
+  try{ plainBuf = await crypto.subtle.decrypt({ name:"AES-GCM", iv }, key, ciphertext); }
+  catch(err){ throw new Error("FINBO_DECRYPT_FAILED"); }
+  return JSON.parse(new TextDecoder().decode(plainBuf));
+}
+
+/* ---- Supabase-client + sessie/wachtwoord-state ---- */
+const cloudClient = (typeof window.supabase !== "undefined")
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+let cloudSession = null;       // huidige Supabase auth-sessie (na inloggen)
+let encryptionPassword = null; // alleen in het geheugen, nooit opgeslagen/verstuurd
+let saveErrorFlag = false;
+let autoSaveTimer = null;
+/* "dirty" volgt of er wijzigingen zijn die nog niet écht naar de cloud zijn geschreven — gebruikt
+   door de beforeunload-waarschuwing hieronder, zodat een aangemaakt maandbudget/jaar/maand nooit
+   stilzwijgend verloren gaat doordat het tabblad dichtgaat vóórdat er daadwerkelijk geschreven is. */
+let dirty = false;
+
+async function writeStateToCloud(){
+  // Sessie/wachtwoord meteen in lokale variabelen vastleggen: hieronder wordt ge-awaited
+  // (versleutelen + netwerkschrijving), en in die tussentijd kan de gebruiker uitloggen
+  // (signOutCloud zet cloudSession/encryptionPassword dan op null). Zonder deze snapshot
+  // zou dat een crash geven op cloudSession.user.id ná een inmiddels genulde cloudSession.
+  const sessionAtStart = cloudSession;
+  const passwordAtStart = encryptionPassword;
+  if(!cloudClient || !sessionAtStart || !passwordAtStart) return;
+  try{
+    const record = await finboEncryptState(state, passwordAtStart);
+    // Nog steeds dezelfde gebruiker/sessie? Zo niet (bv. inmiddels uitgelogd), dan niet meer
+    // wegschrijven — anders kan er een schrijving voor de verkeerde/oude sessie plaatsvinden.
+    if(cloudSession !== sessionAtStart) return;
+    const { error } = await cloudClient.from("finbo_state").upsert({
+      user_id: sessionAtStart.user.id,
+      ciphertext: record.ciphertext,
+      salt: record.salt,
+      iv: record.iv,
+    });
+    if(error) throw error;
+    saveErrorFlag = false;
+    dirty = false;
+  }catch(err){
+    console.error("Cloud-opslaan mislukt:", err);
+    saveErrorFlag = true;
+  }
+  updateSaveStatus();
+}
+
+function scheduleAutoSave(){
+  dirty = true;
+  updateSaveStatus();
+  if(!cloudSession) return;
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(writeStateToCloud, 500);
+}
+
+/* Waarschuw vóórdat het tabblad/venster echt dichtgaat als er nog wijzigingen zijn die niet naar
+   de cloud zijn geschreven — of dat nu is omdat je nog niet ingelogd bent, of omdat de auto-save
+   van de laatste wijziging nog in het korte debounce-venster zit. */
+window.addEventListener("beforeunload", (e) => {
+  if(dirty){
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
+/* Als het tabblad naar de achtergrond gaat (tab-wissel, dichtklikken) terwijl er nog een auto-save
+   gepland staat: meteen wegschrijven in plaats van op de 500ms debounce te wachten. */
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "hidden" && cloudSession && autoSaveTimer){
+    clearTimeout(autoSaveTimer);
+    writeStateToCloud();
+  }
+});
+
+function updateSaveStatus(){
+  document.querySelectorAll(".save-status").forEach(el=>{
+    if(!cloudClient){
+      el.textContent = "Supabase-library kon niet geladen worden — check je internetverbinding.";
+      el.className = "save-status error";
+      return;
+    }
+    if(saveErrorFlag){
+      el.textContent = t("cloudSaveErrorStatus");
+      el.className = "save-status error";
+      return;
+    }
+    if(cloudSession){
+      el.innerHTML = `<span class="dot"></span>${t("cloudSaveStatus")(cloudSession.user.email)}`;
+      el.className = "save-status on";
+      return;
+    }
+    el.textContent = t("cloudSaveOff");
+    el.className = "save-status";
+  });
+}
+
+/* Handmatige "Opslaan"-knop: schrijft meteen (zonder op de debounce te wachten) naar de cloud. */
+async function saveNow(){
+  if(!cloudSession) return;
+  clearTimeout(autoSaveTimer);
+  const btns = document.querySelectorAll("#saveNowBtn");
+  btns.forEach(b=>{ b.disabled = true; b.textContent = t("saveNowSaving"); });
+  await writeStateToCloud();
+  btns.forEach(b=>{ b.disabled = false; b.textContent = saveErrorFlag ? t("saveNowBtn") : t("saveNowSaved"); });
+  setTimeout(()=>{ document.querySelectorAll("#saveNowBtn").forEach(b=>{ b.textContent = t("saveNowBtn"); }); }, 1500);
+}
+
+async function signOutCloud(){
+  // Een eventueel nog geplande auto-save (debounce-timer) annuleren vóórdat we zelf meteen
+  // wegschrijven — anders kan die losse timer later alsnog afgaan, ná het uitloggen hieronder.
+  clearTimeout(autoSaveTimer);
+  if(dirty) await writeStateToCloud();
+  if(cloudClient) await cloudClient.auth.signOut();
+  cloudSession = null;
+  encryptionPassword = null;
+  renderAuthGate();
+}
+
+/* ---------- AUTH GATE: login + versleutelingswachtwoord vóór de rest van de app laadt ---------- */
+let authGateMode = "signin"; // "signin" | "signup"
+
+function authGateHTML(inner){
+  return `
+    <div class="auth-gate-box">
+      <div class="auth-gate-title">FinBo</div>
+      ${inner}
+    </div>
+  `;
+}
+
+function renderAuthGate(){
+  const el = document.getElementById("authGate");
+  if(!cloudClient){
+    el.style.display = "flex";
+    el.innerHTML = authGateHTML(`<p class="auth-gate-error">Kon de cloud-database niet laden — check je internetverbinding en herlaad de pagina.</p>`);
+    return;
+  }
+  if(!cloudSession){
+    el.style.display = "flex";
+    renderLoginForm();
+    return;
+  }
+  if(!encryptionPassword){
+    el.style.display = "flex";
+    renderEncryptionPrompt();
+    return;
+  }
+  el.style.display = "none";
+}
+
+function renderLoginForm(){
+  const el = document.getElementById("authGate");
+  const isSignUp = authGateMode === "signup";
+  el.innerHTML = authGateHTML(`
+    <p class="auth-gate-subtitle">${t("loginSubtitle")}</p>
+    <div id="authGateError" class="auth-gate-error" style="display:none;"></div>
+    <div id="authGateNotice" class="auth-gate-notice" style="display:none;"></div>
+    <label>${t("loginEmailLabel")}<input type="email" id="authEmailInput" autocomplete="username" /></label>
+    <label>${t("loginPasswordLabel")}<input type="password" id="authPasswordInput" autocomplete="${isSignUp ? "new-password" : "current-password"}" /></label>
+    <button id="authSubmitBtn" class="primary">${isSignUp ? t("loginSignUpBtn") : t("loginSignInBtn")}</button>
+    <button id="authToggleModeBtn" class="ghost">${isSignUp ? t("loginToggleToSignIn") : t("loginToggleToSignUp")}</button>
+  `);
+  document.getElementById("authToggleModeBtn").onclick = () => {
+    authGateMode = isSignUp ? "signin" : "signup";
+    renderLoginForm();
+  };
+  document.getElementById("authSubmitBtn").onclick = async () => {
+    const email = document.getElementById("authEmailInput").value.trim();
+    const password = document.getElementById("authPasswordInput").value;
+    const errEl = document.getElementById("authGateError");
+    const noticeEl = document.getElementById("authGateNotice");
+    errEl.style.display = "none";
+    noticeEl.style.display = "none";
+    const btn = document.getElementById("authSubmitBtn");
+    btn.disabled = true;
+    try{
+      if(isSignUp){
+        const { data, error } = await cloudClient.auth.signUp({ email, password });
+        if(error) throw error;
+        if(!data.session){
+          noticeEl.textContent = t("loginConfirmEmailNotice");
+          noticeEl.style.display = "block";
+          btn.disabled = false;
+          return;
+        }
+        cloudSession = data.session;
+      } else {
+        const { data, error } = await cloudClient.auth.signInWithPassword({ email, password });
+        if(error) throw error;
+        cloudSession = data.session;
+      }
+      renderAuthGate();
+    }catch(err){
+      errEl.textContent = t("loginErrorPrefix") + (err.message || String(err));
+      errEl.style.display = "block";
+      btn.disabled = false;
+    }
+  };
+}
+
+function renderEncryptionPrompt(){
+  const el = document.getElementById("authGate");
+  // Weten we al of er cloud-data voor dit account bestaat? Dat bepaalt of dit een "kies een
+  // nieuw wachtwoord"-scherm is (met bevestigveld) of een "voer je wachtwoord in"-scherm.
+  el.innerHTML = authGateHTML(`<p>Bezig met controleren…</p>`);
+  cloudClient.from("finbo_state").select("*").eq("user_id", cloudSession.user.id).maybeSingle().then(({ data, error }) => {
+    if(error){
+      el.innerHTML = authGateHTML(`<p class="auth-gate-error">${error.message}</p>`);
+      return;
+    }
+    if(data){
+      renderEncryptionPromptExisting(data);
+    }else{
+      renderEncryptionPromptNew();
+    }
+  });
+}
+
+function renderEncryptionPromptExisting(record){
+  const el = document.getElementById("authGate");
+  el.innerHTML = authGateHTML(`
+    <div class="auth-gate-title2">${t("encryptionPromptTitleExisting")}</div>
+    <p class="auth-gate-subtitle">${t("encryptionPromptTextExisting")}</p>
+    <div id="authGateError" class="auth-gate-error" style="display:none;"></div>
+    <label>${t("encryptionPasswordLabel")}<input type="password" id="encPasswordInput" autocomplete="off" /></label>
+    <button id="encSubmitBtn" class="primary">${t("encryptionSubmitBtn")}</button>
+    <button id="authSignOutBtn" class="ghost">${t("logoutBtn")}</button>
+  `);
+  const submit = async () => {
+    const pw = document.getElementById("encPasswordInput").value;
+    const errEl = document.getElementById("authGateError");
+    const btn = document.getElementById("encSubmitBtn");
+    btn.disabled = true;
+    try{
+      const decrypted = await finboDecryptState(record, pw);
+      state = decrypted;
+      if(!state.activeView) state.activeView = {type:"scenario", index: state.activeScenario||0};
+      if(!state.months) state.months = [];
+      if(!state.lang) state.lang = "nl";
+      if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING;
+      migrateState();
+      encryptionPassword = pw;
+      renderAuthGate();
+      bootApp();
+    }catch(err){
+      errEl.textContent = err.message === "FINBO_DECRYPT_FAILED" ? t("encryptionWrongPassword") : String(err.message || err);
+      errEl.style.display = "block";
+      btn.disabled = false;
+    }
+  };
+  document.getElementById("encSubmitBtn").onclick = submit;
+  document.getElementById("encPasswordInput").addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
+  document.getElementById("authSignOutBtn").onclick = signOutCloud;
+}
+
+function renderEncryptionPromptNew(){
+  const el = document.getElementById("authGate");
+  const embeddedHasData = !!readEmbeddedData();
+  el.innerHTML = authGateHTML(`
+    <div class="auth-gate-title2">${t("firstTimeChoiceTitle")}</div>
+    ${embeddedHasData ? `
+      <p class="auth-gate-subtitle">${t("firstTimeChoiceText")}</p>
+      <button id="firstTimeImportBtn" class="primary">${t("firstTimeImportBtn")}</button>
+      <button id="firstTimeBlankBtn" class="ghost">${t("firstTimeBlankBtn")}</button>
+    ` : `
+      <button id="firstTimeBlankBtn" class="primary">${t("firstTimeBlankBtn")}</button>
+    `}
+  `);
+  const proceedToNewPassword = (useEmbedded) => {
+    if(useEmbedded){
+      const data = readEmbeddedData();
+      if(data){
+        state = data;
+        if(!state.activeView) state.activeView = {type:"scenario", index: state.activeScenario||0};
+        if(!state.months) state.months = [];
+        if(!state.lang) state.lang = "nl";
+        if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING;
+        migrateState();
+      }
+    }
+    renderEncryptionPromptNewPassword();
+  };
+  const importBtn = document.getElementById("firstTimeImportBtn");
+  if(importBtn) importBtn.onclick = () => proceedToNewPassword(true);
+  document.getElementById("firstTimeBlankBtn").onclick = () => proceedToNewPassword(false);
+}
+
+function renderEncryptionPromptNewPassword(){
+  const el = document.getElementById("authGate");
+  el.innerHTML = authGateHTML(`
+    <div class="auth-gate-title2">${t("encryptionPromptTitleNew")}</div>
+    <p class="auth-gate-subtitle">${t("encryptionPromptTextNew")}</p>
+    <div id="authGateError" class="auth-gate-error" style="display:none;"></div>
+    <label>${t("encryptionPasswordLabel")}<input type="password" id="encPasswordInput" autocomplete="off" /></label>
+    <label>${t("encryptionConfirmLabel")}<input type="password" id="encPasswordConfirmInput" autocomplete="off" /></label>
+    <button id="encSubmitBtn" class="primary">${t("encryptionSubmitBtn")}</button>
+    <button id="authSignOutBtn" class="ghost">${t("logoutBtn")}</button>
+  `);
+  const submit = async () => {
+    const pw = document.getElementById("encPasswordInput").value;
+    const pw2 = document.getElementById("encPasswordConfirmInput").value;
+    const errEl = document.getElementById("authGateError");
+    if(!pw || pw !== pw2){
+      errEl.textContent = t("encryptionMismatch");
+      errEl.style.display = "block";
+      return;
+    }
+    encryptionPassword = pw;
+    renderAuthGate();
+    bootApp();
+    dirty = true;
+    writeStateToCloud();
+  };
+  document.getElementById("encSubmitBtn").onclick = submit;
+  document.getElementById("authSignOutBtn").onclick = signOutCloud;
+}
+
+/* ---------- RENDER: HEADER ---------- */
+function renderHeader(){
+  document.getElementById("eyebrow").textContent = t("eyebrow");
+  document.getElementById("mainTitle").textContent = t("title");
+  document.getElementById("footerNote").textContent = t("footer");
+  document.querySelectorAll(".lang-btn").forEach(b=>{
+    b.classList.toggle("active", b.dataset.lang === state.lang);
+  });
+  document.documentElement.dataset.mode = state.darkMode ? "dark" : "light";
+  document.getElementById("modeIconMoon").style.display = state.darkMode ? "none" : "";
+  document.getElementById("modeIconSun").style.display = state.darkMode ? "" : "none";
+  document.getElementById("modeBtn").title = state.darkMode ? t("lightModeBtn") : t("darkModeBtn");
+}
+
+/* ---------- RENDER: TABS ---------- */
+// In-/uitklapstand van de Maandbudgetten- en Jaren-lijstjes in het menu. Bewust NIET in `state`
+// (dus niet meegenomen in export/cloud-sync) — dit is puur een lokale schermvoorkeur, geen data.
+// Standaard dichtgeklapt bij het inloggen/openen (issue #1) — de actieve maand/jaar blijft altijd
+// gewoon bereikbaar via de kop van de pagina/het actieve tabblad, dus dichtgeklapt is geen
+// probleem, en zo oogt het menu meteen rustiger bij het inloggen.
+let collapsedGroups = { budgets: true, years: true };
+
+function renderTabs(){
+  const el = document.getElementById("tabs");
+  el.innerHTML = "";
+
+  // Basisdata staat altijd los vooraan, als eigen groepje van één tab.
+  const bdGroup = document.createElement("div");
+  bdGroup.className = "tab-group";
+  const bd = basisdataScenario();
+  const bdBtn = document.createElement("button");
+  bdBtn.className = "tab" + (state.activeView.type==="scenario" && state.activeView.index===0 ? " active":"");
+  bdBtn.innerHTML = `<span class="tab-idx">01</span>${bd.label}`;
+  bdBtn.onclick = ()=>{ state.activeScenario = 0; state.activeView = {type:"scenario", index:0}; renderAll(); };
+  bdGroup.appendChild(bdBtn);
+  el.appendChild(bdGroup);
+
+  // Maandbudgetten + Jaren staan samen in een "pair"-wrapper: op een smal scherm staan ze
+  // gewoon onder elkaar (zoals voorheen), maar vanaf voldoende paginabreedte zet de CSS
+  // (`.tab-group-pair`, zie <style>) ze naast elkaar — er is toch ruime lege ruimte rechts van
+  // het menu op brede schermen. Beide lijstjes zijn bovendien los van elkaar in-/uitklapbaar.
+  const groupPair = document.createElement("div");
+  groupPair.className = "tab-group-pair";
+
+  // Maandbudgetten: eigen groepje direct na Basisdata, vóór de overige jaren (nieuwste bovenaan).
+  // Het groepje (met "+"-knop) staat er altijd, ook zonder maandbudgetten — dat is nu meteen de
+  // plek om er een aan te maken, in plaats van een kaart onderaan de Basisdata-pagina.
+  const budgetGroup = document.createElement("div");
+  budgetGroup.className = "tab-group";
+  budgetGroup.innerHTML = `
+    <div class="tab-group-head">
+      <button class="group-collapse-btn${collapsedGroups.budgets ? " collapsed":""}" id="collapseBudgetsBtn" title="${t("collapseGroupBtn")}" aria-label="${t("collapseGroupBtn")}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <span class="tab-group-label">${t("maandbudgettenLabel")}</span>
+      <button class="group-add-btn" id="addBudgetBtn" title="${t("nieuwBudgetBtn")}">+</button>
+    </div>`;
+  budgetGroup.querySelector("#addBudgetBtn").onclick = () => createBudget();
+  budgetGroup.querySelector("#collapseBudgetsBtn").onclick = () => { collapsedGroups.budgets = !collapsedGroups.budgets; renderTabs(); };
+  if(!collapsedGroups.budgets){
+    state.budgets.forEach(b=>{
+      const btn = document.createElement("button");
+      btn.className = "tab" + (state.activeView.type==="budget" && state.activeView.id===b.id ? " active":"");
+      btn.textContent = b.title;
+      btn.onclick = ()=>{ state.activeView = {type:"budget", id:b.id}; renderAll(); };
+      budgetGroup.appendChild(btn);
+    });
+  }
+  groupPair.appendChild(budgetGroup);
+
+  // Overige jaren (2027, 2028, en elk zelf aangemaakt jaar erna) — "+" maakt het volgende jaar aan.
+  const scenGroup = document.createElement("div");
+  scenGroup.className = "tab-group";
+  scenGroup.innerHTML = `
+    <div class="tab-group-head">
+      <button class="group-collapse-btn${collapsedGroups.years ? " collapsed":""}" id="collapseYearsBtn" title="${t("collapseGroupBtn")}" aria-label="${t("collapseGroupBtn")}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <span class="tab-group-label">${t("jarenLabel")}</span>
+      <button class="group-add-btn" id="addJaarBtn" title="${t("nieuwJaarBtn")(latestScenario().jaar+1)}">+</button>
+    </div>`;
+  scenGroup.querySelector("#addJaarBtn").onclick = () => createNewYear();
+  scenGroup.querySelector("#collapseYearsBtn").onclick = () => { collapsedGroups.years = !collapsedGroups.years; renderTabs(); };
+  if(!collapsedGroups.years){
+    state.scenarios.slice(1).forEach((s,offset)=>{
+      const i = offset + 1;
+      const b = document.createElement("button");
+      b.className = "tab" + (state.activeView.type==="scenario" && state.activeView.index===i ? " active":"");
+      const labelText = s.label === String(s.jaar) ? s.label : `${s.label} · ${s.jaar}`;
+      b.innerHTML = `<span class="tab-idx">${String(i+1).padStart(2,"0")}</span>${labelText}`;
+      b.onclick = ()=>{ state.activeScenario = i; state.activeView = {type:"scenario", index:i}; renderAll(); };
+      scenGroup.appendChild(b);
+    });
+  }
+  groupPair.appendChild(scenGroup);
+
+  el.appendChild(groupPair);
+
+  if(state.months.length){
+    const monthGroup = document.createElement("div");
+    monthGroup.className = "tab-group";
+    state.months.forEach(m=>{
+      const b = document.createElement("button");
+      b.className = "tab" + (state.activeView.type==="month" && state.activeView.key===m.key ? " active":"");
+      b.textContent = monthLabel(m);
+      b.onclick = ()=>{ state.activeView = {type:"month", key:m.key}; renderAll(); };
+      monthGroup.appendChild(b);
+    });
+    el.appendChild(monthGroup);
+  }
+
+  // "Groei"-groepje: een eigen kopje/menugroep (net als Maandbudgetten en Jaren), met daarin
+  // (voorlopig) alleen "Salaris groei" als pagina — zie issue #2.
+  const extraGroup = document.createElement("div");
+  extraGroup.className = "tab-group";
+  extraGroup.innerHTML = `
+    <div class="tab-group-head">
+      <span class="tab-group-label">${t("groeiGroupLabel")}</span>
+    </div>`;
+  const loonstijgingBtn = document.createElement("button");
+  loonstijgingBtn.className = "tab" + (state.activeView.type==="loonstijging" ? " active":"");
+  loonstijgingBtn.textContent = t("navLoonstijging");
+  loonstijgingBtn.onclick = () => { state.activeView = {type:"loonstijging"}; renderAll(); };
+  extraGroup.appendChild(loonstijgingBtn);
+  el.appendChild(extraGroup);
+
+  const uploadBtn = document.createElement("button");
+  uploadBtn.className = "tab tab-upload";
+  uploadBtn.textContent = t("uploadBtn");
+  uploadBtn.onclick = () => document.getElementById("csvUploadInput").click();
+  el.appendChild(uploadBtn);
+}
+
+/* ---------- RENDER: LOONSVERHOGING-BLOK PER JAAR ---------- */
+/* Elk niet-Basisdata jaar (2027, 2028, en elk zelf aangemaakt jaar) heeft bovenaan zijn eigen
+   loonsverhoging-blok: vast bedrag + percentage, toegepast op het loon van het jaar ervoor. Dat
+   resultaat is het loon van DIT jaar (zie computedLoon) — direct zichtbaar in de Inkomsten-kaart
+   eronder (daar staat Loon read-only, met een verwijzing naar dit blok). */
+function renderLoonsverhogingCard(s){
+  const idx = state.scenarios.indexOf(s);
+  const prev = state.scenarios[idx-1];
+  if(!s.loonstijging) s.loonstijging = { vast:0, pct:0 };
+  const wrap = document.createElement("div");
+  wrap.className = "card";
+  wrap.innerHTML = `
+    <div class="card-head">
+      <h2>${t("loonsverhogingTitle")(s.jaar)}</h2>
+    </div>
+    <div class="verhogingen-info">
+      <div>${t("vorigJaarLoon")(prev.jaar)}: <span class="mono">€ ${fmt(computedLoon(prev))}</span></div>
+    </div>
+    <div class="rows verhogingen-rows">
+      <div class="row">
+        <input class="label-input" value="${t("indexLabel")}" disabled />
+        <div class="value-wrap">
+          <span class="euro">€</span>
+          <input class="value-input" id="loonstijgingVastInput" type="number" step="0.01" value="${(Number(s.loonstijging.vast)||0).toFixed(2)}" />
+        </div>
+      </div>
+      <div class="row">
+        <input class="label-input" value="${t("pctLabel")}" disabled />
+        <div class="value-wrap pct-stepper">
+          <div class="stepper-btns">
+            <button type="button" class="step-btn" id="loonstijgingPctMinus" aria-label="${t('pctLabel')} −1">−</button>
+            <button type="button" class="step-btn" id="loonstijgingPctPlus" aria-label="${t('pctLabel')} +1">+</button>
+          </div>
+          <input class="value-input" id="loonstijgingPctInput" type="number" step="1" value="${Number(s.loonstijging.pct)||0}" />
+          <span class="euro">%</span>
+        </div>
+      </div>
+    </div>
+    <div class="verhogingen-info">
+      <div>${t("nieuwLoonResultaat")(s.jaar)}: <span class="mono" id="loonstijgingResultDisplay">€ ${fmt(computedLoon(s))}</span></div>
+    </div>
+  `;
+  const updatePreview = () => {
+    const el = document.getElementById("loonstijgingResultDisplay");
+    if(el) el.textContent = `€ ${fmt(computedLoon(s))}`;
+  };
+  /* Bij de +/- pijltjes van een number-input vuurt Chromium meteen een "change" (niet pas bij
+     verlaten van het veld) — een renderAll() daarop bouwt de kaart opnieuw op, en dat nieuwe
+     invoerveld heeft dan geen focus meer. Zonder deze fix moest je na élk stapje opnieuw klikken.
+     Had het veld de focus vóór het herbouwen, dan krijgt het 'm er hierna dus weer bij terug, zodat
+     je met de pijltjes gewoon door kunt blijven klikken (bijv. meerdere hele procenten achter elkaar). */
+  const changeHandler = (id) => () => {
+    const hadFocus = document.activeElement && document.activeElement.id === id;
+    renderAll();
+    if(hadFocus){
+      const el = document.getElementById(id);
+      if(el){ el.focus(); const v = el.value; el.value = ""; el.value = v; }
+    }
+  };
+  wrap.querySelector("#loonstijgingVastInput").oninput = e => {
+    s.loonstijging.vast = parseFloat(e.target.value) || 0;
+    updatePreview();
+  };
+  wrap.querySelector("#loonstijgingVastInput").onchange = changeHandler("loonstijgingVastInput");
+  wrap.querySelector("#loonstijgingPctInput").oninput = e => {
+    s.loonstijging.pct = parseFloat(e.target.value) || 0;
+    updatePreview();
+  };
+  wrap.querySelector("#loonstijgingPctInput").onchange = changeHandler("loonstijgingPctInput");
+  /* +/- stapper-knoppen: zelfde effect als de (nu verborgen) pijltjes van het getalveld, maar
+     altijd zichtbaar en groot genoeg om ook op een telefoon/tablet aan te tikken. Passen de
+     waarde direct aan zonder de kaart opnieuw op te bouwen — geen focus-gedoe, blijft dus ook
+     achter elkaar aantikbaar werken. */
+  const pctInput = wrap.querySelector("#loonstijgingPctInput");
+  const stepPct = (delta) => {
+    s.loonstijging.pct = (Number(s.loonstijging.pct) || 0) + delta;
+    pctInput.value = s.loonstijging.pct;
+    updatePreview();
+    // Zelfde volledige sync (incl. het samenvattingspaneel rechts) als na typen/pijltjes +
+    // de focus-fix hierboven, zodat de knoppen ook meerdere keren achter elkaar aantikbaar blijven.
+    changeHandler("loonstijgingPctInput")();
+  };
+  wrap.querySelector("#loonstijgingPctMinus").onclick = () => stepPct(-1);
+  wrap.querySelector("#loonstijgingPctPlus").onclick = () => stepPct(1);
+  return wrap;
+}
+
+/* Nieuw jaar aanmaken gebeurt nu vanuit het "+"-knopje bij de groep "Jaren" in het menu
+   (zie renderTabs) in plaats van een kaart onderaan de pagina — altijd zichtbaar, geen scrollen. */
+/* Maakt een nieuw jaar aan als volledige, onafhankelijke kopie van het meest recente jaar
+   (inkomsten, vaste lasten, abonnementen, variabele lasten, incl. het loon van dat jaar als
+   startpunt). Het eigen loonsverhoging-blok van het nieuwe jaar start als kopie van dat van het
+   meest recente jaar en is daarna los aanpasbaar. Nieuwe jaren zijn niet "locked" en dus
+   verwijderbaar. */
+function createNewYear(){
+  const latest = latestScenario();
+  const nextJaar = latest.jaar + 1;
+  const defaultLoonstijging = latest.loonstijging
+    ? { vast: latest.loonstijging.vast, pct: latest.loonstijging.pct }
+    : { vast: 0, pct: 0 };
+  const newScenario = makeScenario(String(nextJaar), nextJaar, false,
+    latest.income.items, latest.vasteLasten.items, latest.abonnementen.items, latest.variabeleLasten.items,
+    defaultLoonstijging);
+  state.scenarios.push(newScenario);
+  state.activeScenario = state.scenarios.length - 1;
+  state.activeView = { type:"scenario", index: state.activeScenario };
+  renderAll();
+}
+
+/* ---------- RENDER: CATEGORY CARD (generiek, gebruikt door scenario's en maanden) ---------- */
+/* Kleine lijn-iconen per categorie-kaart — puur ter herkenning, geen functie. Gebruiken
+   currentColor zodat ze automatisch de --forest-kleur van de kop volgen (ook in donkere modus). */
+const CARD_ICONS = {
+  income: `<svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M6 8l6-5 6 5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  vasteLasten: `<svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7M5 10v9h14v-9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  abonnementen: `<svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5" stroke-linecap="round"/></svg>`,
+  variabeleLasten: `<svg class="cat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3v4M18 3v4M4 8h16l-1.5 12.5a1 1 0 01-1 .5H6.5a1 1 0 01-1-.5L4 8z" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+};
+
+function renderCard(key, cat, opts={}){
+  const wrap = document.createElement("div");
+  wrap.className = "card";
+  const total = (opts.totalOverride !== undefined) ? opts.totalOverride : sum(cat.items);
+  wrap.innerHTML = `
+    <div class="card-head">
+      <div class="htitle">${CARD_ICONS[key] || ""}<h2>${cat.title}</h2></div>
+      <div class="cat-total mono">€ ${fmt(total)}</div>
+    </div>
+    <div class="rows"></div>
+  `;
+  const rows = wrap.querySelector(".rows");
+  cat.items.forEach((item, idx)=>{
+    const override = opts.valueFor ? opts.valueFor(item, idx) : null;
+    const displayValue = override ? override.value : item.v;
+    const editable = override ? override.editable : true;
+    const displayLabel = (override && override.label !== undefined) ? override.label : translateLabel(item.l);
+
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <input class="label-input" value="${displayLabel}" ${editable ? "" : "disabled"} />
+      <div class="value-wrap">
+        <span class="euro">€</span>
+        <input class="value-input" type="number" step="0.01" value="${(Number(displayValue)||0).toFixed(2)}" ${editable ? "" : "disabled"} />
+      </div>
+      <button class="del-btn" title="${t('delRow')}">×</button>
+    `;
+    const [labelInput, , delBtn] = row.children;
+    const valueInput = row.querySelector(".value-input");
+    if(editable){
+      labelInput.oninput = e => { item.l = e.target.value; };
+      valueInput.oninput = e => { item.v = parseFloat(e.target.value)||0; renderAll(true); };
+    }
+    delBtn.onclick = () => { cat.items.splice(idx,1); renderAll(); };
+    rows.appendChild(row);
+
+    if(item.note){
+      const noteText = typeof item.note === "object" ? (item.note[state.lang] || item.note.nl) : item.note;
+      if(noteText){
+        const noteEl = document.createElement("div");
+        noteEl.className = "row-note";
+        noteEl.textContent = noteText;
+        rows.appendChild(noteEl);
+      }
+    }
+  });
+  const addBtn = document.createElement("button");
+  addBtn.className = "add-row-btn";
+  addBtn.textContent = t("addRow");
+  addBtn.onclick = () => { cat.items.push({l:t("newItem"), v:0}); renderAll(); };
+  rows.appendChild(addBtn);
+  return wrap;
+}
+
+/* Inkomsten-kaart: op Basisdata is Loon gewoon direct bewerkbaar. Op elk ander jaar is Loon
+   read-only en komt de waarde uit het eigen loonsverhoging-blok van dat jaar (zie
+   renderLoonsverhogingCard) — een toelichting onder de rij verwijst daarnaar. */
+function renderIncomeCard(s){
+  const isBasisdata = s === basisdataScenario();
+  const loonItem = getLoonItem(s);
+  let opts = {};
+  if(!isBasisdata && loonItem){
+    loonItem.note = { nl: i18n.nl.loonBerekendNote(s.jaar), en: i18n.en.loonBerekendNote(s.jaar) };
+    opts = {
+      valueFor: (item) => item === loonItem ? { value: computedLoon(s), editable: false } : null,
+    };
+  } else if(loonItem){
+    loonItem.note = undefined;
+  }
+  const card = renderCard("income", { title: t("income"), items: s.income.items }, opts);
+  card.id = "income-card";
+  return card;
+}
+
+/* Vaste-lasten-kaart: als de Warmtefonds-schakelaar aan staat, wordt UN-Gas+elec getoond als
+   (ruwe waarde − Warmtefonds) met een grijze toelichting eronder, en telt de kaart/het totaal
+   ook zo mee. De schakelaar zelf verschijnt alleen op het Basisdata-tabblad, en het effect geldt
+   ook alleen daar — elk jaar heeft nu zijn eigen vaste lasten, dus dit hoeft niet meer overal
+   door te werken zoals toen alles gedeeld was. */
+function renderVasteLastenCard(){
+  const bd = basisdataScenario();
+  const unItem = bd.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "un-gas+elec");
+  const warmtefondsItem = bd.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "warmtefonds");
+  const toggleActive = state.warmtefondsAftrek && unItem && warmtefondsItem;
+
+  let opts = {};
+  if(toggleActive){
+    const warmtefondsVal = parseFloat(warmtefondsItem.v) || 0;
+    const rawUN = parseFloat(unItem.v) || 0;
+    const netUN = Math.round((rawUN - warmtefondsVal) * 100) / 100;
+    unItem.note = { nl: i18n.nl.warmtefondsNote(fmt(warmtefondsVal)), en: i18n.en.warmtefondsNote(fmt(warmtefondsVal)) };
+    opts = {
+      totalOverride: vasteLastenTotal(),
+      valueFor: (item) => {
+        if(item !== unItem) return null;
+        return { value: netUN, editable: false };
+      }
+    };
+  } else if(unItem){
+    unItem.note = undefined;
+  }
+
+  const card = renderCard("vasteLasten", { title: t("vasteLasten"), items: bd.vasteLasten.items }, opts);
+  card.id = "vaste-lasten-card";
+  return card;
+}
+
+/* Op elk jaar behalve Basisdata: één samengevatte regel i.p.v. de drie uitgesplitste kaarten
+   (vaste lasten/abonnementen/variabele lasten) — die kosten zijn nu altijd gelijk aan Basisdata
+   en dus niet meer los te bewerken op dit jaar zelf. Zie ontwerp-doc §3.1. */
+function renderKostenUitBasisdataCard(){
+  const wrap = document.createElement("div");
+  wrap.className = "card";
+  const costs = basisdataCostTotals();
+  wrap.innerHTML = `
+    <div class="card-head">
+      <div class="htitle">${CARD_ICONS.vasteLasten}<h2>${t("kostenUitBasisdata")}</h2></div>
+      <div class="cat-total mono">€ ${fmt(costs.totaalUitgaven)}</div>
+    </div>
+    <div class="card-note">${t("kostenUitBasisdataNote")}</div>
+  `;
+  return wrap;
+}
+
+/* Schakelaar voor de Warmtefonds-aftrek — bewust alleen zichtbaar op het Basisdata-tabblad. */
+function renderWarmtefondsToggle(){
+  const wrap = document.createElement("div");
+  wrap.className = "toggle-row";
+  wrap.innerHTML = `
+    <label class="toggle-label">
+      <input type="checkbox" id="warmtefondsToggle" ${state.warmtefondsAftrek ? "checked" : ""} />
+      ${t("warmtefondsToggleLabel")}
+    </label>
+  `;
+  wrap.querySelector("#warmtefondsToggle").onchange = (e) => {
+    state.warmtefondsAftrek = e.target.checked;
+    renderAll();
+  };
+  return wrap;
+}
+
+/* Nieuw maandbudget aanmaken gebeurt nu vanuit het "+"-knopje bij de groep "Maandbudgetten"
+   in het menu (zie renderTabs) in plaats van een kaart onderaan de Basisdata-pagina. */
+
+/* ---------- RENDER: CATEGORIES ---------- */
+function renderCategories(){
+  if(state.activeView.type === "month"){
+    const m = state.months.find(x=>x.key===state.activeView.key);
+    if(m) renderMonthCategories(m);
+    return;
+  }
+  if(state.activeView.type === "budget"){
+    renderBudgetCategories();
+    return;
+  }
+  if(state.activeView.type === "loonstijging"){
+    renderLoonstijgingCategories();
+    return;
+  }
+  renderScenarioCategories();
+}
+
+function renderScenarioCategories(){
+  const el = document.getElementById("categories");
+  el.innerHTML = "";
+  const s = activeScenarioObj();
+  const isBasisdata = s === basisdataScenario();
+  if(!isBasisdata){
+    el.appendChild(renderLoonsverhogingCard(s));
+  }
+  el.appendChild(renderIncomeCard(s));
+  if(isBasisdata){
+    el.appendChild(renderVasteLastenCard());
+    el.appendChild(renderWarmtefondsToggle());
+    el.appendChild(renderCard("abonnementen", { title: t("abonnementen"), items: s.abonnementen.items }));
+    el.appendChild(renderCard("variabeleLasten", { title: t("variabeleLasten"), items: s.variabeleLasten.items }));
+  } else {
+    el.appendChild(renderKostenUitBasisdataCard());
+  }
+}
+
+/* ---------- RENDER: MAANDBUDGET-PAGINA (eigen tab, eigen momentopname) ---------- */
+function renderBudgetCategories(){
+  const el = document.getElementById("categories");
+  el.innerHTML = "";
+  const b = budgetObjFromView();
+  if(!b) return;
+
+  const titleWrap = document.createElement("div");
+  titleWrap.className = "card";
+  titleWrap.innerHTML = `
+    <div class="card-head"><h2>${t("maandbudgetTitleLabel")}</h2></div>
+    <div class="rows"><div class="row">
+      <input class="label-input" id="budgetTitleInput" value="${b.title}" />
+    </div></div>
+  `;
+  const titleInput = titleWrap.querySelector("#budgetTitleInput");
+  titleInput.oninput = e => { b.title = e.target.value; renderTabs(); };
+  titleInput.onchange = () => renderAll();
+  el.appendChild(titleWrap);
+
+  el.appendChild(renderCard("income", { title: t("income"), items: b.income.items }));
+  el.appendChild(renderCard("vasteLasten", { title: t("vasteLasten"), items: b.vasteLasten.items }));
+  el.appendChild(renderCard("abonnementen", { title: t("abonnementen"), items: b.abonnementen.items }));
+  el.appendChild(renderCard("variabeleLasten", { title: t("variabeleLasten"), items: b.variabeleLasten.items }));
+}
+
+/* ---------- RENDER: MAANDVERGELIJKING (CSV-upload vs. gekozen maandbudget) ---------- */
+/* Kiezer waarmee je bepaalt tegen welk maandbudget deze geüploade maand vergeleken wordt.
+   Wijzigen verandert alleen de koppeling, niet de al herkende CSV-data. */
+function renderBudgetPickerCard(m){
+  const wrap = document.createElement("div");
+  wrap.className = "card";
+  wrap.innerHTML = `
+    <div class="card-head"><h2>${t("compareWithLabel")}</h2></div>
+    <div class="compare-picker">
+      <select id="budgetPickerSelect">
+        <option value="" ${!m.budgetId ? "selected" : ""}>${t("noBudgetOption")}</option>
+        ${state.budgets.map(b=>`<option value="${b.id}" ${m.budgetId===b.id ? "selected" : ""}>${b.title}</option>`).join("")}
+      </select>
+    </div>
+  `;
+  wrap.querySelector("#budgetPickerSelect").onchange = e => {
+    m.budgetId = e.target.value || null;
+    renderAll();
+  };
+  return wrap;
+}
+
+/* Bouwt de vergelijkingsregels voor één blok: unie van de labels uit het maandbudget en de
+   CSV-herkende posten van deze maand, met begroot/werkelijk/verschil per label. "kind" bepaalt
+   de kleurbetekenis van het verschil: bij "income" is méér dan begroot goed (groen), bij "cost"
+   is méér dan begroot juist slecht (rood, boven budget). */
+function buildCompareRows(budgetItems, actualItems){
+  const map = {};
+  (budgetItems||[]).forEach(it=>{
+    if(!map[it.l]) map[it.l] = { label: it.l, budget:0, actual:0 };
+    map[it.l].budget = parseFloat(it.v)||0;
+  });
+  (actualItems||[]).forEach(it=>{
+    if(!map[it.l]) map[it.l] = { label: it.l, budget:0, actual:0 };
+    map[it.l].actual = parseFloat(it.v)||0;
+  });
+  return Object.values(map)
+    .map(r=>({ ...r, diff: r.actual - r.budget }))
+    .sort((a,b)=> Math.max(Math.abs(b.budget),Math.abs(b.actual)) - Math.max(Math.abs(a.budget),Math.abs(a.actual)));
+}
+
+function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
+  const rows = buildCompareRows(budgetItems, actualItems);
+  const totBudget = rows.reduce((a,r)=>a+r.budget,0);
+  const totActual = rows.reduce((a,r)=>a+r.actual,0);
+  const totDiff = totActual - totBudget;
+  const diffClass = (d) => (kind==="income" ? d>=0 : d<=0) ? "good" : "bad";
+
+  const wrap = document.createElement("div");
+  wrap.className = "card";
+  wrap.innerHTML = `
+    <div class="card-head">
+      <div class="htitle">${CARD_ICONS[iconKey] || ""}<h2>${title}</h2></div>
+    </div>
+    <div class="compare-head-row">
+      <span class="compare-name"></span>
+      <span class="compare-col">${t("compareBudgetCol")}</span>
+      <span class="compare-col">${t("compareActualCol")}</span>
+      <span class="compare-col">${t("compareDiffCol")}</span>
+    </div>
+    <div class="compare-rows">
+      ${rows.map(r=>`
+        <div class="compare-row">
+          <span class="compare-name" title="${r.label}">${translateLabel(r.label)}</span>
+          <span class="compare-col mono">€ ${fmt(r.budget)}</span>
+          <span class="compare-col mono">€ ${fmt(r.actual)}</span>
+          <span class="compare-col mono compare-diff ${diffClass(r.diff)}">${r.diff>=0?'+':'−'} € ${fmt(Math.abs(r.diff))}</span>
+        </div>
+      `).join("")}
+      <div class="compare-row compare-total">
+        <span class="compare-name">${t("totaal")}</span>
+        <span class="compare-col mono">€ ${fmt(totBudget)}</span>
+        <span class="compare-col mono">€ ${fmt(totActual)}</span>
+        <span class="compare-col mono compare-diff ${diffClass(totDiff)}">${totDiff>=0?'+':'−'} € ${fmt(Math.abs(totDiff))}</span>
+      </div>
+    </div>
+  `;
+  return wrap;
+}
+
+function renderMonthCategories(m){
+  const el = document.getElementById("categories");
+  el.innerHTML = "";
+
+  const sourceNote = document.createElement("div");
+  sourceNote.className = "card-note";
+  sourceNote.style.margin = "0 0 14px";
+  sourceNote.textContent = t("sourceNote")(m.sourceFile, m.rowCount);
+  el.appendChild(sourceNote);
+
+  el.appendChild(renderBudgetPickerCard(m));
+
+  const budget = m.budgetId ? state.budgets.find(b=>b.id===m.budgetId) : null;
+  if(!budget){
+    const note = document.createElement("div");
+    note.className = "card-note";
+    note.style.margin = "0 0 14px";
+    note.textContent = t("noBudgetSelected");
+    el.appendChild(note);
+  } else {
+    el.appendChild(renderCompareCard(t("income"), budget.income.items, m.income.items, "income", "income"));
+    el.appendChild(renderCompareCard(t("vasteLasten"), budget.vasteLasten.items, m.vasteLasten.items, "cost", "vasteLasten"));
+    el.appendChild(renderCompareCard(t("abonnementen"), budget.abonnementen.items, m.abonnementen.items, "cost", "abonnementen"));
+    el.appendChild(renderCompareCard(t("variabeleLasten"), budget.variabeleLasten.items, m.variabeleLasten.items, "cost", "variabeleLasten"));
+  }
+
+  if(m.review && m.review.length){
+    el.appendChild(renderReviewCard(m));
+  }
+}
+
+/* ---------- RENDER: LOONSTIJGING (bron: tabblad "Loonstijging 2021-2030") ---------- */
+function renderLoonstijgingCategories(){
+  const el = document.getElementById("categories");
+  el.innerHTML = "";
+
+  const sourceNote = document.createElement("div");
+  sourceNote.className = "card-note";
+  sourceNote.style.margin = "0 0 14px";
+  sourceNote.textContent = t("loonstijgingSub");
+  el.appendChild(sourceNote);
+
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <div class="card-head">
+      <h2>${t("loonstijgingEyebrow")}</h2>
+    </div>
+    <div class="table-wrap">
+      <table class="loonstijging-table">
+        <thead>
+          <tr>
+            <th>${t("colJaar")}</th>
+            <th>${t("colTotaalJaar")}</th>
+            <th>${t("colGemPerMaand")}</th>
+            <th>${t("colGroeiPct")}</th>
+            <th>${t("colKosten")}</th>
+            <th>${t("colExtra")}</th>
+            <th>${t("colTotaalPerMaand")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${effectiveLoonstijgingRows().map(row => `
+            <tr class="${row.synced ? "synced-row" : ""}" title="${row.synced ? t("loonstijgingSyncedRowTitle") : ""}">
+              <td>${row.synced
+                ? `<button type="button" class="jaar-link" data-jaar="${row.jaar}">${row.jaar}<span class="synced-dot" title="${t("loonstijgingSyncedRowTitle")}"></span></button>`
+                : row.jaar}</td>
+              <td class="mono">€ ${fmt(row.totaal)}</td>
+              <td class="mono">€ ${fmt(row.gemPerMaand)}</td>
+              <td class="mono">${fmt(row.groeiPct)}%</td>
+              <td class="mono">€ ${fmt(huidigKosten())}</td>
+              <td class="mono">€ ${fmt(row.extraInkomsten)}</td>
+              <td class="mono strong">€ ${fmt(row.totaalPerMaand)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+  /* Jaren die aan een echt tabblad gekoppeld zijn (groen bolletje) zijn nu ook meteen aanklikbaar
+     — scheelt de omweg via het menu om naar dat jaar te springen. */
+  card.querySelectorAll(".jaar-link").forEach(btn=>{
+    btn.onclick = () => {
+      const jaar = Number(btn.dataset.jaar);
+      const idx = state.scenarios.findIndex(s => s.jaar === jaar);
+      if(idx < 0) return;
+      state.activeScenario = idx;
+      state.activeView = { type:"scenario", index: idx };
+      renderAll();
+    };
+  });
+  el.appendChild(card);
+}
+
+/* Extra blok: niet-herkende posten die de gebruiker handmatig aan een blok toewijst.
+   Telt bewust niet mee in de berekening totdat een post met "Toevoegen" is ingedeeld. */
+function renderReviewCard(m){
+  const wrap = document.createElement("div");
+  wrap.className = "card card-review";
+  wrap.innerHTML = `
+    <div class="card-head">
+      <h2>${t("reviewTitle")}</h2>
+    </div>
+    <div class="card-note">${t("reviewNote")}</div>
+    <div class="rows review-rows"></div>
+  `;
+  const rows = wrap.querySelector(".review-rows");
+  const targets = [
+    { key:"income", label: t("income") },
+    { key:"vasteLasten", label: t("vasteLasten") },
+    { key:"abonnementen", label: t("abonnementen") },
+    { key:"variabeleLasten", label: t("variabeleLasten") },
+  ];
+
+  m.review.forEach(entry=>{
+    const row = document.createElement("div");
+    row.className = "row review-row";
+    const isAdded = !!entry.target;
+    const sign = entry.amt >= 0 ? "+" : "−";
+    const defaultTarget = entry.target || (entry.amt > 0 ? "income" : "vasteLasten");
+
+    row.innerHTML = `
+      <span class="review-name" title="${entry.naam}">${entry.naam}</span>
+      <span class="review-amt mono ${entry.amt>=0?'pos':'neg'}">${sign} € ${fmt(Math.abs(entry.amt))}</span>
+      <select class="review-select" ${isAdded ? "disabled" : ""}>
+        ${targets.map(o=>`<option value="${o.key}" ${defaultTarget===o.key ? "selected" : ""}>${o.label}</option>`).join("")}
+      </select>
+      <button class="review-btn ${isAdded ? "added" : ""}">${isAdded ? t("reverseBtn") : t("addBtn")}</button>
+    `;
+    const select = row.querySelector(".review-select");
+    const btn = row.querySelector(".review-btn");
+
+    btn.onclick = () => {
+      if(entry.target){
+        const bucket = m[entry.target];
+        const idx = bucket.items.indexOf(entry.addedItem);
+        if(idx>=0) bucket.items.splice(idx,1);
+        entry.target = null;
+        entry.addedItem = null;
+      } else {
+        const chosen = select.value;
+        const contribution = chosen === "income" ? entry.amt : -entry.amt;
+        const item = { l: entry.naam, v: Math.round(contribution*100)/100 };
+        m[chosen].items.push(item);
+        entry.target = chosen;
+        entry.addedItem = item;
+      }
+      renderAll();
+    };
+    rows.appendChild(row);
+  });
+  return wrap;
+}
+
+/* ---------- CHARTS (inline SVG, no deps) ---------- */
+/* Kleuren per categorie, gedeeld tussen staafdiagram, cirkeldiagram en legenda's. Verwijzen naar
+   CSS custom properties (zie :root / html[data-mode="dark"]) zodat de grafieken automatisch mee
+   wisselen tussen licht en donker, zonder dat deze JS zelf de modus hoeft te kennen. */
+const CAT_COLORS = { vasteLasten:"var(--cat-vaste)", abonnementen:"var(--cat-abon)", variabeleLasten:"var(--cat-variabel)",
+  over:"var(--cat-over)", tekort:"var(--cat-tekort)", income:"var(--cat-income)", kosten:"var(--cat-kosten)" };
+
+/* Bouwt de gesorteerde categorie-segmenten (grootste eerst) plus, indien er geld over is,
+   een extra "over"-segment (groen) zodat duidelijk is dat er geld over zou moeten zijn. Is er
+   juist een tekort, dan komt er een "tekort"-segment (geel, zelfde kleur als in de staafgrafiek)
+   bij — die krijgt bewust `noSlice:true`: de drie lastencategorieën samen zijn namelijk al gelijk
+   aan de totale uitgaven, dus het tekort erbovenop als extra taartpunt meetellen zou het totaal
+   (en daarmee alle verhoudingen) vertekenen. In plaats daarvan telt donutChart() 'm niet mee voor
+   de taart zelf, maar toont 'm wél als extra regel in de legenda eronder, zodat het tekort ook in
+   het cirkeldiagram zichtbaar is in plaats van stilzwijgend weggelaten te worden. */
+function categorySegments(vasteLasten, abonnementen, variabeleLasten, over){
+  const segs = [
+    { key:"vasteLasten", l:t("vasteLasten"), v: vasteLasten, c: CAT_COLORS.vasteLasten },
+    { key:"abonnementen", l:t("abonnementen"), v: abonnementen, c: CAT_COLORS.abonnementen },
+    { key:"variabeleLasten", l:t("variabeleLasten"), v: variabeleLasten, c: CAT_COLORS.variabeleLasten },
+  ].sort((a,b)=> b.v - a.v);
+  if(over >= 0){
+    segs.push({ key:"over", l:t("overTeSpenderen"), v: over, c: CAT_COLORS.over });
+  } else {
+    segs.push({ key:"tekort", l:t("legendTekort"), v: -over, c: CAT_COLORS.tekort, noSlice:true });
+  }
+  return segs;
+}
+
+/* Legenda die altijd alle categorieën toont, plus zowel "over" als "tekort" (ook als de
+   actieve balk net geen tekort toont) zodat de rode stippellijn in andere balken duidelijk blijft. */
+function categoryLegendHTML(){
+  return `
+    <span><span class="dot" style="background:${CAT_COLORS.vasteLasten}"></span>${t("vasteLasten")}</span>
+    <span><span class="dot" style="background:${CAT_COLORS.abonnementen}"></span>${t("abonnementen")}</span>
+    <span><span class="dot" style="background:${CAT_COLORS.variabeleLasten}"></span>${t("variabeleLasten")}</span>
+    <span><span class="dot" style="background:${CAT_COLORS.over}"></span>${t("legendOver")}</span>
+    <span><span class="dot" style="background:${CAT_COLORS.tekort}"></span>${t("legendTekort")}</span>
+  `;
+}
+
+/* Eén gestapelde staaf per scenario: de vaste/abonnement/variabele lasten (gelijk voor elk
+   scenario) staan onderin gesorteerd van groot (onder) naar klein (boven), met daarboven — als
+   er geld over is — een groen "over"-segment. Is er een tekort, dan blijft de staaf tot de
+   uitgaven doorlopen en toont een rode stippellijn ter hoogte van het netto inkomen. */
+function barChart(totals){
+  const w=332, h=170, pad=28;
+  const n = state.scenarios.length;
+  const max = Math.max(...totals.netIncome, ...totals.totaalUitgavenPerScenario) * 1.15 || 1;
+  const scaleY = (h-pad-16) / max;
+  const groupW = (w - pad) / n;
+  const barW = Math.max(4, Math.min(groupW - 16, 56));
+  let bars = "";
+  state.scenarios.forEach((s,i)=>{
+    const x0 = pad + i*groupW + (groupW-barW)/2;
+    let y = h-pad;
+    const baseCats = [
+      { v: totals.vasteLastenPerScenario[i], c: CAT_COLORS.vasteLasten },
+      { v: totals.abonnementenPerScenario[i], c: CAT_COLORS.abonnementen },
+      { v: totals.variabeleLastenPerScenario[i], c: CAT_COLORS.variabeleLasten },
+    ].sort((a,b)=> b.v - a.v);
+    baseCats.forEach(c=>{
+      const segH = c.v*scaleY;
+      y -= segH;
+      bars += `<rect x="${x0}" y="${y}" width="${barW}" height="${segH}" fill="${c.c}" rx="1.5"/>`;
+    });
+    const over = totals.overTeSpenderen[i];
+    if(over >= 0){
+      const segH = over*scaleY;
+      y -= segH;
+      bars += `<rect x="${x0}" y="${y}" width="${barW}" height="${segH}" fill="${CAT_COLORS.over}" rx="1.5"/>`;
+    } else {
+      // Tekort: was eerst alleen een dun lijntje op de hoogte van het netto inkomen — bijna
+      // onzichtbaar tussen de andere kleuren. Kleurt nu, net als een positief "over"-stukje, het
+      // bovenste deel van de staaf (het stuk boven het netto inkomen) duidelijk in de tekort-kleur.
+      const incomeY = h-pad-(totals.netIncome[i]*scaleY);
+      const tekortH = Math.max(0, incomeY - y);
+      if(tekortH > 0.5){
+        bars += `<rect x="${x0}" y="${y}" width="${barW}" height="${tekortH}" fill="${CAT_COLORS.tekort}" rx="1.5"/>`;
+      }
+      bars += `<line x1="${x0-3}" y1="${incomeY}" x2="${x0+barW+3}" y2="${incomeY}" stroke="var(--text-onink)" stroke-width="1" stroke-dasharray="3,2"/>`;
+    }
+    bars += `<text x="${x0+barW/2}" y="${h-8}" fill="var(--text-onink-soft)" font-size="9" text-anchor="middle" font-family="Segoe UI,sans-serif">${s.jaar}</text>`;
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+    <line x1="${pad}" y1="${h-pad}" x2="${w-4}" y2="${h-pad}" stroke="color-mix(in srgb, var(--text-onink) 15%, transparent)"/>
+    ${bars}
+  </svg>`;
+}
+
+/* Zelfde opbouw als barChart, maar voor één maand: één gestapelde staaf, categorieën gesorteerd
+   van groot (onder) naar klein (boven), met "over" erboven of een rode stippellijn bij een tekort. */
+function monthBarChart(totals){
+  const w=332, h=170, pad=28;
+  const over = totals.income - totals.totaalUitgaven;
+  const baseCats = [
+    { v: totals.vasteLasten, c: CAT_COLORS.vasteLasten },
+    { v: totals.abonnementen, c: CAT_COLORS.abonnementen },
+    { v: totals.variabeleLasten, c: CAT_COLORS.variabeleLasten },
+  ].sort((a,b)=> b.v - a.v);
+  const max = Math.max(totals.income, totals.totaalUitgaven, 1) * 1.15;
+  const scaleY = (h-pad-16) / max;
+  const barW = 74;
+  const x0 = w/2 - barW/2;
+  let y = h-pad;
+  let bars = "";
+  baseCats.forEach(c=>{
+    const segH = c.v*scaleY;
+    y -= segH;
+    bars += `<rect x="${x0}" y="${y}" width="${barW}" height="${segH}" fill="${c.c}" rx="1.5"/>`;
+  });
+  if(over >= 0){
+    const segH = over*scaleY;
+    y -= segH;
+    bars += `<rect x="${x0}" y="${y}" width="${barW}" height="${segH}" fill="${CAT_COLORS.over}" rx="1.5"/>`;
+  } else {
+    const incomeY = h-pad-(totals.income*scaleY);
+    const tekortH = Math.max(0, incomeY - y);
+    if(tekortH > 0.5){
+      bars += `<rect x="${x0}" y="${y}" width="${barW}" height="${tekortH}" fill="${CAT_COLORS.tekort}" rx="1.5"/>`;
+    }
+    bars += `<line x1="${x0-3}" y1="${incomeY}" x2="${x0+barW+3}" y2="${incomeY}" stroke="var(--text-onink)" stroke-width="1" stroke-dasharray="3,2"/>`;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+    <line x1="${pad}" y1="${h-pad}" x2="${w-4}" y2="${h-pad}" stroke="color-mix(in srgb, var(--text-onink) 15%, transparent)"/>
+    ${bars}
+  </svg>`;
+}
+
+/* Legenda voor de Loonstijging-lijngrafiek: lijnvormige swatches (mirrort de lijn-mark),
+   in plaats van de ronde "dot" die de staaf-/donutgrafieken gebruiken. */
+function loonstijgingLegendHTML(){
+  return `
+    <span><span class="line-swatch" style="background:${CAT_COLORS.income}"></span>${t("legendNettoInkomen")}</span>
+    <span><span class="line-swatch" style="background:${CAT_COLORS.kosten}"></span>${t("legendKosten")}</span>
+  `;
+}
+
+/* Lijngrafiek "Netto inkomen vs kosten per maand" (bron: grafiekentabblad in Rekensheet 2026).
+   X-as = jaren, twee lijnen (netto inkomen per maand / vaste kosten per maand). Inclusief
+   hover-crosshair die naar het dichtstbijzijnde jaar snapt en één tooltip met beide waarden,
+   zoals de interactie-richtlijn voor lijn-/vlakgrafieken voorschrijft. */
+function loonstijgingLineChart(data, selectedYear, onSelect){
+  const wrap = document.createElement("div");
+  wrap.className = "lchart-wrap";
+
+  const w = 480, h = 220, padL = 46, padR = 12, padT = 14, padB = 28;
+  const n = data.length;
+  const incomeVals = data.map(d=>d.totaalPerMaand);
+  const liveKosten = huidigKosten();
+  const kostenVals = data.map(()=>liveKosten);
+  const maxRaw = Math.max(...incomeVals, ...kostenVals);
+  const chartMax = Math.ceil((maxRaw*1.08)/1000)*1000 || 1000;
+  const ticks = 5;
+  const xStep = n>1 ? (w-padL-padR)/(n-1) : 0;
+  const xScale = i => padL + i*xStep;
+  const yScale = v => h-padB - (v/chartMax)*(h-padT-padB);
+  let selectedIdx = Math.max(0, data.findIndex(d=>d.jaar===selectedYear));
+  if(selectedIdx < 0) selectedIdx = n-1;
+
+  const pathFor = vals => vals.map((v,i)=> `${i===0?'M':'L'}${xScale(i).toFixed(1)},${yScale(v).toFixed(1)}`).join(" ");
+
+  let gridSvg = "";
+  for(let i=0;i<=ticks;i++){
+    const v = chartMax*i/ticks;
+    const y = yScale(v);
+    gridSvg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="color-mix(in srgb, var(--text-onink) 8%, transparent)" stroke-width="1"/>`;
+    gridSvg += `<text x="${(padL-8).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8.5" fill="var(--text-onink-soft)" font-family="Segoe UI,sans-serif">€${Math.round(v).toLocaleString('nl-NL')}</text>`;
+  }
+
+  const labelEvery = n > 9 ? 2 : 1;
+  let xLabels = "";
+  let xGridSvg = "";
+  data.forEach((d,i)=>{
+    const x = xScale(i);
+    // Verticale lijntjes bij ELK jaar, ook de tussenliggende jaren zonder zichtbaar cijfer
+    // eronder — net zoals de horizontale lijntjes er ook bij elk cijfer staan.
+    xGridSvg += `<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${h-padB}" stroke="color-mix(in srgb, var(--text-onink) 8%, transparent)" stroke-width="1"/>`;
+    if(i % labelEvery !== 0 && i !== n-1) return;
+    xLabels += `<text x="${x.toFixed(1)}" y="${h-8}" text-anchor="middle" font-size="8.5" fill="var(--text-onink-soft)" font-family="Segoe UI,sans-serif">${d.jaar}</text>`;
+  });
+
+  /* Zichtbare bolletjes + een grotere, onzichtbare hit-cirkel per jaar (klik- én tik-doel van
+     minstens 24px) zodat je niet precies op het kleine bolletje hoeft te mikken. */
+  const kostenDots = kostenVals.map((v,i)=> `<circle class="lchart-dot" data-idx="${i}" cx="${xScale(i).toFixed(1)}" cy="${yScale(v).toFixed(1)}" r="3" fill="${CAT_COLORS.kosten}"/>`).join("");
+  const incomeDots = incomeVals.map((v,i)=> `<circle class="lchart-dot" data-idx="${i}" cx="${xScale(i).toFixed(1)}" cy="${yScale(v).toFixed(1)}" r="3" fill="${CAT_COLORS.income}"/>`).join("");
+  const hitDots = data.map((d,i)=> `<circle class="lchart-hit" data-idx="${i}" cx="${xScale(i).toFixed(1)}" cy="${(padT + (h-padT-padB)/2).toFixed(1)}" r="${Math.max(12, xStep/2).toFixed(1)}" fill="transparent" style="cursor:pointer;"/>`).join("");
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" id="lchartSvg">
+      ${gridSvg}
+      ${xGridSvg}
+      ${xLabels}
+      <path d="${pathFor(kostenVals)}" fill="none" stroke="${CAT_COLORS.kosten}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="${pathFor(incomeVals)}" fill="none" stroke="${CAT_COLORS.income}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${kostenDots}
+      ${incomeDots}
+      <circle id="lchartSelectedIncome" r="6" fill="none" stroke="${CAT_COLORS.income}" stroke-width="2"/>
+      <circle id="lchartSelectedKosten" r="6" fill="none" stroke="${CAT_COLORS.kosten}" stroke-width="2"/>
+      <line id="lchartCrosshair" x1="0" y1="${padT}" x2="0" y2="${h-padB}" stroke="color-mix(in srgb, var(--text-onink) 35%, transparent)" stroke-width="1" stroke-dasharray="2,2" style="display:none;"/>
+      <circle id="lchartHoverIncome" r="4.5" fill="${CAT_COLORS.income}" stroke="var(--ink)" stroke-width="1.5" style="display:none;"/>
+      <circle id="lchartHoverKosten" r="4.5" fill="${CAT_COLORS.kosten}" stroke="var(--ink)" stroke-width="1.5" style="display:none;"/>
+      <rect id="lchartOverlay" x="${padL}" y="${padT}" width="${w-padL-padR}" height="${h-padT-padB}" fill="transparent" style="cursor:pointer;"/>
+      ${hitDots}
+    </svg>
+    <div class="lchart-tooltip" id="lchartTooltip">
+      <div class="tt-year"></div>
+      <div class="tt-row"><span class="tt-key" style="background:${CAT_COLORS.income}"></span><span class="tt-val"></span><span class="tt-label">${t("legendNettoInkomen")}</span></div>
+      <div class="tt-row"><span class="tt-key" style="background:${CAT_COLORS.kosten}"></span><span class="tt-val"></span><span class="tt-label">${t("legendKosten")}</span></div>
+    </div>
+  `;
+
+  const svg = wrap.querySelector("#lchartSvg");
+  const overlay = wrap.querySelector("#lchartOverlay");
+  const crosshair = wrap.querySelector("#lchartCrosshair");
+  const hoverIncome = wrap.querySelector("#lchartHoverIncome");
+  const hoverKosten = wrap.querySelector("#lchartHoverKosten");
+  const selectedIncome = wrap.querySelector("#lchartSelectedIncome");
+  const selectedKosten = wrap.querySelector("#lchartSelectedKosten");
+  const tooltip = wrap.querySelector("#lchartTooltip");
+  const ttYear = tooltip.querySelector(".tt-year");
+  const ttVals = tooltip.querySelectorAll(".tt-val");
+
+  function placeSelectedRing(idx){
+    const d = data[idx];
+    const x = xScale(idx);
+    selectedIncome.setAttribute("cx", x); selectedIncome.setAttribute("cy", yScale(d.totaalPerMaand));
+    selectedKosten.setAttribute("cx", x); selectedKosten.setAttribute("cy", yScale(liveKosten));
+  }
+  placeSelectedRing(selectedIdx);
+
+  function pointerToIndex(evt){
+    const rect = svg.getBoundingClientRect();
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    const xInSvg = (clientX - rect.left) * (w / rect.width);
+    let idx = Math.round((xInSvg - padL) / (xStep || 1));
+    return Math.max(0, Math.min(n-1, idx));
+  }
+
+  function showAt(idx){
+    const d = data[idx];
+    const x = xScale(idx);
+    crosshair.setAttribute("x1", x); crosshair.setAttribute("x2", x);
+    crosshair.style.display = "";
+    hoverIncome.setAttribute("cx", x); hoverIncome.setAttribute("cy", yScale(d.totaalPerMaand));
+    hoverKosten.setAttribute("cx", x); hoverKosten.setAttribute("cy", yScale(liveKosten));
+    hoverIncome.style.display = "";
+    hoverKosten.style.display = "";
+    ttYear.textContent = d.jaar;
+    ttVals[0].textContent = `€ ${fmt(d.totaalPerMaand)}`;
+    ttVals[1].textContent = `€ ${fmt(liveKosten)}`;
+    tooltip.classList.add("visible");
+    const svgRect = svg.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    const px = svgRect.left - wrapRect.left + (x/w)*svgRect.width;
+    let left = px + 12;
+    const maxLeft = wrapRect.width - 150;
+    if(left > maxLeft) left = px - 150;
+    tooltip.style.left = `${Math.max(4,left)}px`;
+    // Altijd bovenaan de grafiek plaatsen (los van waar het bolletje voor dit jaar precies staat)
+    // zodat het tooltipje nooit over een bolletje of de klikbare cirkel eromheen heen valt — die
+    // blijven zo altijd goed te zien en aan te klikken, ook bij het rondbewegen met de muis.
+    tooltip.style.top = "0px";
+  }
+
+  function hide(){
+    crosshair.style.display = "none";
+    hoverIncome.style.display = "none";
+    hoverKosten.style.display = "none";
+    tooltip.classList.remove("visible");
+  }
+
+  function selectIdx(idx){
+    if(typeof onSelect === "function") onSelect(data[idx].jaar);
+  }
+
+  overlay.addEventListener("pointermove", e => showAt(pointerToIndex(e)));
+  overlay.addEventListener("pointerleave", hide);
+  overlay.addEventListener("touchstart", e => showAt(pointerToIndex(e)), {passive:true});
+  overlay.addEventListener("click", e => selectIdx(pointerToIndex(e)));
+
+  wrap.querySelectorAll(".lchart-hit").forEach(hit=>{
+    const idx = parseInt(hit.dataset.idx, 10);
+    hit.addEventListener("pointermove", () => showAt(idx));
+    hit.addEventListener("click", () => selectIdx(idx));
+  });
+  wrap.querySelectorAll(".lchart-dot").forEach(dot=>{
+    dot.style.cursor = "pointer";
+    const idx = parseInt(dot.dataset.idx, 10);
+    dot.addEventListener("click", () => selectIdx(idx));
+  });
+
+  return wrap;
+}
+
+function donutChart(segs){
+  /* Segmenten met noSlice (het tekort-segment, zie categorySegments) tellen niet mee voor de
+     taart zelf — die zouden het totaal en daarmee alle verhoudingen van de drie lastencategorieën
+     vertekenen (die samen al gelijk zijn aan de totale uitgaven). Het tekort krijgt in plaats
+     daarvan een eigen dun ringetje net BUITEN de taart (zie tekortRing hieronder) — zo staat het
+     wél zichtbaar in het cirkeldiagram zelf, in plaats van alleen als tekst in de legenda. De
+     grootte van dat ringetje (hoeveel graden het beslaat) is de verhouding tekort/totale-uitgaven,
+     dezelfde noemer als de taart, dus ook dat blijft eerlijk schaalbaar. */
+  const sliceSegs = segs.filter(s=>!s.noSlice);
+  const tekortSeg = segs.find(s=>s.noSlice && s.key==="tekort");
+  const total = sliceSegs.reduce((a,s)=>a+s.v,0) || 1;
+  const cx=90, cy=90, r=70, rInner=42;
+  let angle = -Math.PI/2;
+  let paths = "";
+  sliceSegs.forEach(s=>{
+    const frac = s.v/total;
+    const a0 = angle;
+    const a1 = angle + frac*Math.PI*2;
+    angle = a1;
+    const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+    const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    const xi1=cx+rInner*Math.cos(a1), yi1=cy+rInner*Math.sin(a1);
+    const xi0=cx+rInner*Math.cos(a0), yi0=cy+rInner*Math.sin(a0);
+    const large = (a1-a0) > Math.PI ? 1 : 0;
+    if(frac>0){
+      paths += `<path d="M${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} L${xi1},${yi1} A${rInner},${rInner} 0 ${large} 0 ${xi0},${yi0} Z" fill="${s.c}"/>`;
+    }
+  });
+  let tekortRing = "";
+  if(tekortSeg && tekortSeg.v > 0){
+    const rO = r + 7, rOi = r + 2;
+    const fracTekort = Math.min(1, tekortSeg.v / total);
+    if(fracTekort >= 0.995){
+      tekortRing = `<circle cx="${cx}" cy="${cy}" r="${(rO+rOi)/2}" fill="none" stroke="${CAT_COLORS.tekort}" stroke-width="${rO-rOi}"/>`;
+    } else {
+      const a0 = -Math.PI/2, a1 = a0 + fracTekort*Math.PI*2;
+      const x0=cx+rO*Math.cos(a0), y0=cy+rO*Math.sin(a0);
+      const x1=cx+rO*Math.cos(a1), y1=cy+rO*Math.sin(a1);
+      const xi1=cx+rOi*Math.cos(a1), yi1=cy+rOi*Math.sin(a1);
+      const xi0=cx+rOi*Math.cos(a0), yi0=cy+rOi*Math.sin(a0);
+      const large = fracTekort > 0.5 ? 1 : 0;
+      tekortRing = `<path d="M${x0},${y0} A${rO},${rO} 0 ${large} 1 ${x1},${y1} L${xi1},${yi1} A${rOi},${rOi} 0 ${large} 0 ${xi0},${yi0} Z" fill="${CAT_COLORS.tekort}"/>`;
+    }
+  }
+  const legend = segs.map(s=>`<span><span class="dot" style="background:${s.c}"></span>${s.l}: € ${fmt(s.v)}</span>`).join("");
+  return `<svg viewBox="0 0 180 180" width="180" height="180">${paths}${tekortRing}
+    <text x="90" y="86" text-anchor="middle" fill="var(--text-onink)" font-size="11" font-family="Segoe UI,sans-serif">${t("totaal")}</text>
+    <text x="90" y="102" text-anchor="middle" fill="var(--text-onink)" font-size="13" font-weight="700" font-family='Courier New,monospace'>€ ${fmt(total)}</text>
+  </svg><div class="legend">${legend}</div>`;
+}
+
+/* ---------- RENDER: SHARED ACTIONS BLOCK ---------- */
+function renderActionsHTML(showDeleteMonth, showDeleteScenario, showDeleteBudget){
+  return `
+    <div class="actions">
+      <button id="saveNowBtn" class="primary">${t("saveNowBtn")}</button>
+      <button id="logoutBtn">${t("logoutBtn")}</button>
+      <button id="exportBtn">${t("exportBtn")}</button>
+      <button id="importBtn">${t("importBtn")}</button>
+      <button id="resetBtn">${t("resetBtn")}</button>
+      ${showDeleteMonth ? `<button id="deleteMonthBtn" class="danger">${t("deleteMonthBtn")}</button>` : ""}
+      ${showDeleteScenario ? `<button id="deleteScenarioBtn" class="danger">${t("deleteScenarioBtn")}</button>` : ""}
+      ${showDeleteBudget ? `<button id="deleteBudgetBtn" class="danger">${t("deleteBudgetBtn")}</button>` : ""}
+    </div>
+    <div class="save-status"></div>
+    <input type="file" id="importFile" accept=".json,.html,.htm" style="display:none"/>
+  `;
+}
+
+function wireActions(monthObj, scenarioObj, budgetObj){
+  document.getElementById("saveNowBtn").onclick = saveNow;
+  document.getElementById("logoutBtn").onclick = signOutCloud;
+  updateSaveStatus();
+  document.getElementById("exportBtn").onclick = () => {
+    const blob = new Blob([buildHtmlWithEmbeddedData()], {type:"text/html"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "FinBo.html";
+    a.click();
+  };
+  document.getElementById("importBtn").onclick = () => document.getElementById("importFile").click();
+  document.getElementById("importFile").onchange = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try{
+        const text = ev.target.result;
+        // Aanvaardt zowel een los JSON-exportbestand (oudere back-up) als een HTML-kopie van
+        // deze app mét ingebedde data — wordt automatisch herkend.
+        const trimmed = text.trim();
+        const data = trimmed.startsWith("<") ? extractEmbeddedDataFromHtml(text) : JSON.parse(text);
+        if(!data) throw new Error(t("importError"));
+        state = data;
+        if(!state.activeView) state.activeView = {type:"scenario", index: state.activeScenario||0};
+        if(!state.months) state.months = [];
+        if(!state.lang) state.lang = "nl";
+        if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING;
+        migrateState();
+        renderAll();
+      }catch(err){ alert(t("importError") + err.message); }
+    };
+    reader.readAsText(file);
+  };
+  document.getElementById("resetBtn").onclick = () => {
+    if(confirm(t("resetConfirm"))){
+      location.reload();
+    }
+  };
+  const delBtn = document.getElementById("deleteMonthBtn");
+  if(delBtn && monthObj){
+    delBtn.onclick = () => {
+      if(confirm(t("deleteMonthConfirm"))){
+        state.months = state.months.filter(m=>m.key!==monthObj.key);
+        state.activeView = {type:"scenario", index: state.activeScenario};
+        renderAll();
+      }
+    };
+  }
+  const delScenarioBtn = document.getElementById("deleteScenarioBtn");
+  if(delScenarioBtn && scenarioObj && !scenarioObj.locked){
+    delScenarioBtn.onclick = () => {
+      if(confirm(t("deleteScenarioConfirm"))){
+        const idx = state.scenarios.indexOf(scenarioObj);
+        state.scenarios = state.scenarios.filter(s=>s!==scenarioObj);
+        state.activeScenario = Math.max(0, idx-1);
+        state.activeView = {type:"scenario", index: state.activeScenario};
+        renderAll();
+      }
+    };
+  }
+  const delBudgetBtn = document.getElementById("deleteBudgetBtn");
+  if(delBudgetBtn && budgetObj){
+    delBudgetBtn.onclick = () => {
+      if(confirm(t("deleteBudgetConfirm"))){
+        state.budgets = state.budgets.filter(b=>b!==budgetObj);
+        state.activeView = {type:"scenario", index: 0};
+        renderAll();
+      }
+    };
+  }
+}
+
+/* ---------- RENDER: SUMMARY ---------- */
+function renderSummary(){
+  if(state.activeView.type === "month"){
+    renderMonthSummary();
+    return;
+  }
+  if(state.activeView.type === "budget"){
+    renderBudgetSummary();
+    return;
+  }
+  if(state.activeView.type === "loonstijging"){
+    renderLoonstijgingSummary();
+    return;
+  }
+  renderScenarioSummary();
+}
+
+function renderBudgetSummary(){
+  const b = budgetObjFromView();
+  const el = document.getElementById("summary");
+  if(!b){ el.innerHTML = ""; return; }
+  const income = sum(b.income.items);
+  const vasteLasten = sum(b.vasteLasten.items);
+  const abonnementen = sum(b.abonnementen.items);
+  const variabeleLasten = sum(b.variabeleLasten.items);
+  const totaalUitgaven = vasteLasten + abonnementen + variabeleLasten;
+  const over = income - totaalUitgaven;
+  el.innerHTML = `
+    <h2>${b.title}</h2>
+    <div class="stamp ${over<0?'negative':''}">
+      <div class="stamp-label">${over<0? t("tekort") : t("overTeSpenderen")}</div>
+      <div class="stamp-value">€ ${fmt(Math.abs(over))}</div>
+      <div class="stamp-sub">${t("stampSub")}</div>
+    </div>
+
+    <div class="summary-line credit"><span class="l">${t("nettoInkomsten")}</span><span class="v">€ ${fmt(income)}</span></div>
+    <div class="summary-line debit"><span class="l">${t("vasteLasten")}</span><span class="v">− € ${fmt(vasteLasten)}</span></div>
+    <div class="summary-line debit"><span class="l">${t("abonnementen")}</span><span class="v">− € ${fmt(abonnementen)}</span></div>
+    <div class="summary-line debit"><span class="l">${t("variabeleLasten")}</span><span class="v">− € ${fmt(variabeleLasten)}</span></div>
+    <div class="summary-line total"><span class="l">${t("saldo")}</span><span class="v">€ ${fmt(over)}</span></div>
+
+    <div class="chart-block">
+      <h2>${t("chartTitle2")}</h2>
+      ${donutChart(categorySegments(vasteLasten, abonnementen, variabeleLasten, over))}
+    </div>
+
+    ${renderActionsHTML(false, false, true)}
+  `;
+  wireActions(null, null, b);
+}
+
+function renderScenarioSummary(){
+  const totals = computeTotals();
+  const i = state.activeScenario;
+  const s = state.scenarios[i];
+  const net = totals.netIncome[i];
+  const over = totals.overTeSpenderen[i];
+  const el = document.getElementById("summary");
+  el.innerHTML = `
+    <h2>${s.label} (${s.jaar})</h2>
+    <div class="stamp ${over<0?'negative':''}">
+      <div class="stamp-label">${over<0? t("tekort") : t("overTeSpenderen")}</div>
+      <div class="stamp-value">€ ${fmt(Math.abs(over))}</div>
+      <div class="stamp-sub">${t("stampSub")}</div>
+    </div>
+
+    <div class="summary-line credit"><span class="l">${t("nettoInkomsten")}</span><span class="v">€ ${fmt(net)}</span></div>
+    <div class="summary-line debit"><span class="l">${t("vasteLasten")}</span><span class="v">− € ${fmt(totals.vasteLasten)}</span></div>
+    <div class="summary-line debit"><span class="l">${t("abonnementen")}</span><span class="v">− € ${fmt(totals.abonnementen)}</span></div>
+    <div class="summary-line debit"><span class="l">${t("variabeleLasten")}</span><span class="v">− € ${fmt(totals.variabeleLasten)}</span></div>
+    <div class="summary-line total"><span class="l">${t("saldo")}</span><span class="v">€ ${fmt(over)}</span></div>
+
+    <div class="chart-block">
+      <h2>${t("chartTitle1")}</h2>
+      ${barChart(totals)}
+      <div class="legend">${categoryLegendHTML()}</div>
+    </div>
+
+    <div class="chart-block">
+      <h2>${t("chartTitle2")}</h2>
+      ${donutChart(categorySegments(totals.vasteLasten, totals.abonnementen, totals.variabeleLasten, over))}
+    </div>
+
+    ${renderActionsHTML(false, !s.locked)}
+  `;
+  wireActions(null, s);
+}
+
+function renderMonthSummary(){
+  const m = state.months.find(x=>x.key===state.activeView.key);
+  const el = document.getElementById("summary");
+  if(!m){ el.innerHTML = ""; return; }
+  const totals = computeMonthTotals(m);
+  const over = totals.income - totals.totaalUitgaven;
+
+  const budget = m.budgetId ? state.budgets.find(b=>b.id===m.budgetId) : null;
+  let budgetLine = "";
+  if(budget){
+    const bIncome = sum(budget.income.items);
+    const bTotaalUitgaven = sum(budget.vasteLasten.items) + sum(budget.abonnementen.items) + sum(budget.variabeleLasten.items);
+    const bOver = bIncome - bTotaalUitgaven;
+    const diff = over - bOver;
+    budgetLine = `
+      <div class="summary-line"><span class="l">${t("begrootSaldo")(budget.title)}</span><span class="v">€ ${fmt(bOver)}</span></div>
+      <div class="summary-line ${diff<0?'debit':'credit'}"><span class="l">${t("verschilMetBudget")}</span><span class="v">${diff>=0?'+':'−'} € ${fmt(Math.abs(diff))}</span></div>
+    `;
+  }
+
+  el.innerHTML = `
+    <h2>${monthLabel(m)}</h2>
+    <div class="stamp ${over<0?'negative':''}">
+      <div class="stamp-label">${over<0? t("tekort") : t("overTeSpenderen")}</div>
+      <div class="stamp-value">€ ${fmt(Math.abs(over))}</div>
+      <div class="stamp-sub">${t("stampSub")}</div>
+    </div>
+
+    <div class="summary-line credit"><span class="l">${t("nettoInkomsten")}</span><span class="v">€ ${fmt(totals.income)}</span></div>
+    <div class="summary-line debit"><span class="l">${t("vasteLasten")}</span><span class="v">− € ${fmt(totals.vasteLasten)}</span></div>
+    <div class="summary-line debit"><span class="l">${t("abonnementen")}</span><span class="v">− € ${fmt(totals.abonnementen)}</span></div>
+    <div class="summary-line debit"><span class="l">${t("variabeleLasten")}</span><span class="v">− € ${fmt(totals.variabeleLasten)}</span></div>
+    <div class="summary-line total"><span class="l">${t("saldo")}</span><span class="v">€ ${fmt(over)}</span></div>
+    ${budgetLine}
+
+    <div class="chart-block">
+      <h2>${t("chartTitle1Month")}</h2>
+      ${monthBarChart(totals)}
+      <div class="legend">${categoryLegendHTML()}</div>
+    </div>
+
+    <div class="chart-block">
+      <h2>${t("chartTitle2")}</h2>
+      ${donutChart(categorySegments(totals.vasteLasten, totals.abonnementen, totals.variabeleLasten, over))}
+    </div>
+
+    ${renderActionsHTML(true, false, false)}
+  `;
+  wireActions(m);
+}
+
+function renderLoonstijgingSummary(){
+  const el = document.getElementById("summary");
+  const data = effectiveLoonstijgingRows();
+  const nowYear = new Date().getFullYear();
+  const fallbackYear = data.find(d=>d.jaar===nowYear) ? nowYear : data[data.length-1].jaar;
+  const selectedYear = state.loonstijgingSelectedYear || fallbackYear;
+  const row = data.find(d=>d.jaar===selectedYear) || data[data.length-1];
+  const kosten = huidigKosten();
+  const over = row.totaalPerMaand - kosten;
+  el.innerHTML = `
+    <h2>${t("loonstijgingEyebrow")}</h2>
+
+    <div class="summary-line credit"><span class="l">${t("legendNettoInkomen")} (${row.jaar})</span><span class="v">€ ${fmt(row.totaalPerMaand)}</span></div>
+    <div class="summary-line debit"><span class="l">${t("legendKosten")}</span><span class="v">− € ${fmt(kosten)}</span></div>
+    <div class="summary-line total"><span class="l">${t("saldo")}</span><span class="v">€ ${fmt(over)}</span></div>
+
+    <div class="chart-block" id="loonstijgingChartBlock">
+      <h2>${t("loonstijgingTitle")}</h2>
+      <div class="card-note" style="padding:0 0 8px;">${t("loonstijgingClickHint")}</div>
+    </div>
+
+    ${renderActionsHTML(false)}
+  `;
+  const chartBlock = document.getElementById("loonstijgingChartBlock");
+  chartBlock.appendChild(loonstijgingLineChart(data, row.jaar, (jaar) => {
+    state.loonstijgingSelectedYear = jaar;
+    renderSummary();
+  }));
+  const legendDiv = document.createElement("div");
+  legendDiv.className = "legend";
+  legendDiv.innerHTML = loonstijgingLegendHTML();
+  chartBlock.appendChild(legendDiv);
+  wireActions();
+}
+
+/* ---------- RENDER ALL ---------- */
+function renderAll(skipCategories){
+  syncComputedLoons();
+  renderHeader();
+  renderTabs();
+  if(!skipCategories) renderCategories();
+  renderSummary();
+  scheduleAutoSave();
+}
+
+document.getElementById("csvUploadInput").addEventListener("change", handleCSVUpload);
+document.getElementById("langToggle").addEventListener("click", (e)=>{
+  const btn = e.target.closest(".lang-btn");
+  if(!btn) return;
+  state.lang = btn.dataset.lang;
+  renderAll();
+});
+document.getElementById("modeBtn").addEventListener("click", ()=>{
+  state.darkMode = !state.darkMode;
+  renderAll();
+});
+
+/* Bootstrap: de rest van de app wordt pas getekend NADAT er is ingelogd én het
+   versleutelingswachtwoord is ingevoerd/gekozen (zie bootApp(), die vanuit de auth-gate hierboven
+   wordt aangeroepen zodra `state` daadwerkelijk (ontsleuteld) bekend is). Tot die tijd staat alleen
+   de login-overlay er. Is er al eerder data ingebed in dít bestand (een eerder geëxporteerde
+   kopie), dan biedt de auth-gate die aan als startpunt bij een gloednieuw account — zie
+   renderEncryptionPromptNew() / readEmbeddedData() hierboven. */
+function bootApp(){
+  syncComputedLoons();
+  renderHeader();
+  renderTabs();
+  renderCategories();
+  renderSummary();
+  updateSaveStatus();
+}
+
+document.documentElement.dataset.mode = state.darkMode ? "dark" : "light";
+renderAuthGate();
+
+/* Was je al ingelogd (Supabase onthoudt de sessie zelf, in localStorage van déze browser) — dan
+   hoef je niet opnieuw je e-mail/wachtwoord in te typen, alleen nog je versleutelingswachtwoord. */
+if(cloudClient){
+  cloudClient.auth.getSession().then(({ data }) => {
+    if(data && data.session){
+      cloudSession = data.session;
+      renderAuthGate();
+    }
+  });
+}
+</script>
+</body>
+</html>
+
      achtergrond van kaarten. --text-onink(-soft) is de tekstkleur die bij --ink hoort, --text(-soft)
      die bij --paper — dat koppel wisselt per modus mee, dus de rest van het stijlblad hoeft niet
      te weten of het licht of donker is. */
