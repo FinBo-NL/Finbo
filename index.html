@@ -2272,7 +2272,12 @@ function buildMonthFromCSV(rows, filename){
     // (zie ook Geldmaat hierboven), zodat zelf gekozen kan worden of het als inkomen meetelt of als
     // correctie op de kostenpost.
     if(cat !== "income" && amt > 0){
-      if(!reviewBucket[label]) reviewBucket[label] = { total:0, entries:[] };
+      // "inferredCat" onthoudt welke kostencategorie deze losse creditering normaal zou horen te
+      // matchen (bv. "variabeleLasten" voor een PayPal-terugbetaling die anders bij "Online" zou
+      // zijn opgeteld) — zie hieronder bij het samenstellen van "review", en renderReviewCard voor
+      // waar dit de standaard-doelcategorie in de dropdown bepaalt i.p.v. altijd te gokken op
+      // "inkomen" alleen omdat het bedrag toevallig positief is.
+      if(!reviewBucket[label]) reviewBucket[label] = { total:0, entries:[], inferredCat: cat };
       reviewBucket[label].total += amt;
       reviewBucket[label].entries.push({ naam: rawNaam, amt: Math.round(amt*100)/100, datum, omschrijving });
       return;
@@ -2298,6 +2303,7 @@ function buildMonthFromCSV(rows, filename){
     .map(([naam,data])=>({
       naam, amt: Math.round(data.total*100)/100, target:null, addedItem:null, selected:false,
       entries: data.entries.slice().sort(byDatum),
+      ...(data.inferredCat ? { inferredCat: data.inferredCat } : {}),
     }))
     .filter(it=>Math.abs(it.amt) > 0.001)
     .sort((a,b)=> Math.abs(b.amt) - Math.abs(a.amt));
@@ -4043,10 +4049,31 @@ function renderReviewCard(m){
 
   const addEntry = (entry, chosen) => {
     const contribution = chosen === "income" ? entry.amt : -entry.amt;
-    const item = { l: entry.naam, v: Math.round(contribution*100)/100 };
-    m[chosen].items.push(item);
+    // Als de gekozen categorie al een regel met exact hetzelfde label heeft (bv. een PayPal-
+    // terugbetaling die je nu alsnog bij "Online" indeelt, terwijl er al een echte "Online"-post met
+    // de gewone aankopen staat, zie inferredCat hierboven), wordt dit bedrag daar bovenop opgeteld
+    // i.p.v. een tweede, botsende regel met dezelfde naam aan te maken — anders zou de vergelijking
+    // straks alleen de laatst-toegevoegde van de twee gelijknamige regels zien en de rest stilzwijgend
+    // negeren. "addedWasNew" onthoudt of dit een gloednieuwe regel was of een samenvoeging, zodat het
+    // ongedaan maken hieronder de juiste kant op werkt: een nieuwe regel helemaal weghalen, een
+    // samenvoeging alleen met dit bedrag weer verlagen (in plaats van de hele bestaande regel te
+    // wissen, inclusief wat er al in zat vóór deze toevoeging).
+    const key = entry.naam.trim().toLowerCase();
+    const existing = m[chosen].items.find(it => it.l.trim().toLowerCase() === key);
+    let item, wasNew;
+    if(existing){
+      existing.v = Math.round((existing.v + contribution)*100)/100;
+      item = existing;
+      wasNew = false;
+    } else {
+      item = { l: entry.naam, v: Math.round(contribution*100)/100 };
+      m[chosen].items.push(item);
+      wasNew = true;
+    }
     entry.target = chosen;
     entry.addedItem = item;
+    entry.addedContribution = Math.round(contribution*100)/100;
+    entry.addedWasNew = wasNew;
   };
 
   m.review.forEach(entry=>{
@@ -4057,7 +4084,12 @@ function renderReviewCard(m){
     row.className = "row review-row";
     const isAdded = !!entry.target;
     const sign = entry.amt >= 0 ? "+" : "−";
-    const defaultTarget = entry.target || (entry.amt > 0 ? "income" : "vasteLasten");
+    // Een losse creditering die is afgeleid van een bekende kostenregel (bv. een PayPal-terugbetaling
+    // die normaal bij "Online" zou zijn opgeteld, zie buildMonthFromCSV) krijgt die kostencategorie
+    // alvast als voorgeselecteerde standaardwaarde — véél waarschijnlijker de juiste keuze dan zomaar
+    // "Inkomen" alleen omdat het bedrag toevallig positief is. Alleen als er geen betere gok bekend is
+    // (echt ongeclassificeerde posten, of Geldmaat) valt dit terug op de oude teken-gebaseerde regel.
+    const defaultTarget = entry.target || entry.inferredCat || (entry.amt > 0 ? "income" : "vasteLasten");
     // Combinatieregels (bv. meerdere Geldmaat-opnames onder één post) krijgen een uitklapknopje
     // met daaronder de individuele betalingen — zie renderBreakdownRows().
     const hasBreakdown = entry.entries && entry.entries.length > 1;
@@ -4089,10 +4121,21 @@ function renderReviewCard(m){
     btn.onclick = () => {
       if(entry.target){
         const bucket = m[entry.target];
-        const idx = bucket.items.indexOf(entry.addedItem);
-        if(idx>=0) bucket.items.splice(idx,1);
+        if(entry.addedWasNew){
+          // Deze toevoeging heeft indertijd een gloednieuwe regel aangemaakt -- die kan gewoon
+          // helemaal weg.
+          const idx = bucket.items.indexOf(entry.addedItem);
+          if(idx>=0) bucket.items.splice(idx,1);
+        } else if(entry.addedItem){
+          // Deze toevoeging is samengevoegd met een regel die al bestond (zie addEntry hierboven) --
+          // alleen dit bedrag er weer vanaf halen, niet de hele regel wissen (die had immers al een
+          // eigen waarde vóórdat dit erbij kwam).
+          entry.addedItem.v = Math.round((entry.addedItem.v - (entry.addedContribution||0))*100)/100;
+        }
         entry.target = null;
         entry.addedItem = null;
+        entry.addedContribution = null;
+        entry.addedWasNew = null;
       } else {
         addEntry(entry, select.value);
       }
