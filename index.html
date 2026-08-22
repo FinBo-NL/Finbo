@@ -300,6 +300,23 @@
     justify-content:center;
   }
   .tab-upload:hover{background:color-mix(in srgb, var(--gold) 8%, transparent); border-color:var(--gold);}
+  /* CSV- en PDF-uploadknop samen: op smal scherm (het gebruikelijke geval) gewoon onder elkaar,
+     precies zoals hiervoor. Pas vanaf dezelfde 760px-drempel als de Maandbudgetten/Jaren-pair
+     hierboven gaan ze naast elkaar staan — er is dan toch ruimte over. */
+  .upload-row{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  @media (min-width:760px){
+    .upload-row{
+      flex-direction:row;
+    }
+    .upload-row > .tab-upload{
+      flex:1 1 0;
+      min-width:0;
+    }
+  }
 
   /* Layout */
   .layout{
@@ -934,6 +951,7 @@
 </header>
 
 <input type="file" id="csvUploadInput" accept=".csv" style="display:none"/>
+<input type="file" id="pdfUploadInput" accept=".pdf" style="display:none"/>
 
 <div class="layout">
   <main class="categories" id="categories"></main>
@@ -947,6 +965,11 @@
 
 <!-- Supabase-client (cloud-database + inloggen) — moet vóór het hoofdscript geladen zijn. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<!-- PDF.js (voor het inlezen van rekeningafschrift-PDF's als alternatief voor de CSV-export, zie
+     parsePdfTransactions()) — moet vóór het hoofdscript geladen zijn. Zonder internetverbinding
+     werkt de PDF-upload niet (de CSV-upload blijft dan gewoon werken, die heeft dit niet nodig). -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"></script>
 
 <script>
 /* Allereerste statement: leg de pagina exact vast zoals hij statisch is geladen (nog vóórdat er
@@ -967,6 +990,7 @@ const i18n = {
     scenariosLabel: "Scenario's",
     monthsLabel: "Maandoverzichten",
     uploadBtn: "+ Upload maand-CSV",
+    uploadPdfBtn: "+ Upload maand-PDF",
     income: "Inkomsten",
     vasteLasten: "Gedeelde vaste lasten",
     abonnementen: "Abonnementen",
@@ -977,6 +1001,8 @@ const i18n = {
     reviewNote: "Niet automatisch herkend. Kies per post een blok en klik op Toevoegen — deze lijst telt zelf niet mee in het saldo, pas na toevoegen wel.",
     addBtn: "Toevoegen",
     reverseBtn: "Ongedaan maken",
+    stornoReviewTitle: "Openstaande terugboekingen",
+    stornoReviewNote: "Deze incasso's zijn deze maand teruggeboekt (\"Oneens met incasso\" e.d.) en lijken niet binnen dezelfde maand alsnog geslaagd — ze tellen dus nu nergens in mee. Kies zelf of en waar je 'm alsnog als kostenpost wilt meetellen.",
     verhogingen: "Nieuw jaar",
     indexLabel: "Indexverhoging (vast bruto bedrag)",
     pctLabel: "Percentage (over loon + indexcijfer)",
@@ -1011,6 +1037,7 @@ const i18n = {
     resetConfirm: "Alle wijzigingen ongedaan maken en teruggaan naar de basiswaarden?",
     importError: "Kon dit bestand niet lezen: ",
     csvParseError: "Kon deze CSV niet verwerken: ",
+    pdfParseError: "Kon deze PDF niet verwerken: ",
     saveNowBtn: "Opslaan",
     saveNowSaving: "Bezig met opslaan…",
     saveNowSaved: "Opgeslagen ✓",
@@ -1093,6 +1120,7 @@ const i18n = {
     scenariosLabel: "Scenarios",
     monthsLabel: "Monthly overviews",
     uploadBtn: "+ Upload month CSV",
+    uploadPdfBtn: "+ Upload month PDF",
     income: "Income",
     vasteLasten: "Shared fixed costs",
     abonnementen: "Subscriptions",
@@ -1103,6 +1131,8 @@ const i18n = {
     reviewNote: "Not auto-categorised. Pick a block for each item and click Add — this list doesn't count toward the balance itself, only once added.",
     addBtn: "Add",
     reverseBtn: "Reverse",
+    stornoReviewTitle: "Outstanding reversals",
+    stornoReviewNote: "These direct debits were reversed this month (\"payment disputed\" etc.) and don't appear to have succeeded again within the same month — so right now they aren't counted anywhere. Choose yourself whether and where to still count it as a cost.",
     verhogingen: "New year",
     indexLabel: "Index increase (fixed gross amount)",
     pctLabel: "Percentage (over salary + index figure)",
@@ -1137,6 +1167,7 @@ const i18n = {
     resetConfirm: "Undo all changes and go back to the base values?",
     importError: "Could not read this file: ",
     csvParseError: "Could not process this CSV: ",
+    pdfParseError: "Could not process this PDF: ",
     saveNowBtn: "Save",
     saveNowSaving: "Saving…",
     saveNowSaved: "Saved ✓",
@@ -1409,6 +1440,7 @@ function migrateState(){
   // altijd nog wijzigen via de kiezer boven de vergelijking.
   state.months.forEach(m=>{
     if(m.budgetId === undefined) m.budgetId = state.budgets.length ? state.budgets[0].id : null;
+    if(!m.openTerugboekingen) m.openTerugboekingen = [];
   });
   // Oudere maandbudgetten kennen het eigen warmtefonds-vinkje nog niet. Standaard uit, zodat
   // hun al opgeslagen/getoonde totalen niet stilzwijgend veranderen bij het laden.
@@ -1622,7 +1654,7 @@ function parseNLAmount(s){
 }
 
 function detectMonthFromFilename(name){
-  const base = name.replace(/\.csv$/i,"");
+  const base = name.replace(/\.(csv|pdf)$/i,"");
   const m = base.match(/(\d{4})(\d{2})$/);
   if(m){
     const year = parseInt(m[1],10);
@@ -1754,17 +1786,81 @@ function classifyTransaction(tx){
   return {cat:"review", label:naam, naam, amt};
 }
 
+/* Herkent teruggeboekte incasso's ("Reden retour" ingevuld, bv. "MD06-Oneens met incasso") en
+   voorkomt dat ze verkeerd meetellen:
+   1) De mislukte oorspronkelijke afschrijving hoort onlosmakelijk bij zijn eigen terugboeking —
+      te herkennen aan exact dezelfde Transactiereferentie. Dat paar wordt samen genegeerd (netto
+      nul), zodat een mislukte poging nooit alsnog als kostenpost meetelt.
+   2) Is er, voor dezelfde tegenpartij + hetzelfde bedrag + dezelfde omschrijving (bv. "Termijnbedrag
+      mei 2026"), later in dezelfde aanlevering wél een geslaagde afschrijving te vinden, dan is de
+      terugboeking impliciet alsnog voldaan — die geslaagde regel telt gewoon normaal mee, er is
+      verder niets nodig.
+   3) Is die er niet, dan verdwijnt de terugboeking niet stilzwijgend: hij komt in een eigen lijst
+      (zie renderStornoReviewCard) waar zelf gekozen kan worden of en in welk blok 'm alsnog als
+      kostenpost meetelt — in plaats van de aanname dat "genegeerd" hetzelfde is als "voldaan". */
+function resolveStornos(rows){
+  const isStorno = r => !!(r["Reden retour"] && String(r["Reden retour"]).trim());
+  const stornoRows = rows.filter(isStorno);
+  const excluded = new Set();
+  stornoRows.forEach(r => excluded.add(r));
+
+  const identityKey = r => {
+    const naam = (r["Naam tegenpartij"]||r["Naam initiërende partij"]||"").trim().toLowerCase();
+    const omschr = ((r["Omschrijving-1"]||"") + " " + (r["Omschrijving-2"]||"")).trim().toLowerCase();
+    return naam + "|" + omschr;
+  };
+
+  const openTerugboekingen = [];
+  stornoRows.forEach(storno => {
+    const amt = Math.abs(parseNLAmount(storno["Bedrag"]));
+    const naam = (storno["Naam tegenpartij"]||storno["Naam initiërende partij"]||"Onbekend").trim();
+    const ref = storno["Transactiereferentie"];
+
+    // De rechtstreeks gekoppelde, mislukte oorspronkelijke afschrijving (zelfde Transactiereferentie)
+    // telt sowieso nooit mee als kostenpost — ongeacht of de terugboeking verderop alsnog voldaan is.
+    if(ref){
+      rows.forEach(r => {
+        if(r === storno) return;
+        if(r["Transactiereferentie"] === ref && !isStorno(r)) excluded.add(r);
+      });
+    }
+
+    const key = identityKey(storno);
+    const resolved = rows.some(r => {
+      if(isStorno(r) || excluded.has(r)) return false;
+      const rAmt = parseNLAmount(r["Bedrag"]);
+      if(rAmt >= 0) return false; // moet zelf ook een afschrijving zijn
+      if(Math.abs(Math.abs(rAmt) - amt) > 0.005) return false;
+      return identityKey(r) === key;
+    });
+
+    if(!resolved){
+      openTerugboekingen.push({
+        naam,
+        amt: Math.round(amt*100)/100,
+        datum: storno["Datum"] || "",
+        target: null,
+        addedItem: null,
+      });
+    }
+  });
+
+  return { rows: rows.filter(r => !excluded.has(r)), openTerugboekingen };
+}
+
 function buildMonthFromCSV(rows, filename){
   const ym = detectMonthFromFilename(filename) || detectMonthFromRows(rows);
   if(!ym) throw new Error("Kon geen maand herkennen uit de bestandsnaam of de datums in het bestand.");
   const key = `${ym.year}-${String(ym.month).padStart(2,"0")}`;
+
+  const { rows: filteredRows, openTerugboekingen } = resolveStornos(rows);
 
   const cats = ["income","vasteLasten","abonnementen","variabeleLasten"];
   const buckets = {}; cats.forEach(c=>buckets[c]={});
   const reviewBucket = {};
 
   let rowCount = 0;
-  rows.forEach(r=>{
+  filteredRows.forEach(r=>{
     if(r["Bedrag"] === undefined || r["Bedrag"] === "") return;
     rowCount++;
     const result = classifyTransaction(r);
@@ -1808,6 +1904,7 @@ function buildMonthFromCSV(rows, filename){
     abonnementen: { items: toItems(buckets.abonnementen) },
     variabeleLasten: { items: toItems(buckets.variabeleLasten) },
     review,
+    openTerugboekingen,
   };
 }
 
@@ -1836,6 +1933,224 @@ function handleCSVUpload(e){
       renderAll();
     }catch(err){
       alert(t("csvParseError") + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = "";
+}
+
+/* ---------- PDF IMPORT: alternatief voor de CSV-export ----------
+   Rabobank-rekeningafschriften als PDF hebben, anders dan de CSV-export, geen apart veld met het
+   bedrag + teken: dat is alleen te herkennen aan óf het bedrag in de linkerkolom (debet, "Bedrag af")
+   óf de rechterkolom (credit, "Bedrag bij") staat afgedrukt. Deze parser leest de tekst + positie van
+   elk stukje tekst uit de PDF (via PDF.js), zet ze terug om in regels or "regels" (tekst met (bijna)
+   dezelfde y-positie), herkent daarin per transactie de datum/type/naam/bedrag, en levert per
+   transactie een object op in exact dezelfde vorm als een rij uit de CSV-export — zodat de rest van
+   de import (classifyTransaction, resolveStornos, buildMonthFromCSV) ongewijzigd hergebruikt kan
+   worden voor zowel CSV als PDF.
+   Kanttekening: dit is beduidend fragieler dan de CSV-import (die gestructureerde velden heeft). Bij
+   afwijkingen in de lay-out (bv. een andere banksoort-afschrift) kan dit missen of fouten geven —
+   controleer de eerste keer altijd het resultaat. */
+function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+async function parsePdfTransactions(arrayBuffer){
+  if(!window.pdfjsLib){
+    throw new Error("PDF-bibliotheek kon niet geladen worden (controleer je internetverbinding).");
+  }
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+  const AMOUNT_RE = /^\d{1,3}(?:\.\d{3})*,\d{2}$/;
+  const BLOCK_START_RE = /^(\d{2}-\d{2})\s+([a-z]{2,3})\s+(.*)$/i;
+  const Y_TOL = 2.5;
+
+  const transactions = [];
+  let debetCreditThreshold = null; // x-grens tussen de "Bedrag af"- en "Bedrag bij"-kolom
+  let naamColumnX = null; // linker x-grens van de "Naam/omschrijving"-kolom
+  // Bewust BUITEN de pagina-loop: een enkele transactie kan met zijn vervolgregels over een
+  // pagina-einde heen lopen (dat gebeurt echt — bv. een terugboeking waarvan de laatste regels
+  // "Transactiereferentie: ..." en "Verwerkingsdatum: ..." toevallig net op de volgende pagina
+  // staan). Zonder dit zou zo'n transactie stilzwijgend wegvallen (geen Verwerkingsdatum
+  // gevonden), inclusief zijn eventuele koppeling aan een terugboeking.
+  let block = null;
+
+  for(let pageNum=1; pageNum<=pdf.numPages; pageNum++){
+    const page = await pdf.getPage(pageNum);
+    const content = await page.getTextContent();
+    const items = content.items
+      .map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] }))
+      .filter(it => it.str.trim() !== "");
+
+    const sorted = items.slice().sort((a,b)=> b.y - a.y || a.x - b.x);
+    const lines = [];
+    let currentLine = null;
+    sorted.forEach(it=>{
+      if(!currentLine || Math.abs(currentLine.y - it.y) > Y_TOL){
+        currentLine = { y: it.y, items: [] };
+        lines.push(currentLine);
+      }
+      currentLine.items.push(it);
+    });
+    lines.forEach(l => l.items.sort((a,b)=>a.x-b.x));
+
+    // Kolomgrenzen herberekenen op basis van de kopregel ("Tegenrekening  Naam/omschrijving
+    // Bedrag af (debet)  Bedrag bij (credit)") — via een tekst-naar-item-index-map i.p.v. één los
+    // tekstitem, zodat het ook werkt als PDF.js de koplabels in meerdere kleinere stukjes tekst
+    // opsplitst i.p.v. als één geheel. De Naam-kolomgrens laat toe de naam op de eerste regel altijd
+    // positioneel te bepalen i.p.v. te gokken aan de hand van hoe de tekst eruitziet (zie hieronder
+    // waarom dat laatste bij een korte, in hoofdletters geschreven naam als "TAF BV" fout gaat: die
+    // is qua vorm niet te onderscheiden van een stukje Tegenrekening-IBAN).
+    let headerLineIdx = -1;
+    lines.forEach((line, idx) => {
+      let text = "", map = [];
+      line.items.forEach((it, i)=>{
+        if(i>0){ text += " "; map.push(null); }
+        for(let c=0;c<it.str.length;c++) map.push(it);
+        text += it.str;
+      });
+      const iNaam = text.indexOf("Naam/omschrijving");
+      const iDebet = text.indexOf("Bedrag af");
+      const iCredit = text.indexOf("Bedrag bij");
+      if(iNaam>=0){
+        const naamItem = map[iNaam];
+        if(naamItem) naamColumnX = naamItem.x;
+        headerLineIdx = idx;
+      }
+      if(iDebet>=0 && iCredit>=0){
+        const debetItem = map[iDebet], creditItem = map[iCredit];
+        if(debetItem && creditItem) debetCreditThreshold = (debetItem.x + creditItem.x) / 2;
+      }
+    });
+
+    // Alles tot en met de tabelkop ("Rente Type Tegenrekening Naam/omschrijving ... / datum")
+    // overslaan: dat is altijd kop-/adresgegevens (adressant, IBAN, bladnummer, periode) die nooit
+    // bij een transactie hoort. Nodig omdat een transactie soms met zijn vervolgregels over een
+    // pagina-einde loopt (block blijft dan expres open, zie hieronder) — zonder dit zou die kop-
+    // /adresruis er middenin belanden.
+    const bodyLines = headerLineIdx >= 0 ? lines.slice(headerLineIdx + 2) : lines;
+
+    bodyLines.forEach(line => {
+      const text = line.items.map(it=>it.str).join(" ").replace(/\s+/g," ").trim();
+      if(!text) return;
+
+      const startMatch = text.match(BLOCK_START_RE);
+      if(startMatch){
+        const amtItem = [...line.items].reverse().find(it => AMOUNT_RE.test(it.str.trim()));
+        // Naam positioneel bepalen: alle items die (ruim) binnen de Naam/omschrijving-kolom vallen,
+        // met het bedrag-item er zelf weer uitgefilterd. Robuuster dan tekstpatronen gokken, want
+        // een korte naam als "TAF BV" ziet er qua vorm identiek uit aan een IBAN-groepje.
+        let naamFromPosition = "";
+        if(naamColumnX !== null){
+          const naamItems = line.items.filter(it => it.x >= naamColumnX - 3 && it !== amtItem);
+          naamFromPosition = naamItems.map(it=>it.str).join(" ").replace(/\s+/g," ").trim();
+        }
+        block = {
+          firstLineRest: startMatch[3],
+          naamFromPosition,
+          amountStr: null,
+          amountX: null,
+          extraLines: [],
+          verwerkingsdatum: null,
+        };
+        if(amtItem){ block.amountStr = amtItem.str.trim(); block.amountX = amtItem.x; }
+        transactions.push(block);
+        return;
+      }
+
+      if(!block) return; // ruis vóór de eerste transactie: kopregels, adres, footer, legenda
+
+      const vwMatch = text.match(/Verwerkingsdatum:\s*(\d{2}-\d{2}-\d{4})/);
+      if(vwMatch){
+        block.verwerkingsdatum = vwMatch[1];
+        block = null; // blok compleet — eventuele ruis erna (volgende kop/footer) wordt genegeerd
+        return;
+      }
+      // Kop-/voettekst die per pagina terugkeert (bv. "Blad 7 van 14", "vervolg Rekeningafschrift",
+      // de tabelkop zelf) mag nooit in de omschrijving van een nog openstaand blok terechtkomen —
+      // dat kan gebeuren omdat een transactie soms met zijn vervolgregels over een pagina-einde
+      // loopt (zie hierboven, block blijft dan expres open), waardoor deze ruis er middenin valt.
+      const PAGE_NOISE_RE = /^(Blad\b|\d+ van \d+$|vervolg Rekeningafschrift|Rekeningafschrift|Rabo Standaard|Ten name van|IBAN\s*\/\s*Rekeningnummer|Datum vanaf|Datum tot en met|Rente\s*$|datum\s*$|Type Tegenrekening|CR\s*=|D\s*=\s*tekort)/i;
+      if(PAGE_NOISE_RE.test(text)) return;
+      block.extraLines.push(text);
+    });
+  }
+
+  // Blokken zonder herkend bedrag of Verwerkingsdatum passen niet in de aannames hierboven en
+  // worden overgeslagen i.p.v. met gokwerk verwerkt (liever een gemiste regel dan een foute).
+  return transactions
+    .filter(b => b.amountStr && b.verwerkingsdatum)
+    .map(b => {
+      const isCredit = debetCreditThreshold !== null && b.amountX > debetCreditThreshold;
+      const amt = parseNLAmount(b.amountStr) * (isCredit ? 1 : -1);
+
+      // Naam bij voorkeur positioneel bepaald (zie b.naamFromPosition hierboven) — robuuster dan
+      // op basis van hoe de tekst eruitziet, want een korte naam als "TAF BV" is qua vorm niet te
+      // onderscheiden van een stukje Tegenrekening-IBAN. Alleen als de Naam-kolomgrens deze pagina
+      // niet gevonden kon worden (geen kopregel herkend) valt dit terug op tekstpatronen gokken.
+      let naam;
+      if(b.naamFromPosition !== undefined){
+        naam = b.naamFromPosition;
+      } else {
+        const rest = b.firstLineRest.replace(new RegExp(escapeRegExp(b.amountStr) + "\\s*$"), "").trim();
+        const ibanOnlyMatch = rest.match(/^[A-Z]{2}\d{2}(?:\s+[A-Z0-9]{2,6}){0,6}$/);
+        if(ibanOnlyMatch){
+          naam = ""; // Tegenrekening-IBAN vult de hele eerste regel al
+        } else {
+          const ibanWithNaamMatch = rest.match(/^([A-Z]{2}\d{2}(?:\s+[A-Z0-9]{2,6}){1,6})\s+(.+)$/);
+          naam = (ibanWithNaamMatch ? ibanWithNaamMatch[2] : rest).trim();
+        }
+      }
+
+      // Een "naam" die er zelf nog als een stukje IBAN uitziet (kort, alleen hoofdletters/cijfers,
+      // geen spatie) is vrijwel zeker een restje Tegenrekening dat toch nog binnen de Naam-kolom
+      // viel (bv. bij een ongebruikelijk lange IBAN) — behandel die net als "geen naam gevonden".
+      if(naam && /^[A-Z0-9]{1,6}$/.test(naam)) naam = "";
+
+      // Bij een (te) lange Tegenrekening-IBAN past de naam soms niet meer op de eerste regel en
+      // staat 'm als allereerste vervolgregel (bv. de PayPal- en Amazon-incasso's in dit afschrift)
+      // i.p.v. ernaast. Zonder naam op de eerste regel: als de eerste vervolgregel geen van de
+      // vaste detail-labels is, is dat de naam.
+      let extraLines = b.extraLines.slice();
+      if(!naam && extraLines.length){
+        const first = extraLines[0].trim();
+        const isLabelLine = /^(Kenmerk|Transactiereferentie|Terugboeking|\.\s*Pas|Appr Cd|[A-Z]{2}\d{2}ZZZ)/i.test(first) || /^[A-Z]{2}\d{2}(\s|$)/.test(first);
+        if(first && !isLabelLine){
+          naam = first;
+          extraLines = extraLines.slice(1);
+        }
+      }
+      naam = naam || "Onbekend";
+
+      const omschrijving = extraLines.join(" ").replace(/\s+/g," ").trim();
+      const isStorno = /terugboeking\s*:/i.test(omschrijving);
+      const refMatch = omschrijving.match(/Transactiereferentie:\s*([A-Za-z0-9]+)/i);
+      const [dd,mm,yyyy] = b.verwerkingsdatum.split("-");
+
+      return {
+        "Datum": `${yyyy}-${mm}-${dd}`,
+        "Bedrag": String(amt).replace(".", ","),
+        "Naam tegenpartij": naam,
+        "Naam initiërende partij": "",
+        "Omschrijving-1": omschrijving,
+        "Omschrijving-2": "",
+        "Reden retour": isStorno ? "Terugboeking (PDF)" : "",
+        "Transactiereferentie": refMatch ? refMatch[1] : "",
+      };
+    });
+}
+
+function handlePDFUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    try{
+      const rows = await parsePdfTransactions(ev.target.result);
+      const monthObj = buildMonthFromCSV(rows, file.name);
+      upsertMonth(monthObj);
+      state.activeView = { type:"month", key: monthObj.key };
+      renderAll();
+    }catch(err){
+      alert(t("pdfParseError") + err.message);
     }
   };
   reader.readAsArrayBuffer(file);
@@ -2451,11 +2766,22 @@ function renderTabs(){
   }
   el.appendChild(extraGroup);
 
+  const uploadRow = document.createElement("div");
+  uploadRow.className = "upload-row";
+
   const uploadBtn = document.createElement("button");
   uploadBtn.className = "tab tab-upload";
   uploadBtn.textContent = t("uploadBtn");
   uploadBtn.onclick = () => document.getElementById("csvUploadInput").click();
-  el.appendChild(uploadBtn);
+  uploadRow.appendChild(uploadBtn);
+
+  const uploadPdfBtn = document.createElement("button");
+  uploadPdfBtn.className = "tab tab-upload";
+  uploadPdfBtn.textContent = t("uploadPdfBtn");
+  uploadPdfBtn.onclick = () => document.getElementById("pdfUploadInput").click();
+  uploadRow.appendChild(uploadPdfBtn);
+
+  el.appendChild(uploadRow);
 }
 
 /* ---------- RENDER: LOONSVERHOGING-BLOK PER JAAR ---------- */
@@ -2943,6 +3269,9 @@ function renderMonthCategories(m){
   if(m.review && m.review.length){
     el.appendChild(renderReviewCard(m));
   }
+  if(m.openTerugboekingen && m.openTerugboekingen.length){
+    el.appendChild(renderStornoReviewCard(m));
+  }
 }
 
 /* ---------- RENDER: LOONSTIJGING (bron: tabblad "Loonstijging 2021-2030") ---------- */
@@ -3056,6 +3385,69 @@ function renderReviewCard(m){
       } else {
         const chosen = select.value;
         const contribution = chosen === "income" ? entry.amt : -entry.amt;
+        const item = { l: entry.naam, v: Math.round(contribution*100)/100 };
+        m[chosen].items.push(item);
+        entry.target = chosen;
+        entry.addedItem = item;
+      }
+      renderAll();
+    };
+    rows.appendChild(row);
+  });
+  return wrap;
+}
+
+/* Zelfde toevoegen-met-categorie-keuze UX als renderReviewCard(), maar voor teruggeboekte incasso's
+   die niet binnen dezelfde maand alsnog geslaagd lijken (zie resolveStornos()) — bewust een eigen
+   lijst i.p.v. meegeschoven in "Nog in te delen", zodat direct duidelijk is dát het om een
+   terugboeking gaat en niet om een simpelweg onherkende tegenpartij. */
+function renderStornoReviewCard(m){
+  const wrap = document.createElement("div");
+  wrap.className = "card card-review";
+  wrap.innerHTML = `
+    <div class="card-head">
+      <h2>${t("stornoReviewTitle")}</h2>
+    </div>
+    <div class="card-note">${t("stornoReviewNote")}</div>
+    <div class="rows review-rows"></div>
+  `;
+  const rows = wrap.querySelector(".review-rows");
+  const targets = [
+    { key:"income", label: t("income") },
+    { key:"vasteLasten", label: t("vasteLasten") },
+    { key:"abonnementen", label: t("abonnementen") },
+    { key:"variabeleLasten", label: t("variabeleLasten") },
+  ];
+
+  m.openTerugboekingen.forEach(entry=>{
+    const row = document.createElement("div");
+    row.className = "row review-row";
+    const isAdded = !!entry.target;
+    const defaultTarget = entry.target || "vasteLasten";
+
+    row.innerHTML = `
+      <span class="review-name" title="${entry.naam}">${entry.naam}</span>
+      <span class="review-amt mono neg">− € ${fmt(Math.abs(entry.amt))}</span>
+      <select class="review-select" ${isAdded ? "disabled" : ""}>
+        ${targets.map(o=>`<option value="${o.key}" ${defaultTarget===o.key ? "selected" : ""}>${o.label}</option>`).join("")}
+      </select>
+      <button class="review-btn ${isAdded ? "added" : ""}">${isAdded ? t("reverseBtn") : t("addBtn")}</button>
+    `;
+    const select = row.querySelector(".review-select");
+    const btn = row.querySelector(".review-btn");
+
+    btn.onclick = () => {
+      if(entry.target){
+        const bucket = m[entry.target];
+        const idx = bucket.items.indexOf(entry.addedItem);
+        if(idx>=0) bucket.items.splice(idx,1);
+        entry.target = null;
+        entry.addedItem = null;
+      } else {
+        const chosen = select.value;
+        // Een terugboeking is altijd een kostenpost (nooit inkomsten): bij "income" gekozen tellen
+        // we 'm als negatieve inkomstenpost, zodat het saldo er hoe dan ook mee daalt.
+        const contribution = chosen === "income" ? -entry.amt : entry.amt;
         const item = { l: entry.naam, v: Math.round(contribution*100)/100 };
         m[chosen].items.push(item);
         entry.target = chosen;
@@ -3691,6 +4083,10 @@ function renderAll(skipCategories){
 }
 
 document.getElementById("csvUploadInput").addEventListener("change", handleCSVUpload);
+document.getElementById("pdfUploadInput").addEventListener("change", handlePDFUpload);
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js";
+}
 document.getElementById("langToggle").addEventListener("click", (e)=>{
   const btn = e.target.closest(".lang-btn");
   if(!btn) return;
