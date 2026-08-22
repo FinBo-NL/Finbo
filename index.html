@@ -463,6 +463,15 @@
     border-bottom:1px dashed var(--rule);
   }
   .review-row:last-child{border-bottom:none;}
+  .review-subtotal-row{
+    border-top:1px solid var(--rule);
+    border-bottom:none;
+    padding-top:9px;
+    margin-top:2px;
+    font-weight:600;
+  }
+  .review-subtotal-row .review-name{flex:1 1 auto; white-space:normal; overflow:visible;}
+  .review-subtotal-row .review-amt{width:auto;}
   .review-name{
     flex:1 1 140px;
     min-width:0;
@@ -1093,6 +1102,7 @@ const i18n = {
     chartTitle1Month: "Opbouw budget",
     chartTitle2: "Verdeling uitgaven",
     totaal: "Totaal",
+    subtotaal: "Subtotaal",
     exportBtn: "Exporteer kopie",
     importBtn: "Importeer bestand",
     resetBtn: "Reset",
@@ -1227,6 +1237,7 @@ const i18n = {
     chartTitle1Month: "Budget breakdown",
     chartTitle2: "Expense breakdown",
     totaal: "Total",
+    subtotaal: "Subtotal",
     exportBtn: "Export a copy",
     importBtn: "Import file",
     resetBtn: "Reset",
@@ -1711,8 +1722,20 @@ function computeMonthTotals(m){
   const vasteLasten = sum(m.vasteLasten.items);
   const abonnementen = sum(m.abonnementen.items);
   const variabeleLasten = sum(m.variabeleLasten.items);
-  const totaalUitgaven = vasteLasten + abonnementen + variabeleLasten;
-  return { income, vasteLasten, abonnementen, variabeleLasten, totaalUitgaven };
+  // Issue #12: een toegevoegde "Openstaande terugboeking" (zie renderStornoReviewCard) belandt
+  // sinds de maandbudget-dropdown niet meer in een categorie van DEZE maand zelf, maar in het
+  // "Openstaand"-blok van het gekozen maandbudget — daardoor telde hij nergens meer mee in het
+  // eigen "Over te spenderen"-bedrag van deze maand, ook al is de terugboeking wél echt in deze
+  // maand gebeurd. Voor de eigen totalen van de maand telt een toegevoegde terugboeking daarom
+  // hier gewoon mee als extra kostenpost, los van welk maandbudget de gebruiker 'm later koos voor
+  // de planning. Oudere, nog-op-de-oude-manier toegevoegde rijen (entry.target, al in een categorie
+  // van deze maand zelf verwerkt) worden bewust NIET nogmaals meegeteld — die zaten al in
+  // vasteLasten/abonnementen/variabeleLasten hierboven.
+  const openstaandToegevoegd = (m.openTerugboekingen || [])
+    .filter(entry => entry.addedBudgetId)
+    .reduce((a,entry) => a + Math.abs(parseFloat(entry.amt)||0), 0);
+  const totaalUitgaven = vasteLasten + abonnementen + variabeleLasten + openstaandToegevoegd;
+  return { income, vasteLasten, abonnementen, variabeleLasten, openstaandToegevoegd, totaalUitgaven };
 }
 
 function monthLabel(m){
@@ -3500,7 +3523,7 @@ function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
         </div>
       `).join("")}
       <div class="compare-row compare-total">
-        <span class="compare-name">${t("totaal")}</span>
+        <span class="compare-name">${t("subtotaal")}</span>
         <span class="compare-col mono">€ ${fmt(totBudget)}</span>
         <span class="compare-col mono">€ ${fmt(totActual)}</span>
         <span class="compare-col mono compare-diff ${diffClass(totDiff)}">${totDiff>=0?'+':'−'} € ${fmt(Math.abs(totDiff))}</span>
@@ -3684,6 +3707,20 @@ function renderReviewCard(m){
     rows.appendChild(row);
   });
 
+  // Issue #12: een subtotaal onder de lijst — nadrukkelijk "Subtotaal" genoemd (niet "Totaal"),
+  // want dit is de som van de POSTEN IN DEZE LIJST, niet het saldo van de maand zelf; posten tellen
+  // pas mee in dat saldo zodra ze via "Toevoegen" zijn ingedeeld.
+  if(m.review.length){
+    const subtotal = m.review.reduce((a,entry)=>a+entry.amt, 0);
+    const subtotalRow = document.createElement("div");
+    subtotalRow.className = "row review-row review-subtotal-row";
+    subtotalRow.innerHTML = `
+      <span class="review-name">${t("subtotaal")}</span>
+      <span class="review-amt mono ${subtotal>=0?'pos':'neg'}">${subtotal>=0?'+':'−'} € ${fmt(Math.abs(subtotal))}</span>
+    `;
+    rows.appendChild(subtotalRow);
+  }
+
   const selectAllCheck = wrap.querySelector("#reviewSelectAll");
   if(selectAllCheck){
     selectAllCheck.onchange = () => {
@@ -3788,6 +3825,19 @@ function renderStornoReviewCard(m){
     };
     rows.appendChild(row);
   });
+
+  // Issue #12: subtotaal van deze lijst (altijd een kostenpost, dus altijd negatief getoond) —
+  // helpt meteen zien hoeveel er nog "open" staat, los van welk maandbudget er straks bij gekozen wordt.
+  if(m.openTerugboekingen.length){
+    const subtotal = m.openTerugboekingen.reduce((a,entry)=>a+Math.abs(parseFloat(entry.amt)||0), 0);
+    const subtotalRow = document.createElement("div");
+    subtotalRow.className = "row review-row review-subtotal-row";
+    subtotalRow.innerHTML = `
+      <span class="review-name">${t("subtotaal")}</span>
+      <span class="review-amt mono neg">− € ${fmt(subtotal)}</span>
+    `;
+    rows.appendChild(subtotalRow);
+  }
   return wrap;
 }
 
@@ -4361,6 +4411,7 @@ function renderMonthSummary(){
     <div class="summary-line debit"><span class="l">${t("vasteLasten")}</span><span class="v">− € ${fmt(totals.vasteLasten)}</span></div>
     <div class="summary-line debit"><span class="l">${t("abonnementen")}</span><span class="v">− € ${fmt(totals.abonnementen)}</span></div>
     <div class="summary-line debit"><span class="l">${t("variabeleLasten")}</span><span class="v">− € ${fmt(totals.variabeleLasten)}</span></div>
+    ${totals.openstaandToegevoegd > 0 ? `<div class="summary-line debit"><span class="l">${t("outstandingTitle")}</span><span class="v">− € ${fmt(totals.openstaandToegevoegd)}</span></div>` : ""}
     <div class="summary-line total"><span class="l">${t("saldo")}</span><span class="v">€ ${fmt(over)}</span></div>
     ${budgetLine}
 
