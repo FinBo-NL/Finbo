@@ -648,6 +648,21 @@
     margin-bottom:22px;
     transform:rotate(-0.4deg);
   }
+  /* Twee stamps (werkelijk + begroot) samen: gewoon flex-wrap, geen harde breedte-drempel nodig —
+     zo staan ze vanzelf naast elkaar zodra er ruimte is (bv. op een breed scherm, of zodra de
+     sidebar op smal scherm onder de hoofdinhoud terechtkomt en zo weer breder wordt) en anders
+     gewoon onder elkaar, precies zoals bij de andere responsive stukjes in deze app. */
+  .stamp-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-bottom:22px;
+  }
+  .stamp-row .stamp{
+    flex:1 1 150px;
+    min-width:150px;
+    margin-bottom:0;
+  }
   .stamp.negative{border-color:var(--debit);}
   .stamp .stamp-label{
     font-size:11px;
@@ -1369,6 +1384,7 @@ const BASISDATA_ABONNEMENTEN = [
   { l: "Scouting", v: 8.50 },
   { l: "Tulip Assist", v: 20.95 },
   { l: "Tulip Assist 2", v: 5.35 },
+  { l: "Rabobank", v: 3.60 },
 ];
 const BASISDATA_VARIABELELASTEN = [
   { l: "Hond eten", v: 50.98 },
@@ -1447,6 +1463,17 @@ function migrateState(){
   state.budgets.forEach(b=>{
     if(b.warmtefondsAftrek === undefined) b.warmtefondsAftrek = false;
   });
+  // De maandelijkse Rabobank-rekeningkosten (Rabo Standaard, ~€3,60) ontbraken tot nu toe als
+  // los abonnement — met terugwerkende kracht toegevoegd aan Basisdata én aan alle al bestaande
+  // maandbudgetten (die zijn bevroren snapshots en krijgen 'm dus niet automatisch mee vanuit
+  // Basisdata). Idempotent: slaat over als er al een "Rabobank"-post staat.
+  const ensureRabobankAbonnement = (abonnementen) => {
+    if(!abonnementen.items.some(it => it.l.trim().toLowerCase() === "rabobank")){
+      abonnementen.items.push({ l:"Rabobank", v:3.60 });
+    }
+  };
+  if(state.scenarios && state.scenarios[0]) ensureRabobankAbonnement(basisdataScenario().abonnementen);
+  state.budgets.forEach(b => ensureRabobankAbonnement(b.abonnementen));
   syncComputedLoons();
 }
 
@@ -1685,7 +1712,10 @@ function detectMonthFromRows(rows){
 const CATEGORY_RULES = [
   [["florius"], "vasteLasten","Hypotheek"],
   [["unitedconsumers"], "vasteLasten","UN-Gas+elec"],
-  [["waterleiding maatschappij limburg"], "vasteLasten","Water"],
+  // Zonder de laatste "g": bij deze tegenpartij wrapt de PDF-lay-out het laatste teken van
+  // "LIMBURG" soms als los stukje naar de vervolgregel, waardoor de herkende naam bij een
+  // PDF-import op "...LIMBUR" eindigt i.p.v. "...LIMBURG" (de CSV-export heeft dit probleem niet).
+  [["waterleiding maatschappij limbur"], "vasteLasten","Water"],
   [["bsgw"], "vasteLasten","BsGW"],
   [["confident limburg"], "vasteLasten","NN pakketverzekering"],
   [["nationale-nederlanden zorg"], "vasteLasten","Zorgverzekering"],
@@ -1761,8 +1791,23 @@ function classifyTransaction(tx){
     if(blobOmschr.includes("zorgtoeslag")) return {cat: amt>0 ? "income":"review", label:"Zorgtoeslag", naam, amt};
     return {cat: amt<0 ? "vasteLasten":"review", label:"Belasting Afbet", naam, amt};
   }
-  if(blobNaam.includes("blochberger")){
+  // Specifiek op "C. Blochberger"/"Carina Blochberger" i.p.v. een kale "blochberger"-match: er is
+  // ook een S. Blochberger (bv. een Rabo Betaalverzoek voor een taartje) die niets met de
+  // alimentatieregeling met Carina te maken heeft en anders per ongeluk werd meegeteld.
+  if(blobNaam.includes("c. blochberger") || blobNaam.includes("carina blochberger")){
     return amt<0 ? {cat:"vasteLasten", label:"Alimentatie", naam, amt} : {cat:"income", label:"Carina Blochberger", naam, amt};
+  }
+  // Geldmaat-geldopnames hebben een locatiesuffix in de naam (bv. "Geldmaat Ganzeweide 74" vs
+  // "Geldmaat Bautscherw 43") — dat zou anders los in "Nog in te delen" komen te staan. Samenvoegen
+  // tot één post zodra 'm die kant op gaat (via review), zodat je 'm in één keer kunt toevoegen.
+  if(blobNaam.includes("geldmaat")){
+    return {cat:"review", label:"Geldmaat", naam:"Geldmaat", amt};
+  }
+  // Idem voor de maandelijkse Rabobank-rekeningkosten ("Rabobank" incl. het losse "NL47 RABO..."
+  // tegenrekeningnummer bij de vaste Rabo Standaard-afschrijving): als abonnement herkend i.p.v. in
+  // de reviewlijst te belanden.
+  if(blobNaam.includes("rabobank") && blobOmschr.includes("rabo standaard")){
+    return {cat:"abonnementen", label:"Rabobank", naam, amt};
   }
   if(blobNaam.includes("tulip assist")){
     const isSmall = Math.abs(amt) < 12;
@@ -2068,7 +2113,11 @@ async function parsePdfTransactions(arrayBuffer){
       // de tabelkop zelf) mag nooit in de omschrijving van een nog openstaand blok terechtkomen —
       // dat kan gebeuren omdat een transactie soms met zijn vervolgregels over een pagina-einde
       // loopt (zie hierboven, block blijft dan expres open), waardoor deze ruis er middenin valt.
-      const PAGE_NOISE_RE = /^(Blad\b|\d+ van \d+$|vervolg Rekeningafschrift|Rekeningafschrift|Rabo Standaard|Ten name van|IBAN\s*\/\s*Rekeningnummer|Datum vanaf|Datum tot en met|Rente\s*$|datum\s*$|Type Tegenrekening|CR\s*=|D\s*=\s*tekort)/i;
+      // Let op: "Rabo Standaard" hoort hier NIET bij — dat is niet alleen kop-boilerplate, het is ook
+      // de letterlijke vervolgregel van de maandelijkse rekeningkosten-transactie zelf ("Kosten" /
+      // "Rabo Standaard" / "Periode ..."). Die regel per ongeluk wegfilteren brak de Rabobank-
+      // herkenning (zie classifyTransaction). Alleen tekst die uitsluitend als paginakop voorkomt.
+      const PAGE_NOISE_RE = /^(Blad\b|\d+ van \d+$|vervolg Rekeningafschrift|Rekeningafschrift$|Ten name van|IBAN\s*\/\s*Rekeningnummer|Datum vanaf|Datum tot en met|Rente\s*$|datum\s*$|Type Tegenrekening|CR\s*=|D\s*=\s*tekort)/i;
       if(PAGE_NOISE_RE.test(text)) return;
       block.extraLines.push(text);
     });
@@ -3994,24 +4043,34 @@ function renderMonthSummary(){
   const over = totals.income - totals.totaalUitgaven;
 
   const budget = m.budgetId ? state.budgets.find(b=>b.id===m.budgetId) : null;
+  let secondStamp = "";
   let budgetLine = "";
   if(budget){
     const bIncome = sum(budget.income.items);
     const bTotaalUitgaven = sum(budget.vasteLasten.items) + sum(budget.abonnementen.items) + sum(budget.variabeleLasten.items);
     const bOver = bIncome - bTotaalUitgaven;
     const diff = over - bOver;
+    secondStamp = `
+      <div class="stamp ${bOver<0?'negative':''}">
+        <div class="stamp-label">${bOver<0? t("tekort") : t("overTeSpenderen")}</div>
+        <div class="stamp-value">€ ${fmt(Math.abs(bOver))}</div>
+        <div class="stamp-sub">${t("begrootSaldo")(budget.title)}</div>
+      </div>
+    `;
     budgetLine = `
-      <div class="summary-line"><span class="l">${t("begrootSaldo")(budget.title)}</span><span class="v">€ ${fmt(bOver)}</span></div>
       <div class="summary-line ${diff<0?'debit':'credit'}"><span class="l">${t("verschilMetBudget")}</span><span class="v">${diff>=0?'+':'−'} € ${fmt(Math.abs(diff))}</span></div>
     `;
   }
 
   el.innerHTML = `
     <h2>${monthLabel(m)}</h2>
-    <div class="stamp ${over<0?'negative':''}">
-      <div class="stamp-label">${over<0? t("tekort") : t("overTeSpenderen")}</div>
-      <div class="stamp-value">€ ${fmt(Math.abs(over))}</div>
-      <div class="stamp-sub">${t("stampSub")}</div>
+    <div class="stamp-row">
+      <div class="stamp ${over<0?'negative':''}">
+        <div class="stamp-label">${over<0? t("tekort") : t("overTeSpenderen")}</div>
+        <div class="stamp-value">€ ${fmt(Math.abs(over))}</div>
+        <div class="stamp-sub">${t("stampSub")}</div>
+      </div>
+      ${secondStamp}
     </div>
 
     <div class="summary-line credit"><span class="l">${t("nettoInkomsten")}</span><span class="v">€ ${fmt(totals.income)}</span></div>
