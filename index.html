@@ -2330,9 +2330,14 @@ function buildMonthFromCSV(rows, filename){
 function upsertMonth(monthObj){
   const idx = state.months.findIndex(m=>m.key===monthObj.key);
   // Bij een hernieuwde upload van dezelfde maand: koppeling met een eerder gekozen maandbudget
-  // blijft behouden. Anders: standaard het nieuwste maandbudget (of geen, als er nog geen is).
-  monthObj.budgetId = (idx>=0 && state.months[idx].budgetId) ? state.months[idx].budgetId
-    : (state.budgets.length ? state.budgets[0].id : null);
+  // blijft behouden. Bij een compleet NIEUWE import (CSV of PDF) begint de maand ONgekoppeld ("Geen
+  // maandbudget") totdat de gebruiker zelf een maandbudget kiest in de vergelijk-dropdown bovenaan
+  // de maandpagina — er wordt niet langer automatisch het nieuwste maandbudget gekozen. Dit
+  // voorkomt dat de "Openstaande terugboekingen"-dubbelcheck stilzwijgend afhankelijk is van welk
+  // budget hier toevallig als standaard werd gekozen: die check zoekt nu zelf over ALLE
+  // maandbudgetten (zie findMatchingOutstandingItem/renderStornoReviewCard) en gebruikt hiervoor
+  // niet meer deze vergelijk-koppeling.
+  monthObj.budgetId = (idx>=0 && state.months[idx].budgetId) ? state.months[idx].budgetId : null;
   if(idx>=0) state.months[idx] = monthObj; else state.months.push(monthObj);
   state.months.sort((a,b)=> a.key.localeCompare(b.key));
 }
@@ -4214,16 +4219,27 @@ function renderStornoReviewCard(m){
   `;
   const rows = wrap.querySelector(".review-rows");
 
-  // Zelfherstellend: als een regel volgens haar EIGEN state nog niet is toegevoegd, maar het
-  // (standaard-)budget blijkt al precies zo'n regel te bevatten, wordt die bestaande regel
-  // geadopteerd als entry.addedItem — zie findMatchingOutstandingItem hierboven. Vanaf hier
-  // gedraagt de rij zich verder gewoon als een normale al-toegevoegde rij (inclusief de bestaande
-  // "ongedaan maken"-knop, die de geadopteerde regel dan gewoon weer verwijdert).
+  // Zelfherstellend: als een regel volgens haar EIGEN state nog niet is toegevoegd, wordt gekeken
+  // of ÉÉN VAN AL DE MAANDBUDGETTEN al precies zo'n regel bevat (zelfde naam + zelfde bedrag) — zie
+  // findMatchingOutstandingItem hierboven. Deze check gebruikt bewust NIET meer m.budgetId (de
+  // "vergelijk met maandbudget"-keuze bovenaan de maandpagina): die koppeling staat nu standaard op
+  // "Geen maandbudget" bij een nieuwe import (zie upsertMonth) en heeft an sich niets te maken met
+  // welk budget een terugboeking al eerder heeft ontvangen. In plaats daarvan wordt eerst de eigen,
+  // al eerder in DEZE tabel gekozen keuze geprobeerd (entry.budgetId), en anders over alle
+  // maandbudgetten gezocht. Vanaf hier gedraagt de rij zich verder gewoon als een normale
+  // al-toegevoegde rij (inclusief de bestaande "ongedaan maken"-knop, die de geadopteerde regel dan
+  // gewoon weer verwijdert).
   m.openTerugboekingen.forEach(entry=>{
     if(!entry.addedBudgetId && !entry.target){
-      const candidateId = entry.budgetId || m.budgetId || "";
-      const candidateBudget = candidateId ? state.budgets.find(b=>b.id===candidateId) : null;
-      const match = findMatchingOutstandingItem(candidateBudget, entry);
+      let candidateBudget = entry.budgetId ? (state.budgets.find(b=>b.id===entry.budgetId) || null) : null;
+      let match = findMatchingOutstandingItem(candidateBudget, entry);
+      if(!match){
+        candidateBudget = null;
+        for(const b of state.budgets){
+          const found = findMatchingOutstandingItem(b, entry);
+          if(found){ candidateBudget = b; match = found; break; }
+        }
+      }
       if(match){
         entry.addedBudgetId = candidateBudget.id;
         entry.addedItem = match;
@@ -4241,9 +4257,12 @@ function renderStornoReviewCard(m){
     // dat hun al bestaande post ergens stilzwijgend verdwijnt.
     const isLegacyAdded = !!entry.target && !entry.addedBudgetId;
     const isAdded = !!entry.addedBudgetId || isLegacyAdded;
-    // Standaard: het maandbudget waarmee deze maand al vergeleken wordt, als dat er is — anders
-    // moet de gebruiker zelf kiezen (vandaar de lege "Kies een maandbudget…"-optie).
-    const defaultBudgetId = entry.budgetId || (entry.addedBudgetId || (m.budgetId || ""));
+    // Standaard: alleen de keuze die voor DEZE regel zelf al is gemaakt (via de zelfherstellende
+    // stap hierboven, of een eerdere handmatige keuze in deze tabel) — niet langer de "vergelijk met
+    // maandbudget"-keuze bovenaan de maandpagina (m.budgetId), want die twee dingen staan los van
+    // elkaar. Zonder een reeds bekende keuze moet de gebruiker zelf kiezen (vandaar de lege "Kies
+    // een maandbudget…"-optie).
+    const defaultBudgetId = entry.budgetId || entry.addedBudgetId || "";
 
     row.innerHTML = `
       <span class="review-name" title="${entry.naam}">${entry.naam}</span>
