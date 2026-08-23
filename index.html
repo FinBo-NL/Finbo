@@ -4188,6 +4188,20 @@ function renderReviewCard(m){
    die niet binnen dezelfde maand alsnog geslaagd lijken (zie resolveStornos()) — bewust een eigen
    lijst i.p.v. meegeschoven in "Nog in te delen", zodat direct duidelijk is dát het om een
    terugboeking gaat en niet om een simpelweg onherkende tegenpartij. */
+/* Zoekt of een maandbudget al een "Openstaand"-regel heeft die exact overeenkomt met deze
+   terugboeking-entry (zelfde naam + zelfde bedrag) — gebruikt om te voorkomen dat dezelfde
+   terugboeking twee keer wordt toegevoegd. Dit gebeurde bv. wanneer een maand wordt verwijderd en
+   daarna hetzelfde bestand opnieuw wordt geïmporteerd: het budget zelf (en daarmee zijn
+   "outstanding"-regels) blijft gewoon bestaan, maar de nieuw aangemaakte maand heeft een verse
+   `openTerugboekingen`-lijst waarin niets meer als "toegevoegd" gemarkeerd staat — zonder deze
+   check zou "Toevoegen" dan een tweede, dubbele regel met dezelfde naam aanmaken. */
+function findMatchingOutstandingItem(budget, entry){
+  if(!budget || !budget.outstanding) return null;
+  const amt = Math.round(Math.abs(entry.amt)*100)/100;
+  const key = entry.naam.trim().toLowerCase();
+  return budget.outstanding.items.find(it => it.l.trim().toLowerCase() === key && Math.abs((parseFloat(it.v)||0) - amt) < 0.01) || null;
+}
+
 function renderStornoReviewCard(m){
   const wrap = document.createElement("div");
   wrap.className = "card card-review";
@@ -4199,6 +4213,24 @@ function renderStornoReviewCard(m){
     <div class="rows review-rows"></div>
   `;
   const rows = wrap.querySelector(".review-rows");
+
+  // Zelfherstellend: als een regel volgens haar EIGEN state nog niet is toegevoegd, maar het
+  // (standaard-)budget blijkt al precies zo'n regel te bevatten, wordt die bestaande regel
+  // geadopteerd als entry.addedItem — zie findMatchingOutstandingItem hierboven. Vanaf hier
+  // gedraagt de rij zich verder gewoon als een normale al-toegevoegde rij (inclusief de bestaande
+  // "ongedaan maken"-knop, die de geadopteerde regel dan gewoon weer verwijdert).
+  m.openTerugboekingen.forEach(entry=>{
+    if(!entry.addedBudgetId && !entry.target){
+      const candidateId = entry.budgetId || m.budgetId || "";
+      const candidateBudget = candidateId ? state.budgets.find(b=>b.id===candidateId) : null;
+      const match = findMatchingOutstandingItem(candidateBudget, entry);
+      if(match){
+        entry.addedBudgetId = candidateBudget.id;
+        entry.addedItem = match;
+        entry.budgetId = candidateBudget.id;
+      }
+    }
+  });
 
   m.openTerugboekingen.forEach(entry=>{
     const row = document.createElement("div");
@@ -4255,8 +4287,14 @@ function renderStornoReviewCard(m){
         const targetBudget = state.budgets.find(b => b.id === chosenId);
         if(!targetBudget) return;
         if(!targetBudget.outstanding) targetBudget.outstanding = { items: [] };
-        const item = { l: entry.naam, v: Math.round(Math.abs(entry.amt)*100)/100 };
-        targetBudget.outstanding.items.push(item);
+        // Nogmaals checken op een bestaande match voor het GEKOZEN budget (niet per se het budget
+        // waarop de zelfherstellende stap hierboven al testte) — de gebruiker kan immers een ander
+        // budget hebben geselecteerd dan de standaardwaarde. Is de regel er al, dan wordt die
+        // geadopteerd i.p.v. een dubbele regel aan te maken; de knop wordt hierna gewoon een normale
+        // "ongedaan maken"-knop voor die bestaande regel.
+        const existingMatch = findMatchingOutstandingItem(targetBudget, entry);
+        const item = existingMatch || { l: entry.naam, v: Math.round(Math.abs(entry.amt)*100)/100 };
+        if(!existingMatch) targetBudget.outstanding.items.push(item);
         entry.budgetId = chosenId;
         entry.addedBudgetId = chosenId;
         entry.addedItem = item;
