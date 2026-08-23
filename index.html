@@ -2758,19 +2758,37 @@ function scheduleAutoSave(){
   autoSaveTimer = setTimeout(writeStateToCloud, 500);
 }
 
-/* Waarschuw vóórdat het tabblad/venster echt dichtgaat als er nog wijzigingen zijn die niet naar
-   de cloud zijn geschreven — of dat nu is omdat je nog niet ingelogd bent, of omdat de auto-save
-   van de laatste wijziging nog in het korte debounce-venster zit. */
+/* Vóór het tabblad/venster écht dichtgaat of ververst (klik op de ververs-knop van de browser
+   telt hier ook onder): als er nog wijzigingen openstaan die niet naar de cloud zijn geschreven,
+   meteen (zonder op de 500ms debounce te wachten) een schrijf-poging afvuren. beforeunload-
+   handlers kunnen niet op een async operatie wachten, dus dit is "fire-and-forget" — maar omdat we
+   hieronder ook e.preventDefault()/returnValue zetten, toont de browser de ingebouwde "Wijzigingen
+   die je hebt aangebracht worden mogelijk niet opgeslagen"-waarschuwing, en die pauzeert de
+   navigatie lang genoeg om de schrijving alsnog af te ronden voordat de pagina daadwerkelijk
+   ververst/sluit. */
 window.addEventListener("beforeunload", (e) => {
   if(dirty){
+    clearTimeout(autoSaveTimer);
+    writeStateToCloud();
     e.preventDefault();
     e.returnValue = "";
   }
 });
-/* Als het tabblad naar de achtergrond gaat (tab-wissel, dichtklikken) terwijl er nog een auto-save
-   gepland staat: meteen wegschrijven in plaats van op de 500ms debounce te wachten. */
+/* Als het tabblad naar de achtergrond gaat (tab-wissel, dichtklikken, verversen) terwijl er nog
+   wijzigingen openstaan: meteen wegschrijven in plaats van op de 500ms debounce te wachten.
+   "visibilitychange" naar "hidden" vuurt in de meeste browsers vóór "beforeunload" af, dus dit is
+   vaak al de eerste en snelste kans om de allerlaatste wijziging nog weg te schrijven. */
 document.addEventListener("visibilitychange", () => {
-  if(document.visibilityState === "hidden" && cloudSession && autoSaveTimer){
+  if(document.visibilityState === "hidden" && cloudSession && dirty){
+    clearTimeout(autoSaveTimer);
+    writeStateToCloud();
+  }
+});
+/* Extra vangnet: "pagehide" vuurt betrouwbaar af bij een refresh/navigatie/sluiten (o.a. Safari,
+   en ook bij terug/vooruit-navigatie via de bfcache), zelfs in gevallen waar "visibilitychange" of
+   "beforeunload" om wat voor reden dan ook niet (op tijd) afgaan. */
+window.addEventListener("pagehide", () => {
+  if(cloudSession && dirty){
     clearTimeout(autoSaveTimer);
     writeStateToCloud();
   }
