@@ -38,6 +38,14 @@
     --cat-tekort:#eda100;
     --cat-income:#2a78d6;
     --cat-kosten:#eb6834;
+    /* Aparte, onderling duidelijk verschillende accentkleuren voor de vier categorie-groepen in
+       Profiel > Categorieën (zie renderProfileCategoriesTab) -- bewust los van --cat-income/-vaste
+       hierboven (die zijn identiek aan elkaar, prima voor de grafieken maar niet onderscheidend
+       genoeg voor vier naast elkaar getoonde uitklapsecties). */
+    --profile-cat-income:#1f7a52;
+    --profile-cat-vaste:#2a78d6;
+    --profile-cat-abon:#eb6834;
+    --profile-cat-variabel:#4a3aa7;
   }
   html[data-mode="dark"]{
     --ink:#111a16;
@@ -61,6 +69,10 @@
     --cat-tekort:#c98500;
     --cat-income:#3987e5;
     --cat-kosten:#d95926;
+    --profile-cat-income:#5fbf94;
+    --profile-cat-vaste:#6fa3e0;
+    --profile-cat-abon:#f0906a;
+    --profile-cat-variabel:#9085e9;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -322,6 +334,109 @@
   .profile-divider{ border:none; border-top:1px solid var(--rule); margin:0; }
   .profile-hint{ font-size:11.5px; color:var(--text-soft); line-height:1.5; margin:2px 0 0; }
   .profile-placeholder{ font-size:13px; color:var(--text-soft); line-height:1.6; }
+
+  /* ---- Profiel > Categorieën: eigen categorieën per budgetgroep (zie renderProfileCategoriesTab) ----
+     Elke groep (Inkomsten/Vaste lasten/Abonnementen/Variabele lasten) is een eigen uitklapsectie
+     ("bucket") met zijn eigen aanmaakveld en lijst; --bucket-color wordt per sectie ingesteld (zie
+     bucketColorVar()) zodat knoppen/badges/swatch daarbinnen automatisch de kleur van die groep
+     volgen i.p.v. altijd --gold. */
+  .profile-bucket{ border:1px solid var(--rule); border-radius:8px; background:var(--paper-2); overflow:hidden; }
+  .profile-bucket + .profile-bucket{ margin-top:8px; }
+  .profile-bucket-head{
+    display:flex; align-items:center; gap:9px; padding:11px 12px; cursor:pointer; user-select:none;
+    border-left:3px solid var(--bucket-color, var(--gold)); color:var(--bucket-color, var(--gold));
+  }
+  .profile-bucket-head .cat-icon{ width:16px; height:16px; }
+  .profile-bucket-title{ font-size:13px; font-weight:700; flex:1 1 auto; color:var(--text); }
+  .profile-bucket-count{
+    font-size:10px; font-weight:600; color:var(--text-soft); background:var(--rule);
+    padding:2px 7px; border-radius:20px; flex-shrink:0;
+  }
+  .profile-bucket-chevron{ width:14px; height:14px; color:var(--text-soft); flex-shrink:0; transition:transform .18s; }
+  .profile-bucket.open .profile-bucket-chevron{ transform:rotate(180deg); }
+  .profile-bucket-body{ display:none; padding:0 12px 12px; flex-direction:column; gap:10px; }
+  .profile-bucket.open .profile-bucket-body{ display:flex; }
+
+  .profile-cat-add-row{ display:flex; gap:8px; align-items:flex-start; }
+  .profile-cat-add-field{ flex:1 1 auto; display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .profile-cat-add-field input{
+    font-family:inherit; font-size:13.5px; padding:7px 9px; border:1px solid var(--rule);
+    border-radius:4px; background:var(--paper); color:var(--text); width:100%;
+  }
+  .profile-cat-add-field input:focus{ outline:none; border-color:var(--bucket-color, var(--gold)); }
+  .profile-cat-add-field input.err{ border-color:var(--debit); }
+  .profile-cat-add-field-foot{ display:flex; justify-content:space-between; gap:8px; }
+  .profile-cat-counter{ font-size:10.5px; color:var(--text-soft); text-align:right; white-space:nowrap; }
+  .profile-cat-counter.warn{ color:var(--debit); }
+  .profile-cat-inline-msg{ font-size:11px; color:var(--debit); min-height:13px; }
+  .profile-panel-body button.profile-cat-add-btn{
+    font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:4px; margin-top:0;
+    border:1px solid var(--bucket-color, var(--gold)); background:var(--bucket-color, var(--gold)); color:#fff;
+    white-space:nowrap; height:34px;
+  }
+  .profile-panel-body button.profile-cat-add-btn:hover:not(:disabled){ filter:brightness(1.08); }
+  .profile-panel-body button.profile-cat-add-btn:disabled{ background:var(--text-soft); border-color:var(--text-soft); opacity:.4; }
+
+  .profile-cat-list{ display:flex; flex-direction:column; gap:6px; }
+  .profile-cat-empty{ font-size:12px; color:var(--text-soft); padding:2px 0; margin:0; }
+  .profile-cat-row{
+    border:1px solid var(--rule); border-radius:6px; background:var(--paper); padding:8px 10px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .profile-cat-row-main{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .profile-cat-swatch{ width:9px; height:9px; border-radius:3px; flex-shrink:0; background:var(--bucket-color, var(--gold)); }
+  .profile-cat-name{ font-size:13px; font-weight:600; flex:1 1 auto; min-width:50px; }
+  .profile-cat-badge{ font-size:10px; padding:2px 7px; border-radius:20px; white-space:nowrap; font-weight:600; }
+  .profile-cat-badge.unused{ color:var(--text-soft); background:var(--rule); }
+  .profile-cat-badge.used{ color:var(--bucket-color, var(--gold)); background:color-mix(in srgb, var(--bucket-color, var(--gold)) 14%, transparent); }
+  .profile-panel-body button.profile-cat-manage-link{
+    font-size:11px; color:var(--bucket-color, var(--gold)); background:none; border:none; padding:0; margin:0;
+    text-decoration:underline; text-underline-offset:2px; cursor:pointer;
+  }
+  .profile-panel-body button.profile-cat-icon-btn{
+    width:24px; height:24px; padding:0; margin:0; border-radius:5px; border:1px solid var(--rule);
+    background:var(--paper); display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    color:var(--text-soft); position:relative;
+  }
+  .profile-cat-icon-btn svg{ width:12px; height:12px; }
+  .profile-panel-body button.profile-cat-icon-btn.delete-ready{ color:var(--debit); border-color:var(--debit); }
+  .profile-panel-body button.profile-cat-icon-btn.delete-ready:hover{ background:color-mix(in srgb, var(--debit) 10%, transparent); }
+  .profile-panel-body button.profile-cat-icon-btn.locked{ cursor:not-allowed; color:var(--text-soft); opacity:.55; }
+  .profile-cat-icon-btn.locked:hover .profile-cat-tooltip{ opacity:1; transform:translateY(0); pointer-events:auto; }
+  .profile-cat-tooltip{
+    position:absolute; bottom:calc(100% + 8px); right:0; width:180px; text-align:left;
+    background:var(--ink); color:var(--text-onink); font-size:10.5px; line-height:1.5; font-weight:400;
+    padding:7px 9px; border-radius:5px; box-shadow:0 6px 18px rgba(0,0,0,.25);
+    opacity:0; transform:translateY(4px); transition:.15s; pointer-events:none; z-index:5;
+  }
+  .profile-cat-expand{ border-top:1px dashed var(--rule); margin-top:2px; padding-top:6px; display:flex; flex-direction:column; gap:5px; }
+  .profile-cat-link-row{
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:11.5px; background:var(--paper-2);
+    border:1px solid var(--rule); border-radius:4px; padding:5px 7px;
+  }
+  .profile-cat-link-desc{ flex:1 1 120px; min-width:0; }
+  .profile-cat-link-desc .who{ font-weight:600; }
+  .profile-cat-link-desc .amt.debit{ color:var(--debit); }
+  .profile-cat-link-desc .amt.credit{ color:var(--credit); }
+  .profile-cat-link-month{ color:var(--text-soft); font-size:10px; margin-left:4px; }
+  .profile-cat-link-controls{ display:flex; align-items:center; gap:6px; flex-shrink:0; margin-left:auto; }
+  .profile-cat-link-select{
+    font-family:inherit; font-size:11px; padding:3px 5px; border:1px solid var(--rule);
+    border-radius:4px; background:var(--paper); color:var(--text); max-width:140px;
+  }
+  .profile-panel-body button.profile-cat-link-unlink{
+    width:20px; height:20px; padding:0; margin:0; border-radius:4px; border:1px solid var(--rule);
+    background:transparent; color:var(--text-soft); flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  }
+  .profile-panel-body button.profile-cat-link-unlink:hover{ color:var(--debit); border-color:var(--debit); }
+  .profile-cat-expand-footer{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-top:2px; }
+  .profile-cat-expand-hint{ font-size:10.5px; color:var(--text-soft); }
+  .profile-panel-body button.profile-cat-delete-final-btn{
+    font-size:11px; font-weight:600; padding:5px 10px; border-radius:4px; margin-top:0;
+    border:1px solid var(--debit); background:transparent; color:var(--debit);
+  }
+  .profile-panel-body button.profile-cat-delete-final-btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .profile-panel-body button.profile-cat-delete-final-btn:not(:disabled):hover{ background:color-mix(in srgb, var(--debit) 10%, transparent); }
 
   /* Tabs */
   /* De ruimte tussen de losse menu-secties (Basisdata / Maandbudgetten+Jaren / Groei /
@@ -698,7 +813,7 @@
   }
   .review-amt.pos{color:var(--credit);}
   .review-amt.neg{color:var(--debit);}
-  .review-select{
+  .review-select, .review-cat-select{
     font-family:"Segoe UI",sans-serif;
     font-size:12px;
     padding:4px 5px;
@@ -709,6 +824,7 @@
     flex-shrink:0;
   }
   .review-select:disabled{opacity:.6;}
+  .review-cat-select{ border-style:dashed; max-width:120px; }
   .review-btn{
     background:transparent;
     border:1px solid var(--forest);
@@ -1435,6 +1551,26 @@ const i18n = {
     profileSignOutBtn: "Uitloggen",
     profileCategoriesComingSoonTitle: "Binnenkort beschikbaar",
     profileCategoriesComingSoonText: "Hier kun je straks je eigen categorieën aanmaken en beheren, zodat geïmporteerde PDF/CSV-transacties automatisch bij de juiste post terechtkomen — bijvoorbeeld een vaste regel voor een bepaalde winkel of tegenpartij.",
+    profileCategoryNewTitle: "Nieuwe categorie",
+    profileCategoriesHint: "Groepeer geïmporteerde PDF/CSV-rijen onder je eigen label. Max. 20 tekens.",
+    profileCategoryNamePlaceholder: "bijv. Kinderopvang",
+    profileCategoryAddBtn: "+ Toevoegen",
+    profileCategoryDuplicateError: "Er bestaat al een categorie met deze naam.",
+    profileCategoriesListTitle: "Jouw categorieën",
+    profileCategoriesEmptyState: "Nog geen categorieën — voeg hierboven je eerste toe.",
+    profileCategoryUnusedBadge: "Ongebruikt",
+    profileCategoryUsedBadge: (n) => n === 1 ? "1 rij" : `${n} rijen`,
+    profileCategoryManageLinksBtn: "Koppelingen beheren",
+    profileCategoryHideLinksBtn: "Verbergen",
+    profileCategoryLockedTooltip: (n) => `Gekoppeld aan ${n} geïmporteerde ${n===1?"rij":"rijen"}. Wijs ze eerst opnieuw toe of ontkoppel ze voordat deze categorie verwijderd kan worden.`,
+    profileCategoryDeleteIconTitle: "Categorie verwijderen",
+    profileCategoryDeleteBtn: "Categorie verwijderen",
+    profileCategoryStillLinked: (n) => n === 1 ? "Nog 1 rij gekoppeld" : `Nog ${n} rijen gekoppeld`,
+    profileCategoryMoveToPlaceholder: "Verplaats naar…",
+    profileCategoryUncategorizedOption: "Geen categorie",
+    profileCategoryUnlinkTitle: "Deze rij ontkoppelen",
+    reviewNoCategoryOption: "Geen categorie",
+    reviewCategoryTitle: "Categorie",
     encryptionPromptTitleExisting: "Versleutelingswachtwoord",
     encryptionPromptTextExisting: "Voer je versleutelingswachtwoord in om je data te ontsleutelen.",
     encryptionPromptTitleNew: "Kies een versleutelingswachtwoord",
@@ -1602,6 +1738,26 @@ const i18n = {
     profileSignOutBtn: "Sign out",
     profileCategoriesComingSoonTitle: "Coming soon",
     profileCategoriesComingSoonText: "This is where you'll be able to create and manage your own categories, so imported PDF/CSV transactions land under the right line automatically — for example a standing rule for a particular shop or counterparty.",
+    profileCategoryNewTitle: "New category",
+    profileCategoriesHint: "Group imported PDF/CSV rows under your own label. Max 20 characters.",
+    profileCategoryNamePlaceholder: "e.g. Kids sports",
+    profileCategoryAddBtn: "+ Add",
+    profileCategoryDuplicateError: "A category with this name already exists.",
+    profileCategoriesListTitle: "Your categories",
+    profileCategoriesEmptyState: "No categories yet — add your first one above.",
+    profileCategoryUnusedBadge: "Unused",
+    profileCategoryUsedBadge: (n) => n === 1 ? "1 row" : `${n} rows`,
+    profileCategoryManageLinksBtn: "Manage links",
+    profileCategoryHideLinksBtn: "Hide links",
+    profileCategoryLockedTooltip: (n) => `Linked to ${n} imported row${n===1?"":"s"}. Reassign or unlink them all before this category can be deleted.`,
+    profileCategoryDeleteIconTitle: "Delete category",
+    profileCategoryDeleteBtn: "Delete category",
+    profileCategoryStillLinked: (n) => n === 1 ? "1 row still linked" : `${n} rows still linked`,
+    profileCategoryMoveToPlaceholder: "Move to…",
+    profileCategoryUncategorizedOption: "Uncategorized",
+    profileCategoryUnlinkTitle: "Unlink this row",
+    reviewNoCategoryOption: "No category",
+    reviewCategoryTitle: "Category",
     encryptionPromptTitleExisting: "Encryption password",
     encryptionPromptTextExisting: "Enter your encryption password to decrypt your data.",
     encryptionPromptTitleNew: "Choose an encryption password",
@@ -1909,6 +2065,7 @@ let state = {
   loonstijgingSelectedYear: null, // jaar dat is aangeklikt op de Loonstijging-grafiek; null = huidig kalenderjaar (of laatste jaar als dat buiten bereik valt)
   months: [],
   budgets: [], // maandbudgetten: losse momentopnames van Basisdata (nieuwste eerst), zie makeBudget()
+  categories: [], // eigen categorieën voor het indelen van "Nog in te delen"-rijen, zie createCategory()
   loonstijging: DEFAULT_LOONSTIJGING,
   scenarios: [
     // Basisdata: 2026, het basisjaar — inkomen hier is altijd direct bewerkbaar (geen eigen loonsverhoging-blok).
@@ -1957,6 +2114,12 @@ function migrateState(){
   });
   if(!state.verhogingen) state.verhogingen = undefined; // oud globaal blok wordt niet meer gebruikt
   if(!state.budgets) state.budgets = [];
+  if(!state.categories) state.categories = []; // oudere opslagbestanden kennen eigen categorieën nog niet
+  // Categorieën uit vóór de opsplitsing per budgetgroep (Inkomsten/Vaste lasten/Abonnementen/
+  // Variabele lasten) kennen "bucket" nog niet -- val terug op Vaste lasten zodat ze niet
+  // stilzwijgend verdwijnen; de gebruiker kan ze zelf verwijderen en opnieuw aanmaken in de juiste
+  // groep als dat niet klopt.
+  state.categories.forEach(c => { if(!CATEGORY_BUCKET_KEYS.includes(c.bucket)) c.bucket = "vasteLasten"; });
   if(state.darkMode === undefined) state.darkMode = false;
   // Oudere opslagbestanden kennen "budgetId" op een maand nog niet, of hadden nog geen maandbudget
   // toen de maand werd geüpload. Koppel in dat geval automatisch aan het nieuwste maandbudget (als
@@ -3329,14 +3492,20 @@ function renderHeader(){
 let profilePanelOpen = false;
 let profilePanelTab = "account";
 const PROFILE_TABS = ["account","categories"];
+let profileCategoryExpandedId = null; // welke categorie z'n "koppelingen beheren"-lijst openstaat
+let profileCategoryOpenBucket = null; // welke groep (income/vasteLasten/...) is uitgeklapt
 
 function openProfilePanel(){
   profilePanelOpen = true;
   profilePanelTab = "account";
+  profileCategoryExpandedId = null;
+  profileCategoryOpenBucket = null;
   renderProfilePanel();
 }
 function closeProfilePanel(){
   profilePanelOpen = false;
+  profileCategoryExpandedId = null;
+  profileCategoryOpenBucket = null;
   renderProfilePanel();
 }
 
@@ -3362,15 +3531,204 @@ function renderProfilePanel(){
   const body = document.getElementById("profilePanelBody");
   if(!profilePanelOpen){ body.innerHTML = ""; return; } // niets te renderen terwijl 'm dicht is
   if(profilePanelTab === "categories"){
-    body.innerHTML = `
-      <div>
-        <p class="profile-section-title">${t("profileCategoriesComingSoonTitle")}</p>
-        <p class="profile-placeholder">${t("profileCategoriesComingSoonText")}</p>
-      </div>
-    `;
+    renderProfileCategoriesTab(body);
     return;
   }
   renderProfileAccountTab(body);
+}
+
+// Elke groep is een eigen uitklapsectie ("bucket") met zijn eigen aanmaakveld en lijst -- zie
+// createCategory(name, bucket). PROFILE_CATEGORY_BUCKETS bepaalt titel/icoon per groep; de titels
+// hergebruiken bewust dezelfde vertaalsleutels (t("income") etc.) als de hoofdkaarten elders in de
+// app, zodat de naamgeving overal consistent is.
+const PROFILE_CATEGORY_BUCKETS = [
+  { key:"income", titleKey:"income" },
+  { key:"vasteLasten", titleKey:"vasteLasten" },
+  { key:"abonnementen", titleKey:"abonnementen" },
+  { key:"variabeleLasten", titleKey:"variabeleLasten" },
+];
+
+function renderProfileCategoriesTab(body){
+  body.innerHTML = `
+    <div>
+      <p class="profile-hint">${t("profileCategoriesHint")}</p>
+    </div>
+    <div id="profileBucketList"></div>
+  `;
+  renderBucketAccordion();
+}
+
+function renderBucketAccordion(){
+  const listEl = document.getElementById("profileBucketList");
+  if(!listEl) return;
+  listEl.innerHTML = PROFILE_CATEGORY_BUCKETS.map(b=>{
+    const isOpen = profileCategoryOpenBucket === b.key;
+    const count = state.categories.filter(c=>c.bucket===b.key).length;
+    return `
+      <div class="profile-bucket ${isOpen?'open':''}" style="--bucket-color:${bucketColorVar(b.key)}">
+        <div class="profile-bucket-head" data-toggle-bucket="${b.key}">
+          ${CARD_ICONS[b.key] || ""}
+          <span class="profile-bucket-title">${t(b.titleKey)}</span>
+          <span class="profile-bucket-count">${count}</span>
+          <svg class="profile-bucket-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="profile-bucket-body">
+          <div class="profile-cat-add-row">
+            <div class="profile-cat-add-field">
+              <input type="text" maxlength="20" placeholder="${t('profileCategoryNamePlaceholder')}" data-cat-input="${b.key}">
+              <div class="profile-cat-add-field-foot">
+                <span class="profile-cat-inline-msg" data-cat-err="${b.key}"></span>
+                <span class="profile-cat-counter" data-cat-counter="${b.key}">0 / 20</span>
+              </div>
+            </div>
+            <button type="button" class="profile-cat-add-btn" data-cat-add="${b.key}" disabled>${t("profileCategoryAddBtn")}</button>
+          </div>
+          <div class="profile-cat-list" data-cat-list="${b.key}"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  listEl.querySelectorAll("[data-toggle-bucket]").forEach(el=>{
+    el.onclick = () => {
+      const k = el.dataset.toggleBucket;
+      profileCategoryOpenBucket = (profileCategoryOpenBucket === k) ? null : k;
+      profileCategoryExpandedId = null;
+      renderBucketAccordion();
+    };
+  });
+  listEl.querySelectorAll("[data-cat-input]").forEach(input=>{
+    const bucket = input.dataset.catInput;
+    const counter = listEl.querySelector(`[data-cat-counter="${bucket}"]`);
+    const err = listEl.querySelector(`[data-cat-err="${bucket}"]`);
+    const addBtn = listEl.querySelector(`[data-cat-add="${bucket}"]`);
+    const validateInput = () => {
+      const v = input.value;
+      counter.textContent = `${v.length} / 20`;
+      counter.classList.toggle("warn", v.length >= 18);
+      const trimmed = v.trim();
+      const dup = !!trimmed && state.categories.some(c => c.bucket === bucket && c.name.toLowerCase() === trimmed.toLowerCase());
+      input.classList.toggle("err", dup);
+      err.textContent = dup ? t("profileCategoryDuplicateError") : "";
+      addBtn.disabled = !trimmed || dup;
+    };
+    input.oninput = validateInput;
+    input.onkeydown = (e) => { if(e.key === "Enter" && !addBtn.disabled) addBtn.click(); };
+    validateInput();
+    addBtn.onclick = () => {
+      const result = createCategory(input.value, bucket);
+      if(result.error) return; // validateInput voorkomt dit normaal al
+      renderAll();
+    };
+  });
+
+  PROFILE_CATEGORY_BUCKETS.forEach(b => renderBucketCategoryList(b.key));
+}
+
+function renderBucketCategoryList(bucket){
+  const listEl = document.querySelector(`[data-cat-list="${bucket}"]`);
+  if(!listEl) return;
+  const cats = state.categories.filter(c => c.bucket === bucket);
+  if(!cats.length){
+    listEl.innerHTML = `<p class="profile-cat-empty">${t("profileCategoriesEmptyState")}</p>`;
+    return;
+  }
+  listEl.innerHTML = cats.map(cat=>{
+    const usage = categoryUsageEntries(cat.id);
+    const count = usage.length;
+    const isUsed = count > 0;
+    const isExpanded = profileCategoryExpandedId === cat.id;
+    const badge = isUsed
+      ? `<span class="profile-cat-badge used">${t("profileCategoryUsedBadge")(count)}</span>`
+      : `<span class="profile-cat-badge unused">${t("profileCategoryUnusedBadge")}</span>`;
+    const deleteBtn = isUsed
+      ? `<button type="button" class="profile-cat-icon-btn locked">
+           ${LOCK_ICON}
+           <span class="profile-cat-tooltip">${t("profileCategoryLockedTooltip")(count)}</span>
+         </button>`
+      : `<button type="button" class="profile-cat-icon-btn delete-ready" title="${t('profileCategoryDeleteIconTitle')}" data-del="${cat.id}">${TRASH_ICON}</button>`;
+
+    let expandHtml = "";
+    if(isExpanded){
+      // Verplaatsen mag naar een categorie uit om het even welke groep, niet alleen dezelfde --
+      // elke optie toont daarom ook de groepsnaam.
+      const otherCats = state.categories.filter(c=>c.id!==cat.id);
+      const linkRows = usage.map(({month, entry}) => `
+        <div class="profile-cat-link-row" data-month="${month.key}" data-entry="${encodeURIComponent(entry.naam)}">
+          <div class="profile-cat-link-desc">
+            <span class="who">${entry.naam}</span> —
+            <span class="amt ${entry.amt>=0?'credit':'debit'}">${entry.amt>=0?'+':'−'} € ${fmt(Math.abs(entry.amt))}</span>
+            <span class="profile-cat-link-month mono">${month.key}</span>
+          </div>
+          <div class="profile-cat-link-controls">
+            <select class="profile-cat-link-select">
+              <option value="">${t("profileCategoryMoveToPlaceholder")}</option>
+              ${otherCats.map(c=>`<option value="${c.id}">${c.name} (${t(PROFILE_CATEGORY_BUCKETS.find(pb=>pb.key===c.bucket).titleKey)})</option>`).join("")}
+              <option value="__none__">${t("profileCategoryUncategorizedOption")}</option>
+            </select>
+            <button type="button" class="profile-cat-link-unlink" title="${t('profileCategoryUnlinkTitle')}">✕</button>
+          </div>
+        </div>
+      `).join("");
+      expandHtml = `
+        <div class="profile-cat-expand">
+          ${linkRows}
+          <div class="profile-cat-expand-footer">
+            <span class="profile-cat-expand-hint">${t("profileCategoryStillLinked")(count)}</span>
+            <button type="button" class="profile-cat-delete-final-btn" ${count ? "disabled" : ""} data-del="${cat.id}">${t("profileCategoryDeleteBtn")}</button>
+          </div>
+        </div>`;
+    }
+
+    return `
+      <div class="profile-cat-row">
+        <div class="profile-cat-row-main">
+          <span class="profile-cat-swatch"></span>
+          <span class="profile-cat-name">${cat.name}</span>
+          ${badge}
+          ${isUsed ? `<button type="button" class="profile-cat-manage-link" data-toggle="${cat.id}">${isExpanded ? t("profileCategoryHideLinksBtn") : t("profileCategoryManageLinksBtn")}</button>` : ""}
+          ${deleteBtn}
+        </div>
+        ${expandHtml}
+      </div>
+    `;
+  }).join("");
+
+  listEl.querySelectorAll("[data-toggle]").forEach(b=>{
+    b.onclick = () => {
+      profileCategoryExpandedId = (profileCategoryExpandedId === b.dataset.toggle) ? null : b.dataset.toggle;
+      renderBucketCategoryList(bucket);
+    };
+  });
+  listEl.querySelectorAll("[data-del]").forEach(b=>{
+    b.onclick = () => {
+      if(b.disabled) return;
+      const ok = deleteCategory(b.dataset.del);
+      if(ok && profileCategoryExpandedId === b.dataset.del) profileCategoryExpandedId = null;
+      renderAll();
+    };
+  });
+  listEl.querySelectorAll(".profile-cat-link-row").forEach(rowEl=>{
+    const monthKey = rowEl.dataset.month;
+    const entryNaam = decodeURIComponent(rowEl.dataset.entry);
+    const findEntry = () => {
+      const m = state.months.find(x => x.key === monthKey);
+      return m ? m.review.find(e => e.naam === entryNaam) : null;
+    };
+    const unlinkBtn = rowEl.querySelector(".profile-cat-link-unlink");
+    if(unlinkBtn) unlinkBtn.onclick = () => {
+      const entry = findEntry();
+      if(entry) entry.catId = null;
+      renderAll();
+    };
+    const select = rowEl.querySelector(".profile-cat-link-select");
+    if(select) select.onchange = () => {
+      const entry = findEntry();
+      if(!entry || !select.value) return;
+      entry.catId = (select.value === "__none__") ? null : select.value;
+      renderAll();
+    };
+  });
 }
 
 function renderProfileAccountTab(body){
@@ -3911,6 +4269,63 @@ function createNewYear(){
    één oogopslag duidelijk is dat het om verwijderen gaat, in dezelfde lijn-icoonstijl (currentColor,
    dunne stroke) als CARD_ICONS/group-collapse-btn hieronder. */
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2"/><path d="M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/><path d="M10 11v6M14 11v6"/></svg>`;
+
+/* Slotje voor de "verwijderen geblokkeerd"-knop op een categorie die nog aan rijen gekoppeld is
+   (zie renderCategoryList) -- zelfde lijn-icoonstijl als TRASH_ICON. */
+const LOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
+
+/* ---------- CATEGORIEËN (Profiel > Categorieën) ----------
+   Eigen, door de gebruiker aangemaakte categorieën om "Nog in te delen"-rijen (m.review, zie
+   buildMonthFromCSV) mee te labelen. Elke categorie hoort nu bij precies één van de vier vaste
+   hoofdgroepen (income/vasteLasten/abonnementen/variabeleLasten, zie CATEGORY_BUCKET_KEYS) --
+   dezelfde naam mag dus prima in twee verschillende groepen bestaan (uniek-check is per groep, zie
+   createCategory). Een categorie die aan minstens één rij gekoppeld is ("in gebruik") kan niet
+   verwijderd worden vóórdat al die koppelingen zijn opgeheven of verplaatst naar een andere
+   categorie (uit om het even welke groep) -- zie deleteCategory()/categoryUsageEntries(). */
+const CATEGORY_BUCKET_KEYS = ["income","vasteLasten","abonnementen","variabeleLasten"];
+
+// Accentkleur (CSS custom property) per groep -- zie --profile-cat-* in :root/html[data-mode="dark"].
+function bucketColorVar(bucket){
+  const map = { income:"--profile-cat-income", vasteLasten:"--profile-cat-vaste", abonnementen:"--profile-cat-abon", variabeleLasten:"--profile-cat-variabel" };
+  return `var(${map[bucket] || "--gold"})`;
+}
+
+function findCategory(catId){
+  return state.categories.find(c => c.id === catId) || null;
+}
+
+// Elke "Nog in te delen"-rij (m.review[i]) die deze categorie draagt, over alle maanden heen --
+// dit is precies de koppeling die verwijderen blokkeert (zie deleteCategory hieronder).
+function categoryUsageEntries(catId){
+  const out = [];
+  state.months.forEach(m=>{
+    (m.review||[]).forEach(entry=>{
+      if(entry.catId === catId) out.push({ month: m, entry });
+    });
+  });
+  return out;
+}
+
+// Naam hoeft maar uniek te zijn BINNEN dezelfde groep -- "Boodschappen" onder Variabele lasten en
+// een heel andere "Boodschappen" onder Vaste lasten mogen prima naast elkaar bestaan.
+function createCategory(name, bucket){
+  const trimmed = (name||"").trim();
+  if(!trimmed) return { error:"empty" };
+  if(trimmed.length > 20) return { error:"toolong" };
+  if(!CATEGORY_BUCKET_KEYS.includes(bucket)) return { error:"invalidbucket" };
+  if(state.categories.some(c => c.bucket === bucket && c.name.toLowerCase() === trimmed.toLowerCase())) return { error:"duplicate" };
+  const category = { id:"cat-"+Date.now()+"-"+Math.random().toString(36).slice(2,7), name:trimmed, bucket };
+  state.categories.push(category);
+  return { category };
+}
+
+// Verwijdert alleen als er nul koppelingen meer over zijn -- roep dit dus pas aan nadat de
+// gebruiker (via renderCategoryList) alle gekoppelde rijen heeft ontkoppeld of verplaatst.
+function deleteCategory(catId){
+  if(categoryUsageEntries(catId).length) return false;
+  state.categories = state.categories.filter(c => c.id !== catId);
+  return true;
+}
 
 /* ---------- RENDER: CATEGORY CARD (generiek, gebruikt door scenario's en maanden) ---------- */
 /* Kleine lijn-iconen per categorie-kaart — puur ter herkenning, geen functie. Gebruiken
@@ -4521,6 +4936,20 @@ function renderReviewCard(m){
     const hasBreakdown = entry.entries && entry.entries.length > 1;
     const breakdownKey = `review::${entry.naam}`;
     const isOpen = hasBreakdown && expandedBreakdowns.has(breakdownKey);
+    // Eigen categorie (zie Profiel > Categorieën) -- elke categorie hoort bij één van de vier
+    // groepen, gegroepeerd hier via <optgroup> zodat duidelijk is uit welke groep een gelijknamige
+    // categorie komt. Pas zichtbaar zodra er tenminste één categorie bestaat (zie createCategory).
+    const catSelectHtml = state.categories.length ? `
+      <select class="review-cat-select" title="${t('reviewCategoryTitle')}">
+        <option value="" ${!entry.catId ? "selected" : ""}>${t("reviewNoCategoryOption")}</option>
+        ${PROFILE_CATEGORY_BUCKETS.map(b=>{
+          const catsInBucket = state.categories.filter(c=>c.bucket===b.key);
+          if(!catsInBucket.length) return "";
+          return `<optgroup label="${t(b.titleKey)}">
+            ${catsInBucket.map(c=>`<option value="${c.id}" ${entry.catId===c.id ? "selected" : ""}>${c.name}</option>`).join("")}
+          </optgroup>`;
+        }).join("")}
+      </select>` : "";
 
     row.innerHTML = `
       <input type="checkbox" class="review-row-check" ${entry.selected ? "checked" : ""} ${isAdded ? "disabled" : ""} />
@@ -4532,16 +4961,21 @@ function renderReviewCard(m){
       <select class="review-select" ${isAdded ? "disabled" : ""}>
         ${targets.map(o=>`<option value="${o.key}" ${defaultTarget===o.key ? "selected" : ""}>${o.label}</option>`).join("")}
       </select>
+      ${catSelectHtml}
       <button class="review-btn ${isAdded ? "added" : ""}">${isAdded ? t("reverseBtn") : t("addBtn")}</button>
     `;
     const check = row.querySelector(".review-row-check");
     const select = row.querySelector(".review-select");
+    const catSelect = row.querySelector(".review-cat-select");
     const btn = row.querySelector(".review-btn");
     const breakdownBtn = row.querySelector(".breakdown-toggle-btn");
 
     check.onchange = () => { entry.selected = check.checked; renderAll(); };
     if(breakdownBtn){
       breakdownBtn.onclick = () => { toggleBreakdown(breakdownKey); renderCategories(); };
+    }
+    if(catSelect){
+      catSelect.onchange = () => { entry.catId = catSelect.value || null; renderAll(); };
     }
 
     btn.onclick = () => {
