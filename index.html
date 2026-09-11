@@ -154,6 +154,164 @@
     background:color-mix(in srgb, var(--gold) 12%, transparent);
   }
 
+  .profile-btn{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    border:1px solid color-mix(in srgb, var(--text-onink) 25%, transparent);
+    background:transparent;
+    color:var(--text-onink-soft);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  html[data-mode="light"] .profile-btn{ border-color:rgba(0,0,0,.15); }
+  .profile-btn:hover{border-color:var(--gold); color:var(--gold-bright);}
+  .profile-btn.active{border-color:var(--gold); color:var(--gold-bright); background:color-mix(in srgb, var(--gold) 14%, transparent);}
+  .profile-btn svg{width:17px; height:17px;}
+
+  /* ---------- Profielpaneel: klapt van links open als overlay bovenop de huidige pagina ---------- */
+  .profile-backdrop{
+    position:fixed; inset:0;
+    background:rgba(8,14,11,.42);
+    z-index:940;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .25s ease;
+  }
+  .profile-backdrop.open{ opacity:1; visibility:visible; }
+  .profile-panel{
+    position:fixed;
+    top:0; left:0;
+    height:100vh;
+    /* Letterlijk 30% van de paginabreedte, met een ondergrens zodat de formuliervelden op smalle
+       schermen niet onbruikbaar smal worden, en een bovengrens zodat het op erg brede schermen geen
+       overdreven brede kolom wordt. */
+    width:30vw;
+    min-width:300px;
+    max-width:460px;
+    background:var(--paper);
+    border-right:1px solid var(--rule);
+    box-shadow:2px 0 28px rgba(0,0,0,.18);
+    z-index:950;
+    display:flex;
+    flex-direction:column;
+    transform:translateX(-100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+  }
+  .profile-panel.open{ transform:translateX(0); }
+  @media (prefers-reduced-motion: reduce){
+    .profile-panel{ transition:none; }
+    .profile-backdrop{ transition:none; }
+  }
+  .profile-panel-head{
+    background:linear-gradient(180deg,var(--ink) 0%,var(--ink-2) 100%);
+    border-bottom:3px solid var(--gold);
+    padding:20px 20px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-shrink:0;
+  }
+  .profile-panel-title{
+    font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;
+    font-weight:600;
+    font-size:19px;
+    color:var(--text-onink);
+  }
+  .profile-close-btn{
+    width:30px; height:30px;
+    border-radius:50%;
+    border:1px solid color-mix(in srgb, var(--text-onink) 25%, transparent);
+    background:transparent;
+    color:var(--text-onink-soft);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .profile-close-btn:hover{border-color:var(--debit); color:var(--debit);}
+  .profile-close-btn svg{width:15px; height:15px;}
+  .profile-panel-tabs{
+    display:flex;
+    gap:4px;
+    padding:14px 20px 0;
+    flex-shrink:0;
+    border-bottom:1px solid var(--rule);
+  }
+  .profile-tab-btn{
+    background:transparent;
+    border:none;
+    border-bottom:2px solid transparent;
+    color:var(--text-soft);
+    padding:8px 4px 10px;
+    margin-right:18px;
+    font-size:13px;
+    font-family:"Segoe UI",sans-serif;
+    cursor:pointer;
+  }
+  .profile-tab-btn:hover{ color:var(--text); }
+  .profile-tab-btn.active{ color:var(--gold); border-bottom-color:var(--gold); font-weight:600; }
+  .profile-tab-btn:disabled{ color:var(--text-soft); opacity:.55; cursor:default; }
+  .profile-panel-body{
+    flex:1 1 auto;
+    overflow-y:auto;
+    padding:22px 20px 28px;
+    display:flex;
+    flex-direction:column;
+    gap:26px;
+  }
+  .profile-section-title{
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--text-soft);
+    margin:0 0 4px;
+  }
+  .profile-current-email{
+    font-size:14px;
+    color:var(--text);
+    background:var(--paper-2);
+    border:1px solid var(--rule);
+    border-radius:5px;
+    padding:9px 11px;
+    word-break:break-all;
+  }
+  .profile-field{
+    display:flex; flex-direction:column; gap:4px;
+    font-size:12px;
+    color:var(--text-soft);
+    margin-top:10px;
+  }
+  .profile-field input{
+    font-family:inherit; font-size:14px; padding:8px 10px;
+    border:1px solid var(--rule); border-radius:4px; background:var(--paper); color:var(--text);
+  }
+  .profile-field input:focus{ outline:none; border-color:var(--gold); }
+  .profile-panel-body button{
+    font-family:"Segoe UI",sans-serif; font-size:13px; padding:8px 12px;
+    border-radius:4px; border:1px solid var(--rule); background:transparent; color:var(--text);
+    cursor:pointer; margin-top:12px;
+  }
+  .profile-panel-body button.primary{ background:var(--forest); border-color:var(--forest); color:#fff; }
+  .profile-panel-body button.primary:hover{ opacity:.9; }
+  .profile-panel-body button.danger-outline{ border-color:color-mix(in srgb, var(--debit) 55%, transparent); color:var(--debit); }
+  .profile-panel-body button.danger-outline:hover{ background:color-mix(in srgb, var(--debit) 10%, transparent); }
+  .profile-panel-body button:disabled{ opacity:.6; cursor:default; }
+  .profile-msg{
+    font-size:12px;
+    border-radius:4px;
+    padding:8px 10px;
+    margin-top:10px;
+  }
+  .profile-msg.error{ color:var(--debit); background:color-mix(in srgb, var(--debit) 12%, transparent); }
+  .profile-msg.notice{ color:var(--forest); background:color-mix(in srgb, var(--forest) 12%, transparent); }
+  .profile-divider{ border:none; border-top:1px solid var(--rule); margin:0; }
+  .profile-hint{ font-size:11.5px; color:var(--text-soft); line-height:1.5; margin:2px 0 0; }
+  .profile-placeholder{ font-size:13px; color:var(--text-soft); line-height:1.6; }
+
   /* Tabs */
   /* De ruimte tussen de losse menu-secties (Basisdata / Maandbudgetten+Jaren / Groei /
      upload-knop) komt nu volledig uit deze ene `gap` op de flex-container, in plaats van losse
@@ -1096,6 +1254,9 @@
       <h1 id="mainTitle"></h1>
     </div>
     <div class="header-controls">
+      <button class="profile-btn" id="profileBtn" title="Profiel &amp; instellingen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.2" r="3.4"/><path d="M5.3 19.4c1.2-3.3 3.7-5 6.7-5s5.5 1.7 6.7 5"/></svg>
+      </button>
       <div class="lang-toggle" id="langToggle">
         <button class="lang-btn" data-lang="nl">NL</button>
         <button class="lang-btn" data-lang="en">EN</button>
@@ -1108,6 +1269,21 @@
   </div>
   <div class="tabs" id="tabs"></div>
 </header>
+
+<!-- Profiel-/instellingenpaneel: klapt vanaf links open als overlay (zie .profile-panel), bovenop
+     de huidige pagina — die blijft er gewoon "achter" staan zodat je 'm niet kwijtraakt. Wordt
+     geopend via #profileBtn hierboven (bewust links van de NL/EN- en licht/donker-knoppen). -->
+<div class="profile-backdrop" id="profileBackdrop"></div>
+<aside class="profile-panel" id="profilePanel" aria-hidden="true">
+  <div class="profile-panel-head">
+    <span class="profile-panel-title" id="profilePanelTitle"></span>
+    <button class="profile-close-btn" id="profileCloseBtn" title="Sluiten">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>
+    </button>
+  </div>
+  <div class="profile-panel-tabs" id="profilePanelTabs"></div>
+  <div class="profile-panel-body" id="profilePanelBody"></div>
+</aside>
 
 <input type="file" id="csvUploadInput" accept=".csv" style="display:none"/>
 <input type="file" id="pdfUploadInput" accept=".pdf" style="display:none"/>
@@ -1219,6 +1395,29 @@ const i18n = {
     loginToggleToSignIn: "Al een account? Inloggen",
     loginErrorPrefix: "Inloggen mislukt: ",
     loginConfirmEmailNotice: "Bijna klaar — check je e-mail voor een bevestigingslink, en log daarna in.",
+    profileBtnTitle: "Profiel & instellingen",
+    profilePanelTitle: "Profiel & instellingen",
+    profileTabAccount: "Account",
+    profileTabCategories: "Categorieën",
+    profileAccountEmailLabel: "Huidig e-mailadres",
+    profileAccountEmailSectionTitle: "E-mailadres wijzigen",
+    profileNewEmailLabel: "Nieuw e-mailadres",
+    profileUpdateEmailBtn: "E-mailadres bijwerken",
+    profileEmailUpdateNotice: "Bevestigingslink verstuurd — check zowel je oude als je nieuwe e-mailadres. De wijziging gaat pas in nadat je 'm hebt bevestigd.",
+    profileAccountPasswordSectionTitle: "Inlogwachtwoord wijzigen",
+    profilePasswordHint: "Dit is het wachtwoord waarmee je inlogt bij FinBo — niet het versleutelingswachtwoord waarmee je data lokaal versleuteld wordt.",
+    profileCurrentPasswordLabel: "Huidig wachtwoord",
+    profileNewPasswordLabel: "Nieuw wachtwoord",
+    profileConfirmPasswordLabel: "Bevestig nieuw wachtwoord",
+    profileUpdatePasswordBtn: "Wachtwoord bijwerken",
+    profilePasswordUpdatedNotice: "Wachtwoord bijgewerkt.",
+    profilePasswordMismatch: "De nieuwe wachtwoorden komen niet overeen.",
+    profilePasswordTooShort: "Kies een wachtwoord van minstens 8 tekens.",
+    profileCurrentPasswordWrong: "Huidig wachtwoord onjuist.",
+    profileUpdateErrorPrefix: "Bijwerken mislukt: ",
+    profileSignOutBtn: "Uitloggen",
+    profileCategoriesComingSoonTitle: "Binnenkort beschikbaar",
+    profileCategoriesComingSoonText: "Hier kun je straks je eigen categorieën aanmaken en beheren, zodat geïmporteerde PDF/CSV-transacties automatisch bij de juiste post terechtkomen — bijvoorbeeld een vaste regel voor een bepaalde winkel of tegenpartij.",
     encryptionPromptTitleExisting: "Versleutelingswachtwoord",
     encryptionPromptTextExisting: "Voer je versleutelingswachtwoord in om je data te ontsleutelen.",
     encryptionPromptTitleNew: "Kies een versleutelingswachtwoord",
@@ -1363,6 +1562,29 @@ const i18n = {
     loginToggleToSignIn: "Already have an account? Sign in",
     loginErrorPrefix: "Sign-in failed: ",
     loginConfirmEmailNotice: "Almost done — check your email for a confirmation link, then sign in.",
+    profileBtnTitle: "Profile & settings",
+    profilePanelTitle: "Profile & settings",
+    profileTabAccount: "Account",
+    profileTabCategories: "Categories",
+    profileAccountEmailLabel: "Current email address",
+    profileAccountEmailSectionTitle: "Change email address",
+    profileNewEmailLabel: "New email address",
+    profileUpdateEmailBtn: "Update email address",
+    profileEmailUpdateNotice: "Confirmation link sent — check both your old and new email address. The change only takes effect once you confirm it.",
+    profileAccountPasswordSectionTitle: "Change login password",
+    profilePasswordHint: "This is the password you sign in to FinBo with — not the encryption password that protects your data locally.",
+    profileCurrentPasswordLabel: "Current password",
+    profileNewPasswordLabel: "New password",
+    profileConfirmPasswordLabel: "Confirm new password",
+    profileUpdatePasswordBtn: "Update password",
+    profilePasswordUpdatedNotice: "Password updated.",
+    profilePasswordMismatch: "The new passwords don't match.",
+    profilePasswordTooShort: "Choose a password of at least 8 characters.",
+    profileCurrentPasswordWrong: "Current password is incorrect.",
+    profileUpdateErrorPrefix: "Update failed: ",
+    profileSignOutBtn: "Sign out",
+    profileCategoriesComingSoonTitle: "Coming soon",
+    profileCategoriesComingSoonText: "This is where you'll be able to create and manage your own categories, so imported PDF/CSV transactions land under the right line automatically — for example a standing rule for a particular shop or counterparty.",
     encryptionPromptTitleExisting: "Encryption password",
     encryptionPromptTextExisting: "Enter your encryption password to decrypt your data.",
     encryptionPromptTitleNew: "Choose an encryption password",
@@ -3077,6 +3299,171 @@ function renderHeader(){
   document.getElementById("modeIconMoon").style.display = state.darkMode ? "none" : "";
   document.getElementById("modeIconSun").style.display = state.darkMode ? "" : "none";
   document.getElementById("modeBtn").title = state.darkMode ? t("lightModeBtn") : t("darkModeBtn");
+  document.getElementById("profileBtn").title = t("profileBtnTitle");
+  renderProfilePanel();
+}
+
+/* ---------- RENDER: PROFIELPANEEL ---------- */
+/* Klapt vanaf links open als overlay bovenop de huidige pagina (zie #profilePanel/.profile-backdrop
+   in de CSS) — bewust GEEN onderdeel van `state` (dus niet in export/cloud-sync): dit is puur
+   lokale scherm-/navigatiestand, net als collapsedGroups hierboven. "account" is de eerste en tot
+   nu toe enige echt uitgewerkte subpagina; "categories" staat er als aankondiging voor een latere
+   uitbreiding (eigen categorieën voor geïmporteerde PDF/CSV-transacties). */
+let profilePanelOpen = false;
+let profilePanelTab = "account";
+const PROFILE_TABS = ["account","categories"];
+
+function openProfilePanel(){
+  profilePanelOpen = true;
+  profilePanelTab = "account";
+  renderProfilePanel();
+}
+function closeProfilePanel(){
+  profilePanelOpen = false;
+  renderProfilePanel();
+}
+
+function renderProfilePanel(){
+  const panel = document.getElementById("profilePanel");
+  const backdrop = document.getElementById("profileBackdrop");
+  if(!panel || !backdrop) return; // nog niet in de DOM tijdens de allereerste boot
+  panel.classList.toggle("open", profilePanelOpen);
+  panel.setAttribute("aria-hidden", profilePanelOpen ? "false" : "true");
+  backdrop.classList.toggle("open", profilePanelOpen);
+  document.getElementById("profileBtn").classList.toggle("active", profilePanelOpen);
+  document.getElementById("profilePanelTitle").textContent = t("profilePanelTitle");
+
+  const tabsEl = document.getElementById("profilePanelTabs");
+  tabsEl.innerHTML = `
+    <button class="profile-tab-btn ${profilePanelTab==="account"?"active":""}" data-tab="account">${t("profileTabAccount")}</button>
+    <button class="profile-tab-btn ${profilePanelTab==="categories"?"active":""}" data-tab="categories">${t("profileTabCategories")}</button>
+  `;
+  tabsEl.querySelectorAll(".profile-tab-btn").forEach(b=>{
+    b.onclick = () => { profilePanelTab = b.dataset.tab; renderProfilePanel(); };
+  });
+
+  const body = document.getElementById("profilePanelBody");
+  if(!profilePanelOpen){ body.innerHTML = ""; return; } // niets te renderen terwijl 'm dicht is
+  if(profilePanelTab === "categories"){
+    body.innerHTML = `
+      <div>
+        <p class="profile-section-title">${t("profileCategoriesComingSoonTitle")}</p>
+        <p class="profile-placeholder">${t("profileCategoriesComingSoonText")}</p>
+      </div>
+    `;
+    return;
+  }
+  renderProfileAccountTab(body);
+}
+
+function renderProfileAccountTab(body){
+  const email = (cloudSession && cloudSession.user && cloudSession.user.email) || "—";
+  body.innerHTML = `
+    <div>
+      <p class="profile-section-title">${t("profileAccountEmailLabel")}</p>
+      <div class="profile-current-email mono">${email}</div>
+    </div>
+
+    <hr class="profile-divider">
+
+    <div>
+      <p class="profile-section-title">${t("profileAccountEmailSectionTitle")}</p>
+      <div id="profileEmailMsg"></div>
+      <label class="profile-field">${t("profileNewEmailLabel")}<input type="email" id="profileNewEmailInput" autocomplete="email"></label>
+      <button id="profileUpdateEmailBtn" class="primary">${t("profileUpdateEmailBtn")}</button>
+    </div>
+
+    <hr class="profile-divider">
+
+    <div>
+      <p class="profile-section-title">${t("profileAccountPasswordSectionTitle")}</p>
+      <p class="profile-hint">${t("profilePasswordHint")}</p>
+      <div id="profilePasswordMsg"></div>
+      <label class="profile-field">${t("profileCurrentPasswordLabel")}<input type="password" id="profileCurrentPasswordInput" autocomplete="current-password"></label>
+      <label class="profile-field">${t("profileNewPasswordLabel")}<input type="password" id="profileNewPasswordInput" autocomplete="new-password"></label>
+      <label class="profile-field">${t("profileConfirmPasswordLabel")}<input type="password" id="profileConfirmPasswordInput" autocomplete="new-password"></label>
+      <button id="profileUpdatePasswordBtn" class="primary">${t("profileUpdatePasswordBtn")}</button>
+    </div>
+
+    <hr class="profile-divider">
+
+    <div>
+      <button id="profileSignOutBtn" class="danger-outline">${t("profileSignOutBtn")}</button>
+    </div>
+  `;
+
+  const emailMsgEl = document.getElementById("profileEmailMsg");
+  const showMsg = (el, text, kind) => {
+    el.innerHTML = `<div class="profile-msg ${kind}">${text}</div>`;
+  };
+  const clearMsg = (el) => { el.innerHTML = ""; };
+
+  document.getElementById("profileUpdateEmailBtn").onclick = async () => {
+    const newEmail = document.getElementById("profileNewEmailInput").value.trim();
+    clearMsg(emailMsgEl);
+    if(!newEmail || !newEmail.includes("@")){
+      showMsg(emailMsgEl, t("profileUpdateErrorPrefix") + t("profileNewEmailLabel"), "error");
+      return;
+    }
+    const btn = document.getElementById("profileUpdateEmailBtn");
+    btn.disabled = true;
+    try{
+      const { error } = await cloudClient.auth.updateUser({ email: newEmail });
+      if(error) throw error;
+      showMsg(emailMsgEl, t("profileEmailUpdateNotice"), "notice");
+      document.getElementById("profileNewEmailInput").value = "";
+    }catch(err){
+      showMsg(emailMsgEl, t("profileUpdateErrorPrefix") + (err.message || String(err)), "error");
+    }
+    btn.disabled = false;
+  };
+
+  const passwordMsgEl = document.getElementById("profilePasswordMsg");
+  document.getElementById("profileUpdatePasswordBtn").onclick = async () => {
+    const currentPassword = document.getElementById("profileCurrentPasswordInput").value;
+    const newPassword = document.getElementById("profileNewPasswordInput").value;
+    const confirmPassword = document.getElementById("profileConfirmPasswordInput").value;
+    clearMsg(passwordMsgEl);
+    if(newPassword.length < 8){
+      showMsg(passwordMsgEl, t("profilePasswordTooShort"), "error");
+      return;
+    }
+    if(newPassword !== confirmPassword){
+      showMsg(passwordMsgEl, t("profilePasswordMismatch"), "error");
+      return;
+    }
+    const btn = document.getElementById("profileUpdatePasswordBtn");
+    btn.disabled = true;
+    try{
+      // Het huidige (login-)wachtwoord opnieuw laten bevestigen vóórdat het wachtwoord echt
+      // gewijzigd wordt — een lopende sessie alleen is hier bewust niet genoeg, dit voorkomt dat
+      // iemand die even bij een openstaande, ontgrendelde sessie kan, in één moeite door ook het
+      // wachtwoord overneemt.
+      const { error: signInError } = await cloudClient.auth.signInWithPassword({
+        email: cloudSession.user.email,
+        password: currentPassword,
+      });
+      if(signInError){
+        showMsg(passwordMsgEl, t("profileCurrentPasswordWrong"), "error");
+        btn.disabled = false;
+        return;
+      }
+      const { error } = await cloudClient.auth.updateUser({ password: newPassword });
+      if(error) throw error;
+      showMsg(passwordMsgEl, t("profilePasswordUpdatedNotice"), "notice");
+      document.getElementById("profileCurrentPasswordInput").value = "";
+      document.getElementById("profileNewPasswordInput").value = "";
+      document.getElementById("profileConfirmPasswordInput").value = "";
+    }catch(err){
+      showMsg(passwordMsgEl, t("profileUpdateErrorPrefix") + (err.message || String(err)), "error");
+    }
+    btn.disabled = false;
+  };
+
+  document.getElementById("profileSignOutBtn").onclick = () => {
+    closeProfilePanel();
+    signOutCloud();
+  };
 }
 
 /* ---------- RENDER: TABS ---------- */
@@ -5004,6 +5391,14 @@ document.getElementById("langToggle").addEventListener("click", (e)=>{
 document.getElementById("modeBtn").addEventListener("click", ()=>{
   state.darkMode = !state.darkMode;
   renderAll();
+});
+document.getElementById("profileBtn").addEventListener("click", () => {
+  if(profilePanelOpen) closeProfilePanel(); else openProfilePanel();
+});
+document.getElementById("profileBackdrop").addEventListener("click", closeProfilePanel);
+document.getElementById("profileCloseBtn").addEventListener("click", closeProfilePanel);
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape" && profilePanelOpen) closeProfilePanel();
 });
 
 /* Bootstrap: de rest van de app wordt pas getekend NADAT er is ingelogd én het
