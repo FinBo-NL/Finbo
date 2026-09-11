@@ -3619,6 +3619,14 @@ function renderBucketAccordion(){
       const result = createCategory(input.value, bucket);
       if(result.error) return; // validateInput voorkomt dit normaal al
       renderAll();
+      // Ververs de accordion meteen (renderAll() raakt het profielpaneel zelf niet aan) zodat de
+      // nieuwe categorie/telling direct zichtbaar is zonder het paneel te hoeven sluiten/heropenen.
+      // Het invoerveld wordt daarbij opnieuw getekend (dus leeg) -- geef het meteen focus terug zodat
+      // de gebruiker na Enter direct door kan typen en weer Enter kan drukken voor de volgende
+      // categorie, zonder opnieuw te hoeven klikken.
+      renderBucketAccordion();
+      const freshInput = document.querySelector(`[data-cat-input="${bucket}"]`);
+      if(freshInput) freshInput.focus();
     };
   });
 
