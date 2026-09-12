@@ -379,6 +379,21 @@
 
   .profile-cat-list{ display:flex; flex-direction:column; gap:6px; }
   .profile-cat-empty{ font-size:12px; color:var(--text-soft); padding:2px 0; margin:0; }
+  /* Profiel > Importregels: één regel per onthouden koppeling tegenpartij -> groep. */
+  .profile-rule-row{
+    display:flex; align-items:center; gap:8px;
+    padding:6px 0; border-bottom:1px solid var(--rule);
+  }
+  .profile-rule-row:last-child{ border-bottom:none; }
+  .profile-rule-text{ flex:1; min-width:0; font-size:12px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .profile-rule-match{ font-weight:600; color:var(--text); word-break:break-word; }
+  .profile-rule-arrow{ color:var(--text-soft); }
+  .profile-rule-dest{ color:var(--text-soft); word-break:break-word; }
+  .profile-rule-del{
+    background:none; border:none; color:var(--rule); cursor:pointer;
+    font-size:17px; line-height:1; padding:2px 6px; flex-shrink:0;
+  }
+  .profile-rule-del:hover, .profile-rule-del:focus{ color:var(--debit); }
   .profile-cat-row{
     border:1px solid var(--rule); border-radius:6px; background:var(--paper); padding:8px 10px;
     display:flex; flex-direction:column; gap:6px;
@@ -944,6 +959,38 @@
     flex-shrink:0;
   }
   .row:hover .del-btn, .row .del-btn:focus{opacity:1; color:var(--debit);}
+  /* Markeerknopjes in een rij (zie renderCard/opts.salaryPicker en opts.offsetPicker): hetzelfde
+     onopvallende formaat als .del-btn, maar goudkleurig zodra de markering actief is. Een actieve
+     markering blijft altijd zichtbaar (ook zonder hover), want die zegt iets over de data zelf. */
+  .row .role-btn{
+    background:none;
+    border:none;
+    color:var(--rule);
+    cursor:pointer;
+    font-size:14px;
+    line-height:1;
+    padding:2px 5px;
+    opacity:.35;
+    flex-shrink:0;
+  }
+  .row:hover .role-btn, .row .role-btn:focus{opacity:.85;}
+  .row .role-btn.active{opacity:1; color:var(--gold-bright);}
+  /* Uitklapbaar keuzelijstje onder een rij om die rij van een andere rij af te trekken. */
+  .offset-picker{
+    padding:4px 0 8px 26px;
+    font-size:11.5px;
+    color:var(--text-soft);
+  }
+  .offset-picker label{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .offset-picker select{
+    font:inherit;
+    color:var(--text);
+    background:var(--paper);
+    border:1px solid var(--rule);
+    border-radius:5px;
+    padding:3px 6px;
+    max-width:100%;
+  }
   .add-row-btn{
     background:none;
     border:none;
@@ -1420,6 +1467,62 @@
     background:var(--paper); color:var(--text); max-width:260px;
   }
   .import-bd-cat-hint{ font-size:11px; color:var(--text-soft); font-style:italic; }
+  /* ---- Import basisdata: rij per tegenpartij (v25) ---- */
+  /* Debet en credit naast elkaar, zoals de twee bedragkolommen op het afschrift zelf. */
+  .import-bd-cat-tip{
+    margin:0 0 10px; padding:8px 10px;
+    font-size:11.5px; color:var(--text-soft);
+    background:var(--paper-2); border:1px solid var(--rule); border-radius:6px;
+  }
+  .import-bd-amt-pair{ display:flex; gap:10px; align-items:baseline; flex-shrink:0; }
+  .import-bd-amt{ font-size:13px; font-weight:700; white-space:nowrap; }
+  .import-bd-amt.neg{ color:var(--debit); }
+  .import-bd-amt.pos{ color:var(--credit); }
+  /* Een rij zonder groep valt op: dat is het enige wat de gebruiker nog moet doen. */
+  .import-bd-row.needs-group{ border-left:2px solid var(--gold-bright); }
+  .import-bd-badge.suggestion{ color:var(--text-soft); }
+  .import-bd-mode{
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+    margin-top:6px; font-size:11.5px; color:var(--text-soft);
+  }
+  .import-bd-mode-label{ flex-shrink:0; }
+  .import-bd-mode-btn{
+    font:inherit; cursor:pointer; padding:2px 8px; border-radius:999px;
+    border:1px solid var(--rule); background:transparent; color:var(--text-soft);
+  }
+  .import-bd-mode-btn:hover{ border-color:var(--gold-bright); color:var(--gold-bright); }
+  .import-bd-mode-btn.active{ border-color:var(--gold-bright); background:var(--gold-bright); color:#fff; font-weight:600; }
+  .import-bd-mode-btn.split{ border-style:dashed; }
+  .import-bd-split-tag{
+    margin-left:6px; padding:1px 6px; border-radius:999px;
+    font-size:10px; font-weight:600; text-transform:lowercase;
+    background:var(--paper-2); color:var(--text-soft); border:1px solid var(--rule);
+  }
+  .import-bd-mode-result{ margin-left:auto; font-weight:700; font-size:12.5px; }
+  .import-bd-mode-result.neg{ color:var(--debit); }
+  .import-bd-mode-result.pos{ color:var(--credit); }
+  /* Uitklapper met de individuele transacties achter deze tegenpartij. */
+  .import-bd-expand{
+    display:flex; align-items:center; gap:5px; margin-top:6px;
+    background:none; border:none; padding:2px 0; cursor:pointer;
+    font:inherit; font-size:11.5px; color:var(--text-soft);
+  }
+  .import-bd-expand:hover{ color:var(--gold-bright); }
+  .import-bd-expand svg{ width:13px; height:13px; transition:transform .15s ease; }
+  .import-bd-expand.open svg{ transform:rotate(180deg); }
+  .import-bd-tx-list{ margin-top:4px; padding-left:12px; border-left:1px solid var(--rule); }
+  .import-bd-tx{
+    display:flex; align-items:baseline; gap:8px;
+    padding:3px 0; font-size:11.5px; color:var(--text-soft);
+  }
+  .import-bd-tx-date{ flex-shrink:0; font-variant-numeric:tabular-nums; }
+  .import-bd-tx-desc{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .import-bd-tx-amt{ flex-shrink:0; font-weight:600; }
+  .import-bd-tx-amt.neg{ color:var(--debit); }
+  .import-bd-tx-amt.pos{ color:var(--credit); }
+  @media (max-width:560px){
+    .import-bd-mode-result{ margin-left:0; width:100%; }
+  }
   .import-bd-badge{
     display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:4px 9px; border-radius:20px;
     margin-top:8px; color:var(--gold); background:color-mix(in srgb, var(--gold) 10%, transparent);
@@ -1533,7 +1636,7 @@
 <!-- Hier wordt bij het opslaan de laatste stand van de gegevens in dit bestand zelf gezet
      (zie buildHtmlWithEmbeddedData() verderop) — zo is dit ene HTML-bestand altijd de volledige
      app mét de laatste data ineen, overal te openen, ook zonder los opslagbestand. -->
-<script type="application/json" id="finbo-embedded-data">{"lang":"en","darkMode":true,"activeView":{"type":"budget","id":"b1787176078472_2705"},"activeScenario":2,"warmtefondsAftrek":false,"loonstijgingSelectedYear":2026,"months":[],"budgets":[{"id":"b1787177505545_3181","title":"December 2026","createdAt":1787177505545,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]}},{"id":"b1787177392616_9265","title":"November 2026","createdAt":1787177392616,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]}},{"id":"b1787176968403_4650","title":"Oktober 2026","createdAt":1787176968403,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]}},{"id":"b1787176139522_5031","title":"September 2026","createdAt":1787176139522,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]}},{"id":"b1787176078472_2705","title":"Augustus 2026","createdAt":1787176078472,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"United 85","v":85},{"l":"united 146","v":146},{"l":"ziggo","v":57}]}}],"loonstijging":[{"jaar":2018,"totaal":19200,"gemPerMaand":1600,"groeiPct":100,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":1600},{"jaar":2019,"totaal":22300,"gemPerMaand":1858.33,"groeiPct":16.15,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":1858.33},{"jaar":2020,"totaal":25600,"gemPerMaand":2133.33,"groeiPct":14.8,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":2133.33},{"jaar":2021,"totaal":30471,"gemPerMaand":2539.25,"groeiPct":19.03,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":2539.25},{"jaar":2022,"totaal":34615,"gemPerMaand":2884.58,"groeiPct":13.6,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":2884.58},{"jaar":2023,"totaal":41982,"gemPerMaand":3498.5,"groeiPct":21.28,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":3498.5},{"jaar":2024,"totaal":45123,"gemPerMaand":3760.25,"groeiPct":7.48,"kosten":3922.46,"extraInkomsten":0,"totaalPerMaand":3760.25},{"jaar":2025,"totaal":47024,"gemPerMaand":3918.67,"groeiPct":4.21,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4168.67},{"jaar":2026,"totaal":48830,"gemPerMaand":4069.17,"groeiPct":3.84,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4319.17},{"jaar":2027,"totaal":50310,"gemPerMaand":4192.5,"groeiPct":3.03,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4442.5},{"jaar":2028,"totaal":51820,"gemPerMaand":4318.33,"groeiPct":3,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4568.33},{"jaar":2029,"totaal":52974,"gemPerMaand":4414.5,"groeiPct":2.23,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4664.5},{"jaar":2030,"totaal":53783,"gemPerMaand":4481.92,"groeiPct":1.53,"kosten":3922.46,"extraInkomsten":250,"totaalPerMaand":4731.92}],"scenarios":[{"label":"Basisdata","jaar":2026,"locked":true,"income":{"items":[{"l":"Loon","v":3852.73},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]},"loonstijging":null},{"label":"2027","jaar":2027,"locked":true,"income":{"items":[{"l":"Loon","v":3952.73,"note":{"nl":"Berekend via het loonsverhoging-blok 2027 hierboven (loon vorig jaar + vast bedrag, dan percentage)","en":"Calculated via the 2027 raise block above (previous year's salary + fixed amount, then percentage)"}},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]},"loonstijging":{"vast":100,"pct":0}},{"label":"2028","jaar":2028,"locked":true,"income":{"items":[{"l":"Loon","v":4052.73,"note":{"nl":"Berekend via het loonsverhoging-blok 2028 hierboven (loon vorig jaar + vast bedrag, dan percentage)","en":"Calculated via the 2028 raise block above (previous year's salary + fixed amount, then percentage)"}},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]},"loonstijging":{"vast":100,"pct":0}},{"label":"2029","jaar":2029,"locked":false,"income":{"items":[{"l":"Loon","v":4152.73,"note":{"nl":"Berekend via het loonsverhoging-blok 2029 hierboven (loon vorig jaar + vast bedrag, dan percentage)","en":"Calculated via the 2029 raise block above (previous year's salary + fixed amount, then percentage)"}},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]},"loonstijging":{"vast":100,"pct":0}},{"label":"2030","jaar":2030,"locked":false,"income":{"items":[{"l":"Loon","v":4252.73,"note":{"nl":"Berekend via het loonsverhoging-blok 2030 hierboven (loon vorig jaar + vast bedrag, dan percentage)","en":"Calculated via the 2030 raise block above (previous year's salary + fixed amount, then percentage)"}},{"l":"Hypotheekrenteaftrek","v":568},{"l":"Carina Blochberger","v":77.29}]},"vasteLasten":{"items":[{"l":"Hypotheek","v":1258.01},{"l":"UN-Gas+elec","v":231},{"l":"Water","v":21.4},{"l":"BsGW","v":123.41},{"l":"NN pakketverzekering","v":77.04},{"l":"Zorgverzekering","v":184.38},{"l":"Autoverzekering","v":36.16},{"l":"Wegenbelasting","v":68},{"l":"Dela","v":11.47},{"l":"TAF","v":31.88},{"l":"Warmtefonds","v":156.45},{"l":"Belasting Afbet","v":93},{"l":"Schenking","v":225},{"l":"Alimentatie","v":420},{"l":"Sparen kids","v":17}]},"abonnementen":{"items":[{"l":"Viaplay","v":19.99},{"l":"Netflix","v":9.99},{"l":"Amazon Prime","v":4.99},{"l":"Vodafone","v":75.67},{"l":"Ziggo","v":56.81},{"l":"Boogschieten","v":10},{"l":"Scouting","v":8.5},{"l":"Tulip Assist","v":20.95},{"l":"Tulip Assist 2","v":5.35}]},"variabeleLasten":{"items":[{"l":"Hond eten","v":50.98},{"l":"Cigaretten","v":260.03},{"l":"Eten","v":470.79},{"l":"Online","v":114.74}]},"loonstijging":{"vast":100,"pct":0}}]}</script>
+<script type="application/json" id="finbo-embedded-data">{}</script>
 
 <!-- Supabase-client (cloud-database + inloggen) — moet vóór het hoofdscript geladen zijn. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -1545,8 +1648,15 @@
 
 <script>
 /* Allereerste statement: leg de pagina exact vast zoals hij statisch is geladen (nog vóórdat er
-   ook maar iets door JS is gerenderd/gewijzigd). Dit is de "schone mal" die bij het opslaan wordt
-   hergebruikt — steeds mal + verse data, nooit de inmiddels dooer JS opgebouwde/gemuteerde DOM. */
+   ook maar iets door JS is gerenderd/gewijzigd). Dit is de mal die bij het opslaan wordt
+   hergebruikt — steeds mal + verse data, nooit de inmiddels door JS opgebouwde/gemuteerde DOM.
+
+   Let op: "schoon" slaat hier op de DOM, niet op de data. Dit statement staat ná het
+   finbo-embedded-data-blok hierboven, dus als dít bestand al data ingebed had, zit die data ook in
+   PRISTINE_HTML. Dat geeft niets — buildHtmlWithEmbeddedData() vervangt de inhoud van dat blok bij
+   elke opslag via een regex — maar ga er dus niet van uit dat deze mal datavrij is. Een
+   uit te leveren bestand maak je datavrij door het blok op {} te zetten, niet door hierop te
+   vertrouwen. */
 const PRISTINE_HTML = document.documentElement.outerHTML;
 
 /* ---------- TRANSLATIONS ---------- */
@@ -1636,6 +1746,10 @@ const i18n = {
     profilePanelTitle: "Profiel & instellingen",
     profileTabAccount: "Account",
     profileTabCategories: "Categorieën",
+    profileTabRules: "Importregels",
+    profileRulesHint: "Regels die FinBo heeft onthouden doordat je een rij bij een import zelf hebt ingedeeld. Een volgende import zet die tegenpartij meteen goed.",
+    profileRulesEmpty: "Nog geen eigen regels — die ontstaan vanzelf zodra je bij een import een rij zelf indeelt.",
+    profileRulesDelete: "Regel verwijderen",
     profileAccountEmailLabel: "Huidig e-mailadres",
     profileAccountEmailSectionTitle: "E-mailadres wijzigen",
     profileNewEmailLabel: "Nieuw e-mailadres",
@@ -1688,8 +1802,14 @@ const i18n = {
     firstTimeChoiceText: "Wil je de data uit dit geopende bestand als beginpunt gebruiken, of leeg beginnen?",
     firstTimeImportBtn: "Gebruik data uit dit bestand",
     firstTimeBlankBtn: "Begin leeg",
-    warmtefondsToggleLabel: "Warmtefonds aftrekken van UN-Gas+elec (voorkomt dubbeltelling)",
-    warmtefondsNote: (v) => `Warmtefonds (€ ${v}) is hier al van afgetrokken`,
+    offsetToggleLabel: "Gekoppelde regels aftrekken van hun doelregel (voorkomt dubbeltelling)",
+    offsetNote: (namen) => `${namen} is hier al van afgetrokken`,
+    salaryRoleBtnSet: "Markeer als salarisregel (hierop werkt de loonsverhoging per jaar)",
+    salaryRoleBtnUnset: "Salarisregel — klik om de markering weg te halen",
+    offsetBtnTitle: "Deze regel van een andere regel aftrekken",
+    offsetPickNone: "Niet aftrekken van een andere regel",
+    offsetPickLabel: "Aftrekken van:",
+    noSalaryRowNote: "Wijs met het sterretje in Inkomsten aan welke regel je salaris is — daarop werkt de loonsverhoging.",
     applyZeroedNote: (maand) => `€ 0,00 — geen transactie gevonden in ${maand} bij het toepassen op dit budget`,
     sourceNote: (name, n) => `Bron: ${name} — ${n} transacties automatisch ingedeeld`,
     months: MONTHS_NL,
@@ -1725,8 +1845,18 @@ const i18n = {
     importBasisdataUploadCsvBtn: "+ Upload CSV",
     importBasisdataCatLabel: "Categorie (optioneel — telt gelijke categorieën samen tot één regel, of hernoemt een losse rij):",
     importBasisdataCatNone: "Geen categorie (aparte regel)",
-    importBasisdataCatEmptyHint: (bucketLabel) => `Nog geen categorieën in ${bucketLabel} — die kan je later aanmaken via Profiel → Categorieën.`,
     importBasisdataMergeBadge: (names, catName, total) => `telt samen met ${names} tot één regel "${catName}" (samen € ${fmt(total)})`,
+    importBasisdataSuggestionBadge: (label, groep) => `FinBo denkt: "${label}" (${groep}) — klik een groep om te bevestigen of kies zelf`,
+    importBasisdataDebetLabel: "Afgeschreven (debet)",
+    importBasisdataCreditLabel: "Bijgeschreven (credit)",
+    importBasisdataModeLabel: "Meenemen als:",
+    importBasisdataModeDebet: "alleen af",
+    importBasisdataModeCredit: "alleen bij",
+    importBasisdataModeNet: "saldo",
+    importBasisdataTxCount: (n) => `${n} transactie${n===1?"":"s"}`,
+    importBasisdataCatEmptyTip: "Tip: rijen samenvoegen tot één post doe je met een eigen categorie. Die maak je aan via Profiel → Categorieën; daarna kun je ze hier per rij kiezen.",
+    importBasisdataSplitBtn: "splitsen",
+    importBasisdataSplitHint: "Maak er twee losse rijen van: één voor het afgeschreven deel, één voor het bijgeschreven deel. Handig als die twee niet bij elkaar horen (bv. wegenbelasting eraf, belastingteruggave erbij).",
     importBasisdataRenameBadge: (catName) => `komt in Basisdata te staan als "${catName}" — nog geen andere rijen om mee samen te tellen`,
     importBasisdataPreviewTitle: "Voorbeeld: wat er in Basisdata terechtkomt",
     importBasisdataPreviewHint: "Rijen zonder categorie blijven apart staan onder hun eigen geïmporteerde naam. Geef een rij een categorie en hij wordt hernoemd naar die categorie; geef meerdere rijen dezelfde categorie en ze worden samengeteld tot één regel.",
@@ -1853,6 +1983,10 @@ const i18n = {
     profilePanelTitle: "Profile & settings",
     profileTabAccount: "Account",
     profileTabCategories: "Categories",
+    profileTabRules: "Import rules",
+    profileRulesHint: "Rules FinBo remembered because you categorised a row yourself during an import. The next import will place that counterparty straight away.",
+    profileRulesEmpty: "No rules of your own yet — they appear as soon as you categorise a row during an import.",
+    profileRulesDelete: "Delete rule",
     profileAccountEmailLabel: "Current email address",
     profileAccountEmailSectionTitle: "Change email address",
     profileNewEmailLabel: "New email address",
@@ -1905,8 +2039,14 @@ const i18n = {
     firstTimeChoiceText: "Use the data from this open file as a starting point, or start blank?",
     firstTimeImportBtn: "Use data from this file",
     firstTimeBlankBtn: "Start blank",
-    warmtefondsToggleLabel: "Subtract Warmtefonds from UN-Gas+elec (avoids double-counting)",
-    warmtefondsNote: (v) => `Warmtefonds (€ ${v}) already subtracted here`,
+    offsetToggleLabel: "Subtract linked rows from their target row (avoids double-counting)",
+    offsetNote: (names) => `${names} already subtracted here`,
+    salaryRoleBtnSet: "Mark as the salary row (the yearly raise applies to this row)",
+    salaryRoleBtnUnset: "Salary row — click to remove the mark",
+    offsetBtnTitle: "Subtract this row from another row",
+    offsetPickNone: "Don't subtract from another row",
+    offsetPickLabel: "Subtract from:",
+    noSalaryRowNote: "Use the star in Income to mark which row is your salary — the yearly raise applies to it.",
     applyZeroedNote: (month) => `€ 0.00 — no matching transaction found in ${month} when applying to this budget`,
     sourceNote: (name, n) => `Source: ${name} — ${n} transactions auto-categorised`,
     months: MONTHS_EN,
@@ -1942,8 +2082,18 @@ const i18n = {
     importBasisdataUploadCsvBtn: "+ Upload CSV",
     importBasisdataCatLabel: "Category (optional — sums matching rows into one line, or just renames a single row):",
     importBasisdataCatNone: "No category (keep separate)",
-    importBasisdataCatEmptyHint: (bucketLabel) => `No categories yet in ${bucketLabel} — you can create some later in Profile → Categories.`,
     importBasisdataMergeBadge: (names, catName, total) => `merges with ${names} into one "${catName}" line (${fmt(total)} combined)`,
+    importBasisdataSuggestionBadge: (label, groep) => `FinBo thinks: "${label}" (${groep}) — click a group to confirm, or pick your own`,
+    importBasisdataDebetLabel: "Debited",
+    importBasisdataCreditLabel: "Credited",
+    importBasisdataModeLabel: "Count as:",
+    importBasisdataModeDebet: "debit only",
+    importBasisdataModeCredit: "credit only",
+    importBasisdataModeNet: "net",
+    importBasisdataTxCount: (n) => `${n} transaction${n===1?"":"s"}`,
+    importBasisdataCatEmptyTip: "Tip: to merge rows into a single line, use a category of your own. Create one under Profile → Categories, then pick it per row here.",
+    importBasisdataSplitBtn: "split",
+    importBasisdataSplitHint: "Turn this into two separate rows: one for the debited part, one for the credited part. Useful when those two aren't the same thing (e.g. road tax out, tax refund in).",
     importBasisdataRenameBadge: (catName) => `will appear in Basisdata simply renamed to "${catName}" — no other rows to sum it with yet`,
     importBasisdataPreviewTitle: "Preview: what lands in Basisdata",
     importBasisdataPreviewHint: "Rows without a category stay separate under their own imported name. Give a row a category and it's renamed to that category; give several rows the same category and they're summed into one line under that name.",
@@ -1991,43 +2141,19 @@ const i18n = {
 };
 function t(key){ return i18n[state.lang][key]; }
 
-/* Losse vertalingen voor specifieke posten (niet alle labels — alleen deze zijn gevraagd).
-   De onderliggende data blijft altijd het Nederlandse label; dit is alleen voor de weergave
-   in EN-modus. Als een gebruiker een vertaald label handmatig bewerkt, wordt dat de nieuwe
-   waarde (net als bij elk ander bewerkbaar veld). */
-const ITEM_LABEL_TRANSLATIONS = {
-  "Loon": "Income",
-  "Hypotheekrenteaftrek": "Mortgage interest deduction",
-  "Hypotheek": "Mortgage",
-  "Autoverzekering": "Car insurance",
-  "Zorgverzekering": "Medical care insurance",
-  "Eten": "Food",
-  "Hond eten": "Dog food",
-};
-function translateLabel(label){
-  if(state.lang !== "en") return label;
-  const key = (label||"").trim();
-  return ITEM_LABEL_TRANSLATIONS[key] || label;
-}
+/* (v24 had hier ITEM_LABEL_TRANSLATIONS: een vaste NL→EN woordenlijst voor een handvol
+   postnamen, "Loon" → "Income" enzovoort. Verwijderd in v25: de naam van een post is
+   gebruikersdata, geen tekst van de app. Een vaste lijst kon per definitie alleen de posten van
+   de oorspronkelijke gebruiker vertalen — bij iedereen anders bleef alles onvertaald staan, wat
+   in EN-modus een half-vertaald scherm opleverde. Postnamen worden nu altijd getoond precies
+   zoals ze zijn ingevoerd; alleen de vaste teksten van de app zelf (zie i18n/t()) vertalen mee. */
 
-/* Bron: tabblad "Loonstijging 2021-2030" uit Rekensheet 2026.xlsx (kolommen F t/m L).
-   "kosten" is in dat tabblad een vaste jaarlijkse aanname (niet per jaar herrekend);
-   "totaalPerMaand" = gemiddeld loon per maand + extra inkomsten. */
-const DEFAULT_LOONSTIJGING = [
-  { jaar:2018, totaal:19200,   gemPerMaand:1600,    groeiPct:100,  kosten:3922.46, extraInkomsten:0,   totaalPerMaand:1600 },
-  { jaar:2019, totaal:22300,   gemPerMaand:1858.33, groeiPct:16.15, kosten:3922.46, extraInkomsten:0,   totaalPerMaand:1858.33 },
-  { jaar:2020, totaal:25600,   gemPerMaand:2133.33, groeiPct:14.80, kosten:3922.46, extraInkomsten:0,   totaalPerMaand:2133.33 },
-  { jaar:2021, totaal:30471,   gemPerMaand:2539.25, groeiPct:19.03, kosten:3922.46, extraInkomsten:0,   totaalPerMaand:2539.25 },
-  { jaar:2022, totaal:34615,   gemPerMaand:2884.58, groeiPct:13.60, kosten:3922.46, extraInkomsten:0,   totaalPerMaand:2884.58 },
-  { jaar:2023, totaal:41982,   gemPerMaand:3498.50, groeiPct:21.28, kosten:3922.46, extraInkomsten:0,   totaalPerMaand:3498.50 },
-  { jaar:2024, totaal:45123,   gemPerMaand:3760.25, groeiPct:7.48,  kosten:3922.46, extraInkomsten:0,   totaalPerMaand:3760.25 },
-  { jaar:2025, totaal:47024,   gemPerMaand:3918.67, groeiPct:4.21,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4168.67 },
-  { jaar:2026, totaal:48830,   gemPerMaand:4069.17, groeiPct:3.84,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4319.17 },
-  { jaar:2027, totaal:50310,   gemPerMaand:4192.50, groeiPct:3.03,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4442.50 },
-  { jaar:2028, totaal:51820,   gemPerMaand:4318.33, groeiPct:3.00,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4568.33 },
-  { jaar:2029, totaal:52974,   gemPerMaand:4414.50, groeiPct:2.23,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4664.50 },
-  { jaar:2030, totaal:53783,   gemPerMaand:4481.92, groeiPct:1.53,  kosten:3922.46, extraInkomsten:250, totaalPerMaand:4731.92 },
-];
+/* Historische loonreeks. Bewust LEEG bij een schone start: dit zijn per definitie persoonlijke
+   cijfers, er valt niets zinnigs voor te verzinnen voor iemand anders. effectiveLoonstijgingRows()
+   vult de reeks sowieso aan met een rij per bestaand scenario/jaar (gesynct uit de inkomsten van
+   dat jaar), dus met een leeg startpunt toont de Loonstijging-pagina gewoon het basisjaar en groeit
+   de reeks mee zodra er jaren bij komen. Eigen historische jaren kan de gebruiker zelf toevoegen. */
+const DEFAULT_LOONSTIJGING = [];
 
 /* ---------- STATE ---------- */
 /* Elk scenario/jaar heeft z'n eigen volledig onafhankelijke inkomsten/vaste lasten/abonnementen/
@@ -2043,6 +2169,12 @@ function cloneItems(items){
     const clone = { l: it.l, v: it.v };
     if(it.entries && it.entries.length) clone.entries = it.entries.map(e => ({...e}));
     if(it.note) clone.note = (typeof it.note === "object") ? {...it.note} : it.note;
+    // Markeringen op een regel horen bij die regel en moeten een kopie dus overleven: "role"
+    // (welke inkomstenregel het salaris is, zie getLoonItem) en "offsetTarget" (van welke andere
+    // regel deze wordt afgetrokken, zie findOffsetPairs). Werden ze hier niet meegenomen, dan
+    // verloor elk nieuw maandbudget/jaar die instellingen stilzwijgend.
+    if(it.role) clone.role = it.role;
+    if(it.offsetTarget) clone.offsetTarget = it.offsetTarget;
     return clone;
   });
 }
@@ -2073,9 +2205,9 @@ function makeBudget(title, source){
     vasteLasten: { items: cloneItems(source.vasteLasten.items) },
     abonnementen: { items: cloneItems(source.abonnementen.items) },
     variabeleLasten: { items: cloneItems(source.variabeleLasten.items) },
-    // Eigen, los instelbaar vinkje (zie renderWarmtefondsToggleForBudget) — neemt bij aanmaken de
+    // Eigen, los instelbaar vinkje (zie renderOffsetToggleForBudget) — neemt bij aanmaken de
     // huidige Basisdata-stand over, maar wijzigt daarna niet meer mee met Basisdata (bevroren snapshot).
-    warmtefondsAftrek: state.warmtefondsAftrek,
+    offsetsEnabled: state.offsetsEnabled,
     // Terugboekingen die de gebruiker via "Openstaande terugboekingen" bewust aan dit specifieke
     // maandbudget toevoegt (zie renderStornoReviewCard) — een los blok, niet vermengd met de
     // "normale" vaste-lasten-post, zodat altijd zichtbaar blijft dát het om een terugboeking gaat.
@@ -2180,72 +2312,43 @@ function reverseApplyMonthToBudget(m){
   m.appliedToBudget = null;
 }
 
-const BASISDATA_INCOME = [
-  { l: "Loon", v: 3852.73 },
-  { l: "Hypotheekrenteaftrek", v: 568 },
-  { l: "Carina Blochberger", v: 77.29 },
-];
-const BASISDATA_VASTELASTEN = [
-  { l: "Hypotheek", v: 1258.01 },
-  { l: "UN-Gas+elec", v: 231.00 },
-  { l: "Water", v: 21.40 },
-  { l: "BsGW", v: 123.41 },
-  { l: "NN pakketverzekering", v: 77.04 },
-  { l: "Zorgverzekering", v: 184.38 },
-  { l: "Autoverzekering", v: 36.16 },
-  { l: "Wegenbelasting", v: 68.00 },
-  { l: "Dela", v: 11.47 },
-  { l: "TAF", v: 31.88 },
-  { l: "Warmtefonds", v: 156.45 },
-  { l: "Belasting Afbet", v: 93.00 },
-  { l: "Schenking", v: 225.00 },
-  { l: "Alimentatie", v: 420.00 },
-  { l: "Sparen kids", v: 17.00 },
-];
-const BASISDATA_ABONNEMENTEN = [
-  { l: "Viaplay", v: 19.99 },
-  { l: "Netflix", v: 9.99 },
-  { l: "Amazon Prime", v: 4.99 },
-  { l: "Vodafone", v: 75.67 },
-  { l: "Ziggo", v: 56.81 },
-  { l: "Boogschieten", v: 10.00 },
-  { l: "Scouting", v: 8.50 },
-  { l: "Tulip Assist", v: 20.95 },
-  { l: "Tulip Assist 2", v: 5.35 },
-  { l: "Rabobank", v: 3.60 },
-];
-const BASISDATA_VARIABELELASTEN = [
-  { l: "Hond eten", v: 50.98 },
-  { l: "Cigaretten", v: 260.03 },
-  { l: "Eten", v: 470.79 },
-  { l: "Online", v: 114.74 },
-];
-let state = {
-  lang: "nl",
-  darkMode: false, // licht/donker-modus (hele UI, niet alleen de kaarten) — knop naast NL/EN in de header
-  activeView: { type: "scenario", index: 0 },
-  activeScenario: 0,
-  warmtefondsAftrek: true, // trekt Warmtefonds af van UN-Gas+elec (voorkomt dubbeltelling); alleen zichtbaar/instelbaar op Basisdata
-  loonstijgingSelectedYear: null, // jaar dat is aangeklikt op de Loonstijging-grafiek; null = huidig kalenderjaar (of laatste jaar als dat buiten bereik valt)
-  months: [],
-  budgets: [], // maandbudgetten: losse momentopnames van Basisdata (nieuwste eerst), zie makeBudget()
-  categories: [], // eigen categorieën voor het indelen van "Nog in te delen"-rijen, zie createCategory()
-  loonstijging: DEFAULT_LOONSTIJGING,
-  scenarios: [
-    // Basisdata: 2026, het basisjaar — inkomen hier is altijd direct bewerkbaar (geen eigen loonsverhoging-blok).
-    makeScenario("Basisdata", 2026, true, BASISDATA_INCOME, BASISDATA_VASTELASTEN, BASISDATA_ABONNEMENTEN, BASISDATA_VARIABELELASTEN),
-    // 2027: loon = loon Basisdata (2026) + eigen loonsverhoging-blok van 2027 (125 vast, 0%).
-    makeScenario("2027", 2027, true,
-      [{ l:"Loon", v: 3852.73 + 125 }, { l:"Hypotheekrenteaftrek", v:568 }, { l:"Carina Blochberger", v:77.29 }],
-      BASISDATA_VASTELASTEN, BASISDATA_ABONNEMENTEN, BASISDATA_VARIABELELASTEN,
-      { vast: 125, pct: 0 }),
-    // 2028: loon = loon 2027 + eigen loonsverhoging-blok van 2028 (0 vast, 2%).
-    makeScenario("2028", 2028, true,
-      [{ l:"Loon", v: Math.round((3852.73 + 125) * 1.02 * 100) / 100 }, { l:"Hypotheekrenteaftrek", v:568 }, { l:"Carina Blochberger", v:77.29 }],
-      BASISDATA_VASTELASTEN, BASISDATA_ABONNEMENTEN, BASISDATA_VARIABELELASTEN,
-      { vast: 0, pct: 2 }),
-  ],
-};
+/* Startpunt voor een schone installatie: alle vier de groepen leeg. FinBo levert bewust GEEN
+   voorbeeldposten mee — de gebruiker vult Basisdata zelf, of laat "Import basisdata" hem in één
+   keer opbouwen uit een bankafschrift. (Tot v24 stonden hier de persoonlijke posten van de
+   oorspronkelijke gebruiker; die kwamen daardoor bij iedere nieuwe gebruiker terecht.) */
+const BASISDATA_INCOME = [];
+const BASISDATA_VASTELASTEN = [];
+const BASISDATA_ABONNEMENTEN = [];
+const BASISDATA_VARIABELELASTEN = [];
+/* De enige plek waar een "lege" FinBo wordt gedefinieerd. Wordt gebruikt als opstartwaarde van
+   `state` én door de auth-gate wanneer een nieuw account voor "Begin leeg" kiest — die twee liepen
+   tot v24 uiteen, waardoor "Begin leeg" in de praktijk de voorbeelddata van de oorspronkelijke
+   gebruiker overnam. Eén scenario (Basisdata, op het huidige kalenderjaar), vier lege groepen,
+   geen loonhistorie, geen categorieën, geen eigen importregels. */
+function makeBlankState(){
+  return {
+    lang: "nl",
+    darkMode: false, // licht/donker-modus (hele UI, niet alleen de kaarten) — knop naast NL/EN in de header
+    activeView: { type: "scenario", index: 0 },
+    activeScenario: 0,
+    // Zet de "trek gekoppelde regels af van hun doelregel"-berekening aan (zie findOffsetPairs).
+    // Zonder koppelingen verandert dit niets; het staat aan zodat een nieuwe koppeling meteen werkt.
+    offsetsEnabled: true,
+    loonstijgingSelectedYear: null, // jaar dat is aangeklikt op de Loonstijging-grafiek; null = huidig kalenderjaar (of laatste jaar als dat buiten bereik valt)
+    months: [],
+    budgets: [], // maandbudgetten: losse momentopnames van Basisdata (nieuwste eerst), zie makeBudget()
+    categories: [], // eigen categorieën voor het indelen van "Nog in te delen"-rijen, zie createCategory()
+    userRules: [], // eigen herken-regels voor imports ({match, bucket, label}), zie matchUserRule()
+    loonstijging: DEFAULT_LOONSTIJGING.slice(),
+    scenarios: [
+      // Basisdata = het basisjaar; inkomen is hier altijd direct bewerkbaar (geen eigen
+      // loonsverhoging-blok). Verdere jaren maakt de gebruiker zelf aan met "+ Nieuw jaar".
+      makeScenario("Basisdata", new Date().getFullYear(), true,
+        BASISDATA_INCOME, BASISDATA_VASTELASTEN, BASISDATA_ABONNEMENTEN, BASISDATA_VARIABELELASTEN),
+    ],
+  };
+}
+let state = makeBlankState();
 
 /* Migratie voor oudere opgeslagen bestanden (vóór de onafhankelijke jaren): als het geladen bestand
    nog de oude platte state.income/vasteLasten/abonnementen/variabeleLasten heeft, zet dat om naar
@@ -2312,25 +2415,45 @@ function migrateState(){
       m.sourceType = IMPORT_NAME_RE.exec(m.sourceFile)[1];
     }
   });
-  // Oudere maandbudgetten kennen het eigen warmtefonds-vinkje nog niet. Standaard uit, zodat
+  // Oudere maandbudgetten kennen het eigen aftrek-vinkje nog niet. Standaard uit, zodat
   // hun al opgeslagen/getoonde totalen niet stilzwijgend veranderen bij het laden.
   state.budgets.forEach(b=>{
-    if(b.warmtefondsAftrek === undefined) b.warmtefondsAftrek = false;
+    if(b.offsetsEnabled === undefined) b.offsetsEnabled = (b.warmtefondsAftrek === undefined) ? false : b.warmtefondsAftrek;
+    delete b.warmtefondsAftrek;
     // Nieuw blok voor terugboekingen die de gebruiker bewust als kostenpost aan dít maandbudget
     // toevoegt (zie renderStornoReviewCard) — oudere maandbudgetten krijgen 'm hier alsnog bij.
     if(!b.outstanding) b.outstanding = { items: [] };
   });
-  // De maandelijkse Rabobank-rekeningkosten (Rabo Standaard, ~€3,60) ontbraken tot nu toe als
-  // los abonnement — met terugwerkende kracht toegevoegd aan Basisdata én aan alle al bestaande
-  // maandbudgetten (die zijn bevroren snapshots en krijgen 'm dus niet automatisch mee vanuit
-  // Basisdata). Idempotent: slaat over als er al een "Rabobank"-post staat.
-  const ensureRabobankAbonnement = (abonnementen) => {
-    if(!abonnementen.items.some(it => it.l.trim().toLowerCase() === "rabobank")){
-      abonnementen.items.push({ l:"Rabobank", v:3.60 });
-    }
+
+  /* ---- v24 → v25: van vaste namen naar markeringen in de data ---- */
+  // Tot v24 zaten twee functies vast aan letterlijke postnamen: de loonsverhoging zocht een regel
+  // met het label "Loon", en de aftrek zocht "Warmtefonds" en "UN-Gas+elec". Beide zijn nu vrije
+  // markeringen op de regel zelf (role / offsetTarget). Deze eenmalige migratie zet ze om, zodat
+  // een bestaand bestand precies blijft werken zoals het werkte — bij wie die namen niet gebruikte
+  // verandert er niets, want dan was de functie sowieso al niet actief.
+  if(!state.userRules) state.userRules = [];
+  if(state.offsetsEnabled === undefined) state.offsetsEnabled = (state.warmtefondsAftrek === undefined) ? true : state.warmtefondsAftrek;
+  delete state.warmtefondsAftrek;
+  state.scenarios.forEach(s => {
+    if(!s.income || !s.income.items) return;
+    if(s.income.items.some(it => it.role === "salary")) return;
+    const legacy = s.income.items.find(it => (it.l||"").trim().toLowerCase() === "loon");
+    if(legacy) legacy.role = "salary";
+  });
+  const linkLegacyOffset = (container) => {
+    if(!container || !container.vasteLasten || !container.vasteLasten.items) return;
+    const items = container.vasteLasten.items;
+    if(items.some(it => it.offsetTarget)) return;
+    const src = items.find(it => (it.l||"").trim().toLowerCase() === "warmtefonds");
+    const tgt = items.find(it => (it.l||"").trim().toLowerCase() === "un-gas+elec");
+    if(src && tgt) src.offsetTarget = tgt.l;
   };
-  if(state.scenarios && state.scenarios[0]) ensureRabobankAbonnement(basisdataScenario().abonnementen);
-  state.budgets.forEach(b => ensureRabobankAbonnement(b.abonnementen));
+  state.scenarios.forEach(linkLegacyOffset);
+  state.budgets.forEach(linkLegacyOffset);
+  // (v24 had hier een migratie die een vaste "Rabobank"-post van € 3,60 aan Basisdata én aan elk
+  // bestaand maandbudget toevoegde. Die was gebaseerd op de bankkosten van één specifieke
+  // gebruiker en werd bij ELKE keer laden opnieuw uitgevoerd, dus ook in het bestand van iemand
+  // anders. Verwijderd in v25 — een eigen bankkostenpost voegt de gebruiker zelf toe.)
   syncComputedLoons();
 }
 
@@ -2351,10 +2474,39 @@ function latestScenario(){
   return state.scenarios[state.scenarios.length-1];
 }
 
-/* Loon wordt herkend aan het label "Loon" binnen Inkomsten van een scenario; overige
-   inkomstenposten (zoals hypotheekrenteaftrek) tellen ongewijzigd mee. */
+/* De salarisregel van een scenario: de inkomstenregel die de gebruiker zelf heeft aangewezen met
+   het sterretje in de Inkomsten-kaart (role: "salary"). Dat is de regel waarop de loonsverhoging
+   per jaar wordt toegepast; alle andere inkomstenposten tellen ongewijzigd mee.
+
+   Tot v24 werd deze regel herkend aan het letterlijke label "Loon". Dat werkte alleen voor wie
+   z'n salarisregel toevallig precies zo noemde: bij elke andere naam (of taal) viel de hele
+   loonsverhoging-functie stilzwijgend uit — geen melding, alleen een jaar dat z'n loon niet
+   overnam. De markering staat nu in de data i.p.v. in de code, dus de naam is vrij.
+
+   Er is er hoogstens één: setSalaryRole() haalt de markering eerst overal weg. */
 function getLoonItem(s){
-  return s.income.items.find(it => it.l.trim().toLowerCase() === "loon");
+  return s.income.items.find(it => it.role === "salary");
+}
+
+/* Wijst één inkomstenregel aan als salarisregel (of haalt de markering weg met item = null).
+   Hoogstens één per scenario.
+
+   De markering wordt op ALLE jaren gezet, niet alleen op het scenario waar geklikt is: elk jaar
+   heeft z'n eigen kopie van de inkomstenregels, en het is conceptueel dezelfde regel. Zonder deze
+   doorwerking zou een jaar dat al bestond vóór het aanwijzen geen salarisregel hebben en dus z'n
+   loonsverhoging niet meer krijgen. Jaren worden op label gematcht (net als elders in FinBo).
+   Maandbudgetten blijven bewust ongemoeid: dat zijn bevroren momentopnamen. */
+function setSalaryRole(s, item){
+  const doel = item ? (item.l||"").trim().toLowerCase() : null;
+  state.scenarios.forEach(sc => {
+    if(!sc.income || !sc.income.items) return;
+    sc.income.items.forEach(it => { if(it.role === "salary") delete it.role; });
+    if(!doel) return;
+    const match = (sc === s && item)
+      ? item
+      : sc.income.items.find(it => (it.l||"").trim().toLowerCase() === doel);
+    if(match) match.role = "salary";
+  });
 }
 
 /* Ruwe, opgeslagen loonwaarde van een scenario (zonder de loonsverhoging-formule toe te passen).
@@ -2394,19 +2546,69 @@ function syncComputedLoons(){
 /* Alle kosten (vaste lasten, abonnementen, variabele lasten) komen altijd live van Basisdata —
    ongeacht welk jaar er bekeken wordt. Elk jaar heeft dus identieke kosten; alleen het (eigen,
    los aanpasbare) inkomen per jaar verschilt. Zie ontwerp-doc §3.1. */
+/* ---------- AFTREKKOPPELINGEN TUSSEN REGELS ---------- */
+/* Een regel kan met offsetTarget naar het LABEL van een andere regel in dezelfde groep verwijzen:
+   "trek mij af van die regel". De doelregel wordt dan netto getoond (eigen bedrag minus de
+   gekoppelde regel) en het groepstotaal telt de gekoppelde regel dus niet dubbel mee.
+
+   Dit verving in v25 de vaste "Warmtefonds van UN-Gas+elec"-aftrek, die met die twee namen in de
+   code zat en daardoor bij niemand anders werkte. Er wordt bewust op label gematcht en niet op een
+   id: alle andere koppelingen in FinBo (bv. het vergelijken van een maand met een budget) werken
+   ook op label, en regels hebben geen id. Hernoemen van een doelregel verbreekt de koppeling —
+   daarom wordt de verwijzing meteen bijgewerkt als het label verandert, zie renderCard. */
+function findOffsetPairs(items){
+  const zoekDoel = (van) => {
+    const target = (van.offsetTarget||"").trim().toLowerCase();
+    if(!target) return null;
+    return items.find(it => it !== van && (it.l||"").trim().toLowerCase() === target) || null;
+  };
+  const pairs = [];
+  items.forEach(src => {
+    const tgt = zoekDoel(src);
+    if(!tgt) return;
+    // Kringetje weren: als je vanaf het doel de koppelingen blijft volgen en weer bij de bron
+    // uitkomt (A trekt af van B en B van A), trekken beide regels elkaar weg en zou het
+    // groepstotaal naar nul lopen. Zo'n koppeling wordt genegeerd i.p.v. doorgerekend. De
+    // keuzelijst in renderCard biedt zulke doelen ook niet meer aan; dit is het vangnet voor
+    // bestaande data en voor koppelingen die door hernoemen alsnog rond gaan lopen.
+    let loper = tgt, stappen = 0;
+    while(loper && stappen++ < items.length){
+      if(loper === src) return; // rondje — sla deze koppeling over
+      loper = zoekDoel(loper);
+    }
+    pairs.push({ src, tgt });
+  });
+  return pairs;
+}
+
+/* Mag `src` naar `kandidaat` wijzen zonder een kringetje te maken? Gebruikt door de keuzelijst in
+   renderCard, zodat een onmogelijke keuze niet eens aangeboden wordt. */
+function mayOffsetTarget(items, src, kandidaat){
+  if(src === kandidaat) return false;
+  let loper = kandidaat, stappen = 0;
+  while(loper && stappen++ < items.length){
+    if(loper === src) return false;
+    const t = (loper.offsetTarget||"").trim().toLowerCase();
+    if(!t) return true;
+    loper = items.find(it => it !== loper && (it.l||"").trim().toLowerCase() === t) || null;
+  }
+  return true;
+}
+/* Het totaalbedrag dat door koppelingen van een groepstotaal af moet. 0 als de aftrek uit staat. */
+function offsetTotal(items, enabled){
+  if(!enabled) return 0;
+  return findOffsetPairs(items).reduce((acc, p) => acc + (parseFloat(p.src.v)||0), 0);
+}
+
 function vasteLastenTotal(){
   const bd = basisdataScenario();
-  const warmtefondsItem = bd.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "warmtefonds");
-  const warmtefondsVal = (state.warmtefondsAftrek && warmtefondsItem) ? (parseFloat(warmtefondsItem.v)||0) : 0;
-  return sum(bd.vasteLasten.items) - warmtefondsVal;
+  return sum(bd.vasteLasten.items) - offsetTotal(bd.vasteLasten.items, state.offsetsEnabled);
 }
 /* Zelfde logica als vasteLastenTotal(), maar voor een bevroren maandbudget: gebruikt de eigen
-   (gekopieerde) vaste-lasten-items en het eigen warmtefondsAftrek-vinkje van dat budget, niet de
+   (gekopieerde) vaste-lasten-items en het eigen offsetsEnabled-vinkje van dat budget, niet de
    globale Basisdata-instelling. */
 function vasteLastenTotalForBudget(b){
-  const warmtefondsItem = b.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "warmtefonds");
-  const warmtefondsVal = (b.warmtefondsAftrek && warmtefondsItem) ? (parseFloat(warmtefondsItem.v)||0) : 0;
-  return sum(b.vasteLasten.items) - warmtefondsVal;
+  return sum(b.vasteLasten.items) - offsetTotal(b.vasteLasten.items, b.offsetsEnabled);
 }
 function basisdataCostTotals(){
   const bd = basisdataScenario();
@@ -2569,7 +2771,8 @@ function detectMonthFromFilename(name){
 }
 
 /* FinBo's eigen naamgeving voor een geïmporteerde maand ("JJJJ-CSV-MM" / "JJJJ-PDF-MM"), gebruikt
-   i.p.v. de kale bankbestandsnaam (die zelf nietszeggende dingen als "RA_A_NL47RABO..." bevat) —
+   i.p.v. de kale bankbestandsnaam (die zelf nietszeggende dingen bevat: een voorvoegsel, je eigen
+   IBAN en een reeks datums) —
    zie renderReviewCard()/sourceNote en migrateState() voor de retroactieve toepassing op al eerder
    geïmporteerde maanden. */
 function formatImportName(year, month, type){
@@ -2604,65 +2807,135 @@ function detectMonthFromRows(rows){
   return {year:y, month:mo};
 }
 
-/* Vertaallijst: koppelt bekende tegenpartijen/omschrijvingen aan een categorie + label,
-   gebaseerd op de posten die al in de Basistabel staan. Voeg hier gerust regels toe. */
+/* ---------- HERKENNING VAN TRANSACTIES ---------- */
+/* Een binnenkomende transactie wordt in twee lagen herkend, in deze volgorde:
+   1. state.userRules — de eigen regels van de gebruiker (zie matchUserRule/rememberUserRule).
+      Die winnen altijd: wat je zelf hebt ingedeeld weet FinBo beter dan welke standaardlijst ook.
+   2. CATEGORY_RULES — een kleine, bewust neutrale startlijst met alleen breed bekende ketens.
+
+   Tot v24 stond hier één lange lijst die rechtstreeks was overgenomen uit de bankafschriften van
+   de oorspronkelijke gebruiker: diens hypotheekverstrekker, energieleverancier en verzekeraars,
+   en zelfs namen van familieleden — die werden automatisch als "Alimentatie" of "Sparen kids"
+   ingedeeld. Bij iedere andere gebruiker deed die lijst óf niets, óf iets verkeerds, en het was
+   niet te zien waaróm een rij ergens belandde. Wat hier nu staat is bewust generiek: ketens die
+   groot genoeg zijn dat de regel voor veel mensen klopt. Al het persoonlijke leert FinBo zelf,
+   van wat de gebruiker tijdens een import indeelt.
+
+   Een label uit deze lijst is een startvoorstel, geen waarheid: elke rij is in het importscherm te
+   overschrijven, en die keuze wordt onthouden als eigen regel. */
+
+/* Generieke labels (met "@" ervoor in de regels hieronder) worden op het moment van indelen
+   omgezet naar de taal die dan actief staat. Daarna zijn het gewone postnamen: gebruikersdata,
+   vrij te hernoemen. Merknamen (Netflix, Spotify) blijven uiteraard onvertaald. */
+const IMPORT_LABELS = {
+  nl: { groceries:"Boodschappen", eatingOut:"Uit eten/bezorgd", online:"Online aankopen",
+        fuel:"Benzine", diy:"Bouwmarkt", pets:"Huisdier", cash:"Geldopname",
+        bankCosts:"Bankkosten", salary:"Salaris" },
+  en: { groceries:"Groceries", eatingOut:"Eating out/delivery", online:"Online purchases",
+        fuel:"Fuel", diy:"DIY store", pets:"Pet supplies", cash:"Cash withdrawal",
+        bankCosts:"Bank charges", salary:"Salary" },
+};
+function resolveRuleLabel(label){
+  if(typeof label !== "string" || label[0] !== "@") return label;
+  const set = IMPORT_LABELS[state.lang] || IMPORT_LABELS.nl;
+  return set[label.slice(1)] || label.slice(1);
+}
+
 const CATEGORY_RULES = [
-  [["florius"], "vasteLasten","Hypotheek"],
-  [["unitedconsumers"], "vasteLasten","UN-Gas+elec"],
-  // Zonder de laatste "g": bij deze tegenpartij wrapt de PDF-lay-out het laatste teken van
-  // "LIMBURG" soms als los stukje naar de vervolgregel, waardoor de herkende naam bij een
-  // PDF-import op "...LIMBUR" eindigt i.p.v. "...LIMBURG" (de CSV-export heeft dit probleem niet).
-  [["waterleiding maatschappij limbur"], "vasteLasten","Water"],
-  [["bsgw"], "vasteLasten","BsGW"],
-  [["confident limburg"], "vasteLasten","NN pakketverzekering"],
-  [["nationale-nederlanden zorg"], "vasteLasten","Zorgverzekering"],
-  [["voogd voogd verzekering"], "vasteLasten","Autoverzekering"],
-  [["dela"], "vasteLasten","Dela"],
-  [["taf bv"], "vasteLasten","TAF"],
-  [["jl boon cj"], "vasteLasten","Schenking"],
-  [["sophie"], "vasteLasten","Sparen kids"],
-  [["l.j.m.n. boon"], "vasteLasten","Sparen kids"],
-  [["s.e.s. boon"], "vasteLasten","Sparen kids"],
+  // Streaming en andere doorlopende diensten met een wereldwijd bekende naam.
+  [["netflix"], "abonnementen", "Netflix"],
+  [["spotify"], "abonnementen", "Spotify"],
+  [["disney"], "abonnementen", "Disney+"],
+  [["amazon eu sarl", "amazon prime"], "abonnementen", "Amazon Prime"],
+  [["nent group", "viaplay"], "abonnementen", "Viaplay"],
+  [["videoland"], "abonnementen", "Videoland"],
+  [["hbo max", "hbomax"], "abonnementen", "HBO Max"],
+  [["youtubepremium", "google youtube"], "abonnementen", "YouTube Premium"],
 
-  [["netflix"], "abonnementen","Netflix"],
-  [["amazon eu sarl"], "abonnementen","Amazon Prime"],
-  [["vodafone"], "abonnementen","Vodafone"],
-  [["ziggo"], "abonnementen","Ziggo"],
-  [["robin hood"], "abonnementen","Boogschieten"],
-  [["scouting amicus"], "abonnementen","Scouting"],
-  [["nent group","viaplay"], "abonnementen","Viaplay"],
-  [["lexa"], "abonnementen","Lexa"],
+  // Supermarkten. Let op de spatie bij korte namen ("plus ", "spar ", "coop "): zonder die spatie
+  // matcht "plus" ook in bv. "Pluswonen" en "coop" in "Cooperatie".
+  [["albert heijn", "ah-", "ah to go"], "variabeleLasten", "@groceries"],
+  [["jumbo"], "variabeleLasten", "@groceries"],
+  [["lidl"], "variabeleLasten", "@groceries"],
+  [["aldi"], "variabeleLasten", "@groceries"],
+  [["plus "], "variabeleLasten", "@groceries"],
+  [["dirk van den broek", "dirk vdb"], "variabeleLasten", "@groceries"],
+  [["spar "], "variabeleLasten", "@groceries"],
+  [["coop "], "variabeleLasten", "@groceries"],
 
-  [["jumbo"], "variabeleLasten","Eten"],
-  [["ah-","ah jan linders","albert heijn"], "variabeleLasten","Eten"],
-  [["plus tim"], "variabeleLasten","Eten"],
-  [["aldi"], "variabeleLasten","Eten"],
-  [["lidl"], "variabeleLasten","Eten"],
-  [["pappie's meals","thuisbezorgd","takeaway","du chef"], "variabeleLasten","Eten"],
+  // Bezorgd eten / uit eten.
+  [["thuisbezorgd", "takeaway", "uber eats", "deliveroo"], "variabeleLasten", "@eatingOut"],
 
-  [["total nn001240"], "variabeleLasten","Cigaretten"],
+  // Online aankopen en betaaldiensten.
+  [["paypal"], "variabeleLasten", "@online"],
+  [["klarna"], "variabeleLasten", "@online"],
+  [["coolblue"], "variabeleLasten", "@online"],
+  [["bol.com", "bol com"], "variabeleLasten", "@online"],
+  [["amazon payments"], "variabeleLasten", "@online"],
+  [["zalando"], "variabeleLasten", "@online"],
+  [["wehkamp"], "variabeleLasten", "@online"],
+  [["tikkie"], "variabeleLasten", "@online"],
 
-  [["hornbach"], "variabeleLasten","Bouwmarkten"],
-  [["action "], "variabeleLasten","Bouwmarkten"],
-  [["praxis"], "variabeleLasten","Bouwmarkten"],
-  [["gamma"], "variabeleLasten","Bouwmarkten"],
-  [["karwei"], "variabeleLasten","Bouwmarkten"],
+  // Brandstof.
+  [["shell"], "variabeleLasten", "@fuel"],
+  [["esso"], "variabeleLasten", "@fuel"],
+  [["tinq"], "variabeleLasten", "@fuel"],
+  [["tango"], "variabeleLasten", "@fuel"],
 
-  [["paypal"], "variabeleLasten","Online"],
-  [["klarna"], "variabeleLasten","Online"],
-  [["coolblue"], "variabeleLasten","Online"],
-  [["amazon payments"], "variabeleLasten","Online"],
-  [["bol.com"], "variabeleLasten","Online"],
-  [["wehkamp"], "variabeleLasten","Online"],
-  [["tikkie"], "variabeleLasten","Online"],
+  // Bouwmarkt / huishoudelijk.
+  [["hornbach"], "variabeleLasten", "@diy"],
+  [["praxis"], "variabeleLasten", "@diy"],
+  [["gamma"], "variabeleLasten", "@diy"],
+  [["karwei"], "variabeleLasten", "@diy"],
+  [["action "], "variabeleLasten", "@diy"],
 
-  [["maxi zoo"], "variabeleLasten","Hond eten"],
-  [["dierenzor"], "variabeleLasten","Hond eten"],
-
-  [["shell"], "variabeleLasten","Benzine"],
-  [["tinq"], "variabeleLasten","Benzine"],
-  [["esso"], "variabeleLasten","Benzine"],
+  // Huisdier.
+  [["maxi zoo"], "variabeleLasten", "@pets"],
+  [["pets place"], "variabeleLasten", "@pets"],
 ];
+
+/* De eigen regels van de gebruiker: [{match, bucket, label}], opgebouwd doordat de gebruiker een
+   rij in het importscherm zelf indeelt (zie rememberUserRule). Matcht — net als CATEGORY_RULES —
+   bewust alleen op de tegenpartijnaam en niet op de vrije omschrijving, zodat een toevallig woord
+   in een omschrijving geen andere tegenpartij kaapt. */
+function matchUserRule(blobNaam){
+  if(!state.userRules || !state.userRules.length) return null;
+  // Bij meerdere passende regels wint de LANGSTE match, niet de eerst toegevoegde. Anders zou een
+  // korte regel ("Albert Heijn" -> Boodschappen) een specifiekere regel die je later maakt
+  // ("Albert Heijn Tankstation" -> Benzine) permanent overschaduwen, zonder dat te zien is waarom.
+  let beste = null, besteLengte = -1;
+  for(const r of state.userRules){
+    const k = (r.match||"").trim().toLowerCase();
+    if(k && blobNaam.includes(k) && k.length > besteLengte){ beste = r; besteLengte = k.length; }
+  }
+  return beste;
+}
+
+/* Onthoudt de indeling die de gebruiker zelf aan een tegenpartij gaf, zodat een volgende import
+   'm meteen goed zet. Bestaat er al een regel voor dezelfde tegenpartij, dan wordt die bijgewerkt
+   in plaats van dat er een tweede bijkomt — anders zou de lijst vollopen met tegenstrijdige regels
+   en zou de oudste (die als eerste matcht) de nieuwe keuze blijven overrulen. */
+function rememberUserRule(match, bucket, label){
+  const k = (match||"").trim();
+  if(!k || !CATEGORY_BUCKET_KEYS.includes(bucket)) return null;
+  if(!state.userRules) state.userRules = [];
+  const key = k.toLowerCase();
+  const bestaand = state.userRules.find(r => (r.match||"").trim().toLowerCase() === key);
+  if(bestaand){
+    bestaand.bucket = bucket;
+    if(label) bestaand.label = label;
+    return bestaand;
+  }
+  const rule = { match: k, bucket, label: label || k };
+  state.userRules.push(rule);
+  return rule;
+}
+
+function deleteUserRule(match){
+  if(!state.userRules) return;
+  const key = (match||"").trim().toLowerCase();
+  state.userRules = state.userRules.filter(r => (r.match||"").trim().toLowerCase() !== key);
+}
 
 function classifyTransaction(tx){
   const partij = (tx["Naam tegenpartij"]||"").trim();
@@ -2671,7 +2944,6 @@ function classifyTransaction(tx){
   const naam = partij || initieel || (omschr ? omschr.slice(0,40) : "Onbekend");
   const blobNaam = naam.toLowerCase();
   const blobOmschr = omschr.toLowerCase();
-  const blob = blobNaam + " " + blobOmschr;
   const amt = parseNLAmount(tx["Bedrag"]);
   const redenRetour = (tx["Reden retour"]||"").trim();
 
@@ -2681,53 +2953,36 @@ function classifyTransaction(tx){
     return {cat:"ignore", naam, amt};
   }
 
-  // Speciale gevallen die op bedrag/tekst binnen dezelfde tegenpartij splitsen
-  if(blobNaam.includes("belastingdienst")){
-    if(blobOmschr.includes("nj-dg-53")) return {cat:"vasteLasten", label:"Wegenbelasting", naam, amt};
-    if(blobOmschr.includes("ib/pvv") && amt>0) return {cat:"income", label:"Hypotheekrenteaftrek", naam, amt};
-    if(blobOmschr.includes("zorgtoeslag")) return {cat: amt>0 ? "income":"review", label:"Zorgtoeslag", naam, amt};
-    return {cat: amt<0 ? "vasteLasten":"review", label:"Belasting Afbet", naam, amt};
-  }
-  // Specifiek op "C. Blochberger"/"Carina Blochberger" i.p.v. een kale "blochberger"-match: er is
-  // ook een S. Blochberger (bv. een Rabo Betaalverzoek voor een taartje) die niets met de
-  // alimentatieregeling met Carina te maken heeft en anders per ongeluk werd meegeteld.
-  if(blobNaam.includes("c. blochberger") || blobNaam.includes("carina blochberger")){
-    return amt<0 ? {cat:"vasteLasten", label:"Alimentatie", naam, amt} : {cat:"income", label:"Carina Blochberger", naam, amt};
-  }
+  // Eigen regels gaan vóór alles: dit is wat de gebruiker zelf heeft ingedeeld.
+  const eigen = matchUserRule(blobNaam);
+  if(eigen) return {cat: eigen.bucket, label: eigen.label || naam, naam, amt};
+
   // Geldmaat-geldopnames hebben een locatiesuffix in de naam (bv. "Geldmaat Ganzeweide 74" vs
-  // "Geldmaat Bautscherw 43") — dat zou anders los in "Nog in te delen" komen te staan. Samenvoegen
-  // tot één post zodra 'm die kant op gaat (via review), zodat je 'm in één keer kunt toevoegen.
+  // "Geldmaat Bautscherw 43") — dat zou anders als losse rijen in "Nog in te delen" komen te staan.
+  // Samenvoegen tot één post zodra 'm die kant op gaat (via review), zodat je 'm in één keer kunt
+  // toevoegen. Let op: "naam" blijft hier bewust de ORIGINELE tegenpartijnaam (mét locatie) — de
+  // samengevoegde reviewregel heet zelf "Geldopname" (dat komt uit "label"), maar de individuele
+  // opname in de uitklapbare deellijst moet juist wél de locatie tonen, anders is de deellijst
+  // drie identieke regels en heeft uitklappen geen nut.
   if(blobNaam.includes("geldmaat")){
-    // Let op: "naam" hier is bewust de ORIGINELE tegenpartijnaam (mét locatie, bv. "Geldmaat
-    // Kerkrade") i.p.v. de kale "Geldmaat" — de samengevoegde reviewregel heet zelf nog gewoon
-    // "Geldmaat" (dat komt uit "label"), maar de individuele opname in de uitklapbare deellijst
-    // (zie buildMonthFromCSV/renderBreakdownRows) moet juist wél de locatie tonen, anders is de
-    // deellijst drie identieke regels en heeft uitklappen geen nut.
-    return {cat:"review", label:"Geldmaat", naam, amt};
+    return {cat:"review", label: resolveRuleLabel("@cash"), naam, amt};
   }
-  // Idem voor de maandelijkse Rabobank-rekeningkosten ("Rabobank" incl. het losse "NL47 RABO..."
-  // tegenrekeningnummer bij de vaste Rabo Standaard-afschrijving): als abonnement herkend i.p.v. in
-  // de reviewlijst te belanden.
+  // Maandelijkse rekeningkosten van de bank zelf: als abonnement herkend i.p.v. in de reviewlijst
+  // te belanden. Alleen de vaste pakketafschrijving, niet elke transactie van de bank.
   if(blobNaam.includes("rabobank") && blobOmschr.includes("rabo standaard")){
-    return {cat:"abonnementen", label:"Rabobank", naam, amt};
+    return {cat:"abonnementen", label: resolveRuleLabel("@bankCosts"), naam, amt};
   }
-  if(blobNaam.includes("tulip assist")){
-    const isSmall = Math.abs(amt) < 12;
-    return {cat:"abonnementen", label: isSmall ? "Tulip Assist 2" : "Tulip Assist", naam, amt};
-  }
-  if(blobNaam.includes("xedule") || blobOmschr.includes("salaris")){
-    return {cat:"income", label:"Loon", naam, amt};
-  }
-  // Warmtefonds komt binnen via "Entrust Netherlands B.V." met de herkenning in de omschrijving,
-  // dus deze regel kijkt (als enige) ook naar de omschrijving i.p.v. alleen de tegenpartijnaam.
-  if(blob.includes("nationaalwarmtef") || blob.includes("warmtefonds")){
-    return {cat:"vasteLasten", label:"Warmtefonds", naam, amt};
+  // Salarisbetalingen zijn zelden aan de werkgeversnaam te herkennen (die verschilt per persoon),
+  // maar wél aan het woord "salaris"/"salary" in de omschrijving — dat zetten werkgevers er vrijwel
+  // altijd bij. Alleen bij een bijschrijving, anders is het een terugbetaling of correctie.
+  if(amt > 0 && (blobOmschr.includes("salaris") || blobOmschr.includes("salary"))){
+    return {cat:"income", label: resolveRuleLabel("@salary"), naam, amt};
   }
 
   // De algemene regels matchen bewust alleen op de tegenpartijnaam (niet de vrije omschrijving),
   // zodat een toevallig woord in een omschrijving (bv. een voornaam) geen andere tegenpartij kaapt.
   for(const [keys,cat,label] of CATEGORY_RULES){
-    if(keys.some(k=>blobNaam.includes(k))) return {cat,label,naam,amt};
+    if(keys.some(k=>blobNaam.includes(k))) return {cat, label: resolveRuleLabel(label), naam, amt};
   }
 
   return {cat:"review", label:naam, naam, amt};
@@ -2878,7 +3133,7 @@ function buildMonthFromCSV(rows, filename){
     .sort((a,b)=> Math.abs(b.amt) - Math.abs(a.amt));
 
   // Issue #10: FinBo's eigen naamgevingsconventie voor imports ("JJJJ-CSV-MM"/"JJJJ-PDF-MM")
-  // i.p.v. de rauwe, nietszeggende bankbestandsnaam (bv. "RA_A_NL47RABO...202607.pdf").
+  // i.p.v. de rauwe bankbestandsnaam, die niets zegt (voorvoegsel + eigen IBAN + datumreeks).
   const importType = /\.pdf$/i.test(filename) ? "PDF" : "CSV";
 
   return {
@@ -3155,17 +3410,25 @@ function handlePDFUpload(e){
   e.target.value = "";
 }
 
-/* ---------- OPSLAAN: DE DATA ZIT IN DIT HTML-BESTAND ZELF ----------
-   Geen los JSON-bestand meer. Bij het opslaan wordt dit hele HTML-bestand herschreven: de statische
-   "mal" (PRISTINE_HTML, hierboven als allereerste vastgelegd) met daarin de huidige `state` als JSON
-   ingebed in het lege <script type="application/json" id="finbo-embedded-data"> blokje. Zo blijft
-   het altijd één bestand — app + laatste data ineen — dat overal te openen is (ook op een telefoon,
-   die de data dan gewoon meteen ziet, zonder dat er iets hoeft te worden verbonden). Alleen om dat
-   ene bestand ook automatisch te kunnen wégschrijven is, net als eerst, een expliciete koppeling
-   (File System Access API) nodig — dat kan alleen in een desktopbrowser die dat ondersteunt.
-   Nog steeds bewust GEEN localStorage/sessionStorage voor de data zelf. Wél wordt, net als in de
-   vorige opzet, een kleine VERWIJZING naar het gekoppelde bestand (een FileSystemFileHandle, geen
-   data) in IndexedDB onthouden, zodat je niet elke keer opnieuw hoeft te verbinden. */
+/* ---------- OPSLAAN ----------
+   Opslaan gaat UITSLUITEND naar de cloud: scheduleAutoSave() -> writeStateToCloud(), versleuteld,
+   in je eigen rij in Supabase. Dit bestand wordt nooit door de app overschreven.
+
+   (Deze toelichting stond tot v25 het tegenovergestelde te beweren: dat opslaan het hele
+   HTML-bestand herschrijft via de File System Access API, met een bestandsverwijzing in IndexedDB.
+   Zo wérkte het vóór de cloud-sync, maar die code is er al niet meer — er is geen
+   showSaveFilePicker, geen createWritable en geen IndexedDB in dit bestand te vinden. De verouderde
+   tekst was niet onschuldig: hij wekte de indruk dat een schoon uitgeleverd bestand zichzelf bij
+   het eerste gebruik weer met data zou vullen, en dat is niet zo.)
+
+   buildHtmlWithEmbeddedData() hieronder bestaat dus nog maar voor één ding: de knop "Exporteren",
+   die een APART bestand downloadt (FinBo-backup-<datum>.html) met de app en je data ineen. Handig
+   als offline back-up die overal te openen is zonder in te loggen — maar daarmee is dat gedownloade
+   bestand ook precies het soort bestand dat je niet zomaar doorstuurt. Vandaar "backup" plus de
+   datum in de naam, in plaats van het onschuldig ogende "FinBo.html" van vroeger.
+
+   Bewust nog steeds GEEN localStorage/sessionStorage voor de data zelf; sessionStorage wordt alleen
+   gebruikt voor het versleutelwachtwoord binnen één tabblad (zie saveEncPasswordForSession). */
 
 /* Elke "<" moet ge-escaped worden zodat een categorienaam met daarin toevallig een scriptsluit-tag
    het ingebedde datablok niet kan afbreken — < is een geldige JSON-escape en levert bij het
@@ -3515,7 +3778,7 @@ function renderEncryptionPrompt(){
           if(!state.activeView) state.activeView = {type:"scenario", index: state.activeScenario||0};
           if(!state.months) state.months = [];
           if(!state.lang) state.lang = "nl";
-          if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING;
+          if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING.slice();
           migrateState();
           encryptionPassword = rememberedPw;
           renderAuthGate();
@@ -3556,7 +3819,7 @@ function renderEncryptionPromptExisting(record){
       if(!state.activeView) state.activeView = {type:"scenario", index: state.activeScenario||0};
       if(!state.months) state.months = [];
       if(!state.lang) state.lang = "nl";
-      if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING;
+      if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING.slice();
       migrateState();
       encryptionPassword = pw;
       saveEncPasswordForSession(cloudSession.user.id, pw);
@@ -3594,9 +3857,21 @@ function renderEncryptionPromptNew(){
         if(!state.activeView) state.activeView = {type:"scenario", index: state.activeScenario||0};
         if(!state.months) state.months = [];
         if(!state.lang) state.lang = "nl";
-        if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING;
+        if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING.slice();
         migrateState();
       }
+    } else {
+      // "Begin leeg" moet ook echt leeg beginnen. Tot v24 deed deze tak niets, waardoor `state`
+      // bleef staan op wat er toevallig al in het geheugen zat — de in dit bestand ingebedde data
+      // van de vorige gebruiker, of anders de voorbeeldposten die toen nog in de code stonden.
+      // Dat werd vervolgens meteen als de data van dit nieuwe account naar de cloud geschreven
+      // (zie renderEncryptionPromptNewPassword hieronder). Nu: een echte lege state, waarbij
+      // alleen taal- en licht/donker-voorkeur uit het inlogscherm behouden blijven.
+      const lang = state.lang;
+      const darkMode = state.darkMode;
+      state = makeBlankState();
+      state.lang = lang;
+      state.darkMode = darkMode;
     }
     renderEncryptionPromptNewPassword();
   };
@@ -3659,7 +3934,7 @@ function renderHeader(){
    uitbreiding (eigen categorieën voor geïmporteerde PDF/CSV-transacties). */
 let profilePanelOpen = false;
 let profilePanelTab = "account";
-const PROFILE_TABS = ["account","categories"];
+const PROFILE_TABS = ["account","categories","rules"];
 let profileCategoryExpandedId = null; // welke categorie z'n "koppelingen beheren"-lijst openstaat
 let profileCategoryOpenBucket = null; // welke groep (income/vasteLasten/...) is uitgeklapt
 
@@ -3691,6 +3966,7 @@ function renderProfilePanel(){
   tabsEl.innerHTML = `
     <button class="profile-tab-btn ${profilePanelTab==="account"?"active":""}" data-tab="account">${t("profileTabAccount")}</button>
     <button class="profile-tab-btn ${profilePanelTab==="categories"?"active":""}" data-tab="categories">${t("profileTabCategories")}</button>
+    <button class="profile-tab-btn ${profilePanelTab==="rules"?"active":""}" data-tab="rules">${t("profileTabRules")}</button>
   `;
   tabsEl.querySelectorAll(".profile-tab-btn").forEach(b=>{
     b.onclick = () => { profilePanelTab = b.dataset.tab; renderProfilePanel(); };
@@ -3702,7 +3978,46 @@ function renderProfilePanel(){
     renderProfileCategoriesTab(body);
     return;
   }
+  if(profilePanelTab === "rules"){
+    renderProfileRulesTab(body);
+    return;
+  }
   renderProfileAccountTab(body);
+}
+
+/* Profiel > Importregels: de regels die FinBo heeft onthouden doordat de gebruiker tijdens een
+   import zelf een rij indeelde (zie rememberUserRule). Bewust zichtbaar én verwijderbaar: een
+   verkeerd geleerde regel zou anders bij elke volgende import blijven terugkomen zonder dat er
+   iets aan te doen is. De meegeleverde standaardlijst (CATEGORY_RULES) staat hier niet tussen —
+   die is niet van de gebruiker en wordt sowieso door een eigen regel overruled. */
+function renderProfileRulesTab(body){
+  const rules = state.userRules || [];
+  const bucketTitle = (key) => {
+    const b = PROFILE_CATEGORY_BUCKETS.find(x => x.key === key);
+    return b ? t(b.titleKey) : key;
+  };
+  body.innerHTML = `
+    <div><p class="profile-hint">${t("profileRulesHint")}</p></div>
+    <div id="profileRulesList"></div>
+  `;
+  const list = document.getElementById("profileRulesList");
+  if(!rules.length){
+    list.innerHTML = `<p class="profile-cat-empty">${t("profileRulesEmpty")}</p>`;
+    return;
+  }
+  list.innerHTML = rules.map(r => `
+    <div class="profile-rule-row">
+      <div class="profile-rule-text">
+        <span class="profile-rule-match">${escapeHtml(r.match)}</span>
+        <span class="profile-rule-arrow">→</span>
+        <span class="profile-rule-dest">${escapeHtml(bucketTitle(r.bucket))}${r.label && r.label !== r.match ? " · " + escapeHtml(r.label) : ""}</span>
+      </div>
+      <button type="button" class="profile-rule-del" data-match="${escapeHtml(r.match)}" title="${escapeHtml(t("profileRulesDelete"))}">×</button>
+    </div>
+  `).join("");
+  list.querySelectorAll(".profile-rule-del").forEach(btn=>{
+    btn.onclick = () => { deleteUserRule(btn.dataset.match); renderAll(); };
+  });
 }
 
 // Elke groep is een eigen uitklapsectie ("bucket") met zijn eigen aanmaakveld en lijst -- zie
@@ -4034,6 +4349,10 @@ let expandedBreakdowns = new Set();
 function toggleBreakdown(key){
   if(expandedBreakdowns.has(key)) expandedBreakdowns.delete(key); else expandedBreakdowns.add(key);
 }
+/* Bij welke regel het "aftrekken van..."-keuzelijstje openstaat (zie renderCard/opts.offsetPicker).
+   Net als expandedBreakdowns puur tijdelijke UI-stand: niet opslaan, niet syncen. Er kan er maar
+   één tegelijk openstaan — dat houdt de kaart rustig. */
+let offsetPickerOpenFor = null;
 /* Bouwt de uitklapbare, ingesprongen deellijst-HTML voor de individuele transacties achter één
    samengevoegde regel — gedeeld tussen renderCompareCard (budget-vs-werkelijk) en renderReviewCard
    ("Nog in te delen"), zodat bv. Geldmaat, Bouwmarkt of Online overal op dezelfde manier uitklapt. */
@@ -4383,6 +4702,7 @@ function renderLoonsverhogingCard(s){
     <div class="verhogingen-info">
       <div>${t("nieuwLoonResultaat")(s.jaar)}: <span class="mono" id="loonstijgingResultDisplay">€ ${fmt(computedLoon(s))}</span></div>
     </div>
+    ${getLoonItem(basisdataScenario()) ? "" : `<div class="card-note">${escapeHtml(t("noSalaryRowNote"))}</div>`}
   `;
   const updatePreview = () => {
     const el = document.getElementById("loonstijgingResultDisplay");
@@ -4539,7 +4859,16 @@ function renderCard(key, cat, opts={}){
     const override = opts.valueFor ? opts.valueFor(item, idx) : null;
     const displayValue = override ? override.value : item.v;
     const editable = override ? override.editable : true;
-    const displayLabel = (override && override.label !== undefined) ? override.label : translateLabel(item.l);
+    // Een berekend BEDRAG read-only maken betekent niet dat de NAAM op slot moet. Bij de
+    // doelregel van een aftrekkoppeling is het bedrag afgeleid (en dus niet te typen), maar de
+    // naam moet gewoon te wijzigen blijven — anders kun je een regel na het koppelen nooit meer
+    // hernoemen, en zou de code die verwijzingen bij hernoemen meeverzet (zie labelInput.oninput
+    // hieronder) nooit kunnen draaien. valueFor mag dit per regel aangeven met labelEditable.
+    const labelEditable = override ? (override.labelEditable === true ? true : override.editable) : true;
+    // Postnamen zijn gebruikersdata en worden onvertaald getoond (zie de notitie bij i18n).
+    // escapeHtml is hier nodig omdat het label zo meteen in een value="..."-attribuut belandt:
+    // een apostrof of aanhalingsteken in een zelfbedachte naam brak anders de hele rij.
+    const displayLabel = escapeHtml((override && override.label !== undefined) ? override.label : item.l);
 
     // Een via "Toepassen op budget" overgenomen combinatieregel (bv. Geldmaat/Bouwmarkt/Online,
     // zie applyMonthToBudget) draagt zijn per-transactie-detail nu mee het budget in, dus krijgt
@@ -4551,30 +4880,106 @@ function renderCard(key, cat, opts={}){
     const rowWrap = document.createElement("div");
     rowWrap.className = "row-wrap";
 
+    // Markeerknopjes. salaryPicker: welke inkomstenregel het salaris is (zie getLoonItem).
+    // offsetPicker: van welke andere regel deze regel wordt afgetrokken (zie findOffsetPairs).
+    // Allebei alleen daar waar de kaart erom vraagt, zodat gewone kaarten onveranderd blijven.
+    const isSalary = item.role === "salary";
+    const pickerKey = `${typeof opts.offsetPicker === "string" ? opts.offsetPicker : "?"}::${key}::${idx}`;
+    const pickerOpen = offsetPickerOpenFor === pickerKey;
+    const hasOffset = !!(item.offsetTarget||"").trim();
+
     const row = document.createElement("div");
     row.className = "row";
     row.innerHTML = `
       ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${breakdownKey}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
-      <input class="label-input" value="${displayLabel}" ${editable ? "" : "disabled"} />
+      ${opts.salaryPicker ? `<button type="button" class="role-btn salary-btn ${isSalary?'active':''}" title="${escapeHtml(isSalary ? t('salaryRoleBtnUnset') : t('salaryRoleBtnSet'))}" aria-pressed="${isSalary}">${isSalary ? "★" : "☆"}</button>` : ""}
+      <input class="label-input" value="${displayLabel}" ${labelEditable ? "" : "disabled"} />
       <div class="value-wrap">
         <span class="euro">€</span>
         <input class="value-input" type="number" step="0.01" value="${(Number(displayValue)||0).toFixed(2)}" ${editable ? "" : "disabled"} />
       </div>
+      ${opts.offsetPicker ? `<button type="button" class="role-btn offset-btn ${hasOffset?'active':''}" title="${escapeHtml(t('offsetBtnTitle'))}" aria-expanded="${pickerOpen}">⇥</button>` : ""}
       <button class="del-btn" title="${t('delRow')}">×</button>
     `;
     const labelInput = row.querySelector(".label-input");
     const valueInput = row.querySelector(".value-input");
     const delBtn = row.querySelector(".del-btn");
     const breakdownBtn = row.querySelector(".breakdown-toggle-btn");
+    const salaryBtn = row.querySelector(".salary-btn");
+    const offsetBtn = row.querySelector(".offset-btn");
+    if(labelEditable){
+      // Anker voor het meeverzetten van verwijzingen hieronder: de laatste niet-lege naam van deze
+      // regel. Nodig omdat je bij het hernoemen bijna altijd even door een lege waarde gaat (alles
+      // selecteren en overtypen); zonder anker was de koppeling precies op dat moment kwijt.
+      if((item.l||"").trim()) labelInput.dataset.laatsteNaam = item.l;
+      labelInput.oninput = e => {
+        // Aftrekkoppelingen verwijzen naar een LABEL (zie findOffsetPairs). Hernoemen zou die
+        // verwijzing dus stilzwijgend breken — daarom verzetten we 'm mee. Bij een (tijdelijk)
+        // lege naam verzetten we bewust NIETS: een verwijzing naar "" is geen verwijzing meer,
+        // en de volgende toetsaanslag zet 'm alsnog goed via het anker.
+        const anker = ((item.l||"").trim() ? item.l : (labelInput.dataset.laatsteNaam || "")).trim().toLowerCase();
+        const nieuweNaam = e.target.value;
+        item.l = nieuweNaam;
+        if(!(nieuweNaam||"").trim()) return;
+        labelInput.dataset.laatsteNaam = nieuweNaam;
+        if(!anker) return;
+        cat.items.forEach(other => {
+          if(other !== item && (other.offsetTarget||"").trim().toLowerCase() === anker) other.offsetTarget = nieuweNaam;
+        });
+      };
+    }
     if(editable){
-      labelInput.oninput = e => { item.l = e.target.value; };
       valueInput.oninput = e => { item.v = parseFloat(e.target.value)||0; renderAll(true); };
     }
-    delBtn.onclick = () => { cat.items.splice(idx,1); renderAll(); };
+    delBtn.onclick = () => {
+      // Een verwijderde regel mag geen verweesde koppeling achterlaten.
+      const weg = (item.l||"").trim().toLowerCase();
+      cat.items.splice(idx,1);
+      cat.items.forEach(other => {
+        if((other.offsetTarget||"").trim().toLowerCase() === weg) delete other.offsetTarget;
+      });
+      renderAll();
+    };
     if(breakdownBtn){
       breakdownBtn.onclick = () => { toggleBreakdown(breakdownKey); renderCategories(); };
     }
+    if(salaryBtn){
+      salaryBtn.onclick = () => {
+        setSalaryRole(opts.salaryScenario, isSalary ? null : item);
+        renderAll();
+      };
+    }
+    if(offsetBtn){
+      offsetBtn.onclick = () => {
+        offsetPickerOpenFor = pickerOpen ? null : pickerKey;
+        renderAll();
+      };
+    }
     rowWrap.appendChild(row);
+    if(offsetBtn && pickerOpen){
+      // Keuzelijst met alle ANDERE regels in dezelfde groep. Een regel die zelf al doelwit is van
+      // een koppeling laten we staan: ketens zijn toegestaan zolang ze niet in zichzelf teruglopen.
+      const picker = document.createElement("div");
+      picker.className = "offset-picker";
+      const opties = cat.items
+        .filter(other => mayOffsetTarget(cat.items, item, other))
+        .map(other => `<option value="${escapeHtml(other.l)}" ${(item.offsetTarget||"").trim().toLowerCase() === (other.l||"").trim().toLowerCase() ? "selected" : ""}>${escapeHtml(other.l)}</option>`)
+        .join("");
+      picker.innerHTML = `
+        <label>${escapeHtml(t("offsetPickLabel"))}
+          <select class="offset-select">
+            <option value="">${escapeHtml(t("offsetPickNone"))}</option>
+            ${opties}
+          </select>
+        </label>
+      `;
+      picker.querySelector(".offset-select").onchange = (e) => {
+        if(e.target.value) item.offsetTarget = e.target.value; else delete item.offsetTarget;
+        offsetPickerOpenFor = null;
+        renderAll();
+      };
+      rowWrap.appendChild(picker);
+    }
     if(hasBreakdown && isOpen){
       rowWrap.insertAdjacentHTML("beforeend", renderBreakdownRows(item.entries));
     }
@@ -4613,39 +5018,59 @@ function renderIncomeCard(s){
   } else if(loonItem){
     loonItem.note = undefined;
   }
+  // Het sterretje waarmee de gebruiker aanwijst wélke inkomstenregel z'n salaris is. Alleen op
+  // Basisdata: daar staat de bron-regel, op de andere jaren wordt de waarde berekend en zou het
+  // sterretje suggereren dat je er daar iets aan kunt veranderen.
+  opts.salaryPicker = isBasisdata;
+  opts.salaryScenario = s;
   const card = renderCard("income", { title: t("income"), items: s.income.items }, opts);
   card.id = "income-card";
   return card;
 }
 
-/* Vaste-lasten-kaart: als de Warmtefonds-schakelaar aan staat, wordt UN-Gas+elec getoond als
-   (ruwe waarde − Warmtefonds) met een grijze toelichting eronder, en telt de kaart/het totaal
+/* Bouwt de renderCard-opties voor een groep met aftrekkoppelingen: elke doelregel wordt netto
+   getoond (read-only, met een grijze toelichting eronder welke regel eraf is gehaald) en het
+   kaarttotaal komt van de bijbehorende totals-functie. Gedeeld door de Basisdata- en de
+   budgetversie, zodat die twee niet uit elkaar kunnen lopen. */
+function offsetCardOpts(items, enabled, totalOverride){
+  // Toelichtingen van een vorige render altijd eerst weghalen — ook als de aftrek nu uit staat,
+  // anders blijft er een "is hier al van afgetrokken"-regel onder een bedrag staan dat het niet meer is.
+  findOffsetPairs(items).forEach(p => { p.tgt.note = undefined; });
+  const pairs = enabled ? findOffsetPairs(items) : [];
+  if(!pairs.length) return {};
+
+  // Meerdere regels mogen naar dezelfde doelregel wijzen; die tellen dan allemaal mee en worden
+  // samen in één toelichting genoemd.
+  const netByTarget = new Map();
+  const sourcesByTarget = new Map();
+  pairs.forEach(p => {
+    const base = netByTarget.has(p.tgt) ? netByTarget.get(p.tgt) : (parseFloat(p.tgt.v)||0);
+    netByTarget.set(p.tgt, Math.round((base - (parseFloat(p.src.v)||0)) * 100) / 100);
+    if(!sourcesByTarget.has(p.tgt)) sourcesByTarget.set(p.tgt, []);
+    sourcesByTarget.get(p.tgt).push(p.src);
+  });
+  sourcesByTarget.forEach((srcs, tgt) => {
+    const namen = srcs.map(s => `${s.l} (€ ${fmt(parseFloat(s.v)||0)})`).join(", ");
+    tgt.note = { nl: i18n.nl.offsetNote(namen), en: i18n.en.offsetNote(namen) };
+  });
+
+  return {
+    totalOverride,
+    // labelEditable: het bedrag van een doelregel is afgeleid en dus niet te typen, maar de naam
+    // moet gewoon te wijzigen blijven (zie de toelichting in renderCard).
+    valueFor: (item) => netByTarget.has(item) ? { value: netByTarget.get(item), editable: false, labelEditable: true } : null,
+  };
+}
+
+/* Vaste-lasten-kaart. Staat de aftrek-schakelaar aan, dan wordt elke doelregel van een
+   aftrekkoppeling netto getoond met een grijze toelichting eronder, en telt de kaart/het totaal
    ook zo mee. De schakelaar zelf verschijnt alleen op het Basisdata-tabblad, en het effect geldt
    ook alleen daar — elk jaar heeft nu zijn eigen vaste lasten, dus dit hoeft niet meer overal
    door te werken zoals toen alles gedeeld was. */
 function renderVasteLastenCard(){
   const bd = basisdataScenario();
-  const unItem = bd.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "un-gas+elec");
-  const warmtefondsItem = bd.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "warmtefonds");
-  const toggleActive = state.warmtefondsAftrek && unItem && warmtefondsItem;
-
-  let opts = {};
-  if(toggleActive){
-    const warmtefondsVal = parseFloat(warmtefondsItem.v) || 0;
-    const rawUN = parseFloat(unItem.v) || 0;
-    const netUN = Math.round((rawUN - warmtefondsVal) * 100) / 100;
-    unItem.note = { nl: i18n.nl.warmtefondsNote(fmt(warmtefondsVal)), en: i18n.en.warmtefondsNote(fmt(warmtefondsVal)) };
-    opts = {
-      totalOverride: vasteLastenTotal(),
-      valueFor: (item) => {
-        if(item !== unItem) return null;
-        return { value: netUN, editable: false };
-      }
-    };
-  } else if(unItem){
-    unItem.note = undefined;
-  }
-
+  const opts = offsetCardOpts(bd.vasteLasten.items, state.offsetsEnabled, vasteLastenTotal());
+  opts.offsetPicker = "basisdata";
   const card = renderCard("vasteLasten", { title: t("vasteLasten"), items: bd.vasteLasten.items }, opts);
   card.id = "vaste-lasten-card";
   return card;
@@ -4668,66 +5093,52 @@ function renderKostenUitBasisdataCard(){
   return wrap;
 }
 
-/* Schakelaar voor de Warmtefonds-aftrek — bewust alleen zichtbaar op het Basisdata-tabblad. */
-function renderWarmtefondsToggle(){
+/* Schakelaar voor de aftrekkoppelingen — bewust alleen zichtbaar op het Basisdata-tabblad.
+   Verschijnt alleen als er daadwerkelijk een koppeling bestaat: zonder koppelingen doet hij niets
+   en zou hij alleen maar een raadsel zijn op een leeg scherm. */
+function renderOffsetToggle(){
+  const bd = basisdataScenario();
+  if(!findOffsetPairs(bd.vasteLasten.items).length) return document.createComment("geen aftrekkoppelingen");
   const wrap = document.createElement("div");
   wrap.className = "toggle-row";
   wrap.innerHTML = `
     <label class="toggle-label">
-      <input type="checkbox" id="warmtefondsToggle" ${state.warmtefondsAftrek ? "checked" : ""} />
-      ${t("warmtefondsToggleLabel")}
+      <input type="checkbox" id="offsetToggle" ${state.offsetsEnabled ? "checked" : ""} />
+      ${t("offsetToggleLabel")}
     </label>
   `;
-  wrap.querySelector("#warmtefondsToggle").onchange = (e) => {
-    state.warmtefondsAftrek = e.target.checked;
+  wrap.querySelector("#offsetToggle").onchange = (e) => {
+    state.offsetsEnabled = e.target.checked;
     renderAll();
   };
   return wrap;
 }
 
-/* Budget-versie van renderVasteLastenCard(): identieke UN-Gas+elec-min-Warmtefonds weergave, maar
-   scoped op de eigen (bevroren) vaste-lasten-items en het eigen warmtefondsAftrek-vinkje van dit
-   specifieke maandbudget, in plaats van Basisdata/de globale instelling. */
+/* Budget-versie van renderVasteLastenCard(): identieke netto-weergave, maar scoped op de eigen
+   (bevroren) vaste-lasten-items en het eigen offsetsEnabled-vinkje van dit specifieke
+   maandbudget, in plaats van Basisdata/de globale instelling. */
 function renderVasteLastenCardForBudget(b){
-  const unItem = b.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "un-gas+elec");
-  const warmtefondsItem = b.vasteLasten.items.find(it => it.l.trim().toLowerCase() === "warmtefonds");
-  const toggleActive = b.warmtefondsAftrek && unItem && warmtefondsItem;
-
-  let opts = {};
-  if(toggleActive){
-    const warmtefondsVal = parseFloat(warmtefondsItem.v) || 0;
-    const rawUN = parseFloat(unItem.v) || 0;
-    const netUN = Math.round((rawUN - warmtefondsVal) * 100) / 100;
-    unItem.note = { nl: i18n.nl.warmtefondsNote(fmt(warmtefondsVal)), en: i18n.en.warmtefondsNote(fmt(warmtefondsVal)) };
-    opts = {
-      totalOverride: vasteLastenTotalForBudget(b),
-      valueFor: (item) => {
-        if(item !== unItem) return null;
-        return { value: netUN, editable: false };
-      }
-    };
-  } else if(unItem){
-    unItem.note = undefined;
-  }
-
+  const opts = offsetCardOpts(b.vasteLasten.items, b.offsetsEnabled, vasteLastenTotalForBudget(b));
+  opts.offsetPicker = "budget:" + b.id;
   const card = renderCard("vasteLasten", { title: t("vasteLasten"), items: b.vasteLasten.items }, opts);
   card.id = "vaste-lasten-card";
   return card;
 }
 
-/* Budget-versie van renderWarmtefondsToggle(): schakelt b.warmtefondsAftrek i.p.v. de globale
-   state.warmtefondsAftrek, zodat elk maandbudget zijn eigen, onafhankelijke instelling houdt. */
-function renderWarmtefondsToggleForBudget(b){
+/* Budget-versie van renderOffsetToggle(): schakelt b.offsetsEnabled i.p.v. de globale
+   state.offsetsEnabled, zodat elk maandbudget zijn eigen, onafhankelijke instelling houdt. */
+function renderOffsetToggleForBudget(b){
+  if(!findOffsetPairs(b.vasteLasten.items).length) return document.createComment("geen aftrekkoppelingen");
   const wrap = document.createElement("div");
   wrap.className = "toggle-row";
   wrap.innerHTML = `
     <label class="toggle-label">
-      <input type="checkbox" id="warmtefondsToggleBudget" ${b.warmtefondsAftrek ? "checked" : ""} />
-      ${t("warmtefondsToggleLabel")}
+      <input type="checkbox" id="offsetToggleBudget" ${b.offsetsEnabled ? "checked" : ""} />
+      ${t("offsetToggleLabel")}
     </label>
   `;
-  wrap.querySelector("#warmtefondsToggleBudget").onchange = (e) => {
-    b.warmtefondsAftrek = e.target.checked;
+  wrap.querySelector("#offsetToggleBudget").onchange = (e) => {
+    b.offsetsEnabled = e.target.checked;
     renderAll();
   };
   return wrap;
@@ -4758,65 +5169,139 @@ function resetImportBasisdataUI(){
   importBasisdataSuccessInfo = null;
 }
 
-/* Levert een platte rijenlijst op i.p.v. het "maand"-object van buildMonthFromCSV: elke rij is één
-   herkende/samengevoegde post (zelfde aggregatie-aanpak: meerdere transacties met hetzelfde
-   herkende label tellen al hier op tot één rij) met een voorgestelde (maar aanpasbare) groep.
-   Weergaveconventie in dit scherm: amt negatief = kosten, positief = inkomen (zie fmt()-gebruik in
-   renderImportBasisdataRowHtml) -- vandaar de tekenwissel t.o.v. de positieve kosten-magnitude die
-   buildMonthFromCSV zelf gebruikt voor scenario-items. Bewust geen maand-detectie nodig, dit hoeft
-   niet bij één kalendermaand te horen. */
+/* Levert een platte rijenlijst op i.p.v. het "maand"-object van buildMonthFromCSV.
+   Eén rij = één TEGENPARTIJ, precies zoals die op het afschrift staat.
+
+   Tot v24 groepeerde dit scherm op het LABEL dat de herkenregels eraan hingen. Je zag dus
+   "Boodschappen" of "Hypotheek" staan — namen die uit de regeltabel kwamen, niet uit je afschrift —
+   en alle supermarkten zaten al op één hoop voordat je iets had kunnen zeggen. Bovendien werd de
+   echte tegenpartijnaam wél berekend en daarna weggegooid. Nu is die naam de titel van de rij, en is
+   de herkenning nog maar een VOORSTEL (zie `suggestion`) dat je overneemt of negeert. Samenvoegen is
+   daarmee een keuze van de gebruiker geworden: geef twee rijen dezelfde categorie en ze worden één
+   regel (zie computeImportBasisdataResultingLines).
+
+   Elke rij houdt debet en credit apart bij. Een tegenpartij waar zowel afschrijvingen als
+   bijschrijvingen op staan (een terugbetaling, een correctie) hoeft dus niet meer óf-óf te zijn:
+   per rij kies je debet, credit of het saldo (zie importRowAmount). Dat verving de v24-aanpak die
+   een losse creditering stilletjes naar de "nog in te delen"-lijst schoof. Echte terugboekingen
+   worden nog steeds vóór dit punt afgevangen door resolveStornos().
+
+   Bedragconventie van dit scherm: negatief = kosten, positief = inkomen. */
 function buildImportBasisdataRows(rows){
   const { rows: filteredRows } = resolveStornos(rows);
-  const buckets = {}; CATEGORY_BUCKET_KEYS.forEach(c=>buckets[c]={});
-  const reviewBucket = {};
+  const perTegenpartij = new Map();
 
   filteredRows.forEach(r=>{
     if(r["Bedrag"] === undefined || r["Bedrag"] === "") return;
     const result = classifyTransaction(r);
-    const {cat,label,amt} = result;
-    if(cat === "ignore") return; // terugboeking/herincasso, zie classifyTransaction
+    if(result.cat === "ignore") return; // terugboeking/herincasso, zie classifyTransaction
 
-    const rawNaam = result.naam || label;
+    const rawNaam = (result.naam || result.label || "Onbekend").trim();
+    const sleutel = rawNaam.toLowerCase();
+    const amt = result.amt;                    // rauw en getekend: - = af, + = bij
+    const datum = r["Datum"] || "";
+    const omschrijving = ((r["Omschrijving-1"]||"") + " " + (r["Omschrijving-2"]||"")).trim();
 
-    if(cat === "review"){
-      if(!reviewBucket[label]) reviewBucket[label] = { total:0, names:new Set() };
-      reviewBucket[label].total += amt;
-      reviewBucket[label].names.add(rawNaam);
-      return;
+    if(!perTegenpartij.has(sleutel)){
+      perTegenpartij.set(sleutel, {
+        naam: rawNaam,
+        debet: 0,      // som van de afschrijvingen, als positief bedrag
+        credit: 0,     // som van de bijschrijvingen, als positief bedrag
+        entries: [],
+        // Het voorstel van de herkenning: welke groep, en onder welke naam het anders zou gaan.
+        // "review" betekent: niets herkend, de gebruiker moet het zelf zeggen.
+        suggestion: (result.cat && result.cat !== "review")
+          ? { bucket: result.cat, label: result.label || rawNaam }
+          : null,
+      });
     }
-    if(cat !== "income" && amt > 0){
-      // Losse creditering op een normaal kosten-tegenpartij (bv. een terugbetaling) -- net als in
-      // buildMonthFromCSV niet blindelings meetellen als kostenpost, maar apart tonen met de
-      // kosten-groep als voorstel (inferredCat), zodat de gebruiker zelf kan kiezen.
-      if(!reviewBucket[label]) reviewBucket[label] = { total:0, names:new Set(), inferredCat: cat };
-      reviewBucket[label].total += amt;
-      reviewBucket[label].names.add(rawNaam);
-      return;
+    const rij = perTegenpartij.get(sleutel);
+    if(amt < 0) rij.debet += -amt; else rij.credit += amt;
+    rij.entries.push({ naam: rawNaam, amt: Math.round(amt*100)/100, datum, omschrijving });
+    // Eén tegenpartij kan in theorie verschillend uitvallen per transactie (een regel die op de
+    // omschrijving kijkt). Het eerste voorstel wint; een leeg voorstel mag nog aangevuld worden.
+    if(!rij.suggestion && result.cat && result.cat !== "review"){
+      rij.suggestion = { bucket: result.cat, label: result.label || rawNaam };
     }
-
-    const isIncome = (cat === "income");
-    const contribution = isIncome ? amt : -amt; // positieve kosten-magnitude, net als buildMonthFromCSV
-    if(!buckets[cat][label]) buckets[cat][label] = { total:0 };
-    buckets[cat][label].total += contribution;
   });
 
   let seq = 0;
   const rowsOut = [];
-  CATEGORY_BUCKET_KEYS.forEach(cat=>{
-    Object.entries(buckets[cat]).forEach(([label,data])=>{
-      const magnitude = Math.round(data.total*100)/100;
-      if(Math.abs(magnitude) <= 0.001) return;
-      const amt = (cat === "income") ? magnitude : -magnitude;
-      rowsOut.push({ id:"ibd"+(seq++), name:label, amt, bucket:cat, catId:null });
+  perTegenpartij.forEach(rij=>{
+    const debet = Math.round(rij.debet*100)/100;
+    const credit = Math.round(rij.credit*100)/100;
+    if(debet <= 0.001 && credit <= 0.001) return;
+    rowsOut.push({
+      id: "ibd"+(seq++),
+      name: rij.naam,          // de tegenpartijnaam van het afschrift — de titel van de rij
+      matchName: rij.naam,     // sleutel voor een eigen herkenregel (zie rememberUserRule)
+      suggestion: rij.suggestion,
+      debet, credit,
+      // Standaardkeuze: staat er maar één kant op, dan die; staan er beide, dan het saldo.
+      mode: (debet > 0.001 && credit > 0.001) ? "net" : (credit > 0.001 ? "credit" : "debet"),
+      entries: rij.entries.sort((a,b)=> String(a.datum).localeCompare(String(b.datum))),
+      bucket: rij.suggestion ? rij.suggestion.bucket : null,
+      catId: null,
     });
   });
-  Object.entries(reviewBucket).forEach(([label,data])=>{
-    const amt = Math.round(data.total*100)/100;
-    if(Math.abs(amt) <= 0.001) return;
-    rowsOut.push({ id:"ibd"+(seq++), name:label, amt, bucket: data.inferredCat || null, catId:null });
-  });
-  rowsOut.sort((a,b)=> Math.abs(b.amt) - Math.abs(a.amt));
+  rowsOut.sort((a,b)=> Math.abs(importRowAmount(b)) - Math.abs(importRowAmount(a)));
   return rowsOut;
+}
+
+/* Het bedrag waarmee deze rij meetelt, volgens de debet/credit-keuze van de rij.
+   Negatief = kosten, positief = inkomen. */
+function importRowAmount(r){
+  if(!r) return 0;
+  if(r.mode === "debet")  return -(r.debet || 0);
+  if(r.mode === "credit") return (r.credit || 0);
+  return Math.round(((r.credit||0) - (r.debet||0)) * 100) / 100;
+}
+
+/* Splitst één tegenpartij-rij in twee losse rijen: de afschrijvingen en de bijschrijvingen.
+   Nodig omdat die twee kanten soms echt iets anders zijn. Een belastingdienst-rij kan tegelijk een
+   wegenbelasting-afschrijving (vaste last) en een teruggave (inkomen) bevatten; met alleen
+   af/bij/saldo moet je dan kiezen welke helft je weggooit. Na het splitsen krijgt elke helft zijn
+   eigen groep en categorie.
+
+   Allebei de helften verliezen hun matchName: er valt voor deze tegenpartij geen enkelvoudige
+   herkenregel meer te leren (dezelfde naam zou dan naar twee verschillende groepen moeten wijzen),
+   en één regel die de andere overschrijft is erger dan geen regel. Zie rememberUserRule. */
+function splitImportBasisdataRow(rowId){
+  const idx = importBasisdataRows.findIndex(r => r.id === rowId);
+  if(idx === -1) return false;
+  const r = importBasisdataRows[idx];
+  if(!(r.debet > 0.001 && r.credit > 0.001)) return false;
+
+  const maak = (soort) => ({
+    id: r.id + ":" + soort,
+    name: r.name,
+    matchName: null,
+    splitFrom: r.name,
+    splitKind: soort,
+    suggestion: soort === "debet" ? r.suggestion : null,
+    debet: soort === "debet" ? r.debet : 0,
+    credit: soort === "credit" ? r.credit : 0,
+    mode: soort,
+    entries: r.entries.filter(e => soort === "debet" ? e.amt < 0 : e.amt > 0),
+    bucket: soort === "debet" ? (r.suggestion ? r.suggestion.bucket : null) : null,
+    catId: null,
+  });
+
+  importBasisdataRows.splice(idx, 1, maak("debet"), maak("credit"));
+  return true;
+}
+
+/* Onder welke naam deze rij straks in Basisdata belandt: de gekozen categorie als die er is,
+   anders het voorstel van de herkenning, anders de kale tegenpartijnaam. Ook de naam die als label
+   in een geleerde herkenregel gaat (zie wireImportBasisdataRowHandlers) — daarom hier op één plek,
+   en niet de rauwe naam: je wilt "Boodschappen" in je budget zien staan, niet "PLUS TIM JANSSEN BV". */
+function importRowDisplayLabel(r){
+  if(r.catId){
+    const cat = findCategory(r.catId);
+    if(cat) return cat.name;
+  }
+  if(r.suggestion && r.suggestion.label) return r.suggestion.label;
+  return r.name;
 }
 
 /* Groepeert de rijen van één groep (bucket) op catId tot de uiteindelijke Basisdata-regels: rijen met
@@ -4828,14 +5313,32 @@ function computeImportBasisdataResultingLines(bucketKey){
   const bucketRows = importBasisdataRows.filter(r => r.bucket === bucketKey);
   const byCat = {};
   const solo = [];
+  const byLabel = {};
   bucketRows.forEach(r=>{
+    const amt = importRowAmount(r);
     if(r.catId){
       if(!byCat[r.catId]) byCat[r.catId] = { catId:r.catId, sum:0, sources:[] };
-      byCat[r.catId].sum += r.amt;
+      byCat[r.catId].sum += amt;
       byCat[r.catId].sources.push(r.name);
     } else {
-      solo.push({ label:r.name, amt:r.amt, merged:1, sources:[r.name] });
+      // Zonder categorie is de regelnaam het voorstel van de herkenning, en pas als dat er niet is
+      // de kale tegenpartijnaam. Je wilt "Netflix" in je Basisdata zien, niet
+      // "NETFLIX INTERNATIONAL B.V." — maar wél iets herkenbaars als er niets herkend is.
+      //
+      // Rijen die op dezelfde naam uitkomen worden één regel. Dat gebeurt vanzelf zodra meerdere
+      // tegenpartijen hetzelfde voorstel krijgen (drie supermarkten -> drie keer "Boodschappen").
+      // Zonder deze samenvoeging kreeg je drie regels met exact dezelfde naam in Basisdata — en
+      // omdat het vergelijken van een maand met een budget op naam matcht, is dat niet alleen
+      // rommelig maar ook stuk.
+      const label = importRowDisplayLabel(r);
+      const sleutel = label.trim().toLowerCase();
+      if(!byLabel[sleutel]) byLabel[sleutel] = { label, sum:0, sources:[] };
+      byLabel[sleutel].sum += amt;
+      byLabel[sleutel].sources.push(r.name);
     }
+  });
+  Object.values(byLabel).forEach(g=>{
+    solo.push({ label: g.label, amt: g.sum, merged: g.sources.length, sources: g.sources });
   });
   const merged = Object.values(byCat).map(g=>{
     const cat = findCategory(g.catId);
@@ -4889,14 +5392,33 @@ function handleImportBasisdataPDFUpload(e){
 }
 
 function renderImportBasisdataRowHtml(r){
+  const bedrag = importRowAmount(r);
+  const heeftBeide = (r.debet > 0.001) && (r.credit > 0.001);
+  const expandKey = `importbd::${r.id}`;
+  const isOpen = expandedBreakdowns.has(expandKey);
+
+  // Het voorstel van de herkenning. Bewust een badge en geen titel: de titel is wat er op je
+  // afschrift staat, dit is wat FinBo ervan denkt. Verdwijnt zodra je zelf een categorie kiest,
+  // want dan is die keuze leidend.
+  let suggestieBadge = "";
+  if(r.suggestion && !r.catId){
+    const bucketObj = PROFILE_CATEGORY_BUCKETS.find(b=>b.key===r.suggestion.bucket);
+    suggestieBadge = `<div class="import-bd-badge suggestion">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-3.6 10.8c.4.3.6.8.6 1.2v.5h6v-.5c0-.4.2-.9.6-1.2A6 6 0 0 0 12 3Z"/><path d="M10 19h4"/></svg>
+      ${escapeHtml(t("importBasisdataSuggestionBadge")(r.suggestion.label, bucketObj ? t(bucketObj.titleKey) : r.suggestion.bucket))}
+    </div>`;
+  }
+
+  // Samenvoeg-/hernoem-badge: ongewijzigd gedrag, maar nu op basis van de eigen keuze van de
+  // gebruiker (categorie) i.p.v. van de herkenregels.
   const siblings = r.catId ? importBasisdataRows.filter(o=>o.id!==r.id && o.bucket===r.bucket && o.catId===r.catId) : [];
   let badge = "";
   if(siblings.length){
     const cat = findCategory(r.catId);
-    const total = siblings.reduce((a,s)=>a+s.amt,0) + r.amt;
+    const total = siblings.reduce((a,s2)=>a+importRowAmount(s2),0) + bedrag;
     badge = `<div class="import-bd-badge">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h10M7 12h10M7 17h6"/></svg>
-      ${escapeHtml(t("importBasisdataMergeBadge")(siblings.map(s=>s.name).join(", "), cat?cat.name:"", fmt(Math.abs(total))))}
+      ${escapeHtml(t("importBasisdataMergeBadge")(siblings.map(s2=>s2.name).join(", "), cat?cat.name:"", fmt(Math.abs(total))))}
     </div>`;
   } else if(r.catId){
     const cat = findCategory(r.catId);
@@ -4914,7 +5436,6 @@ function renderImportBasisdataRowHtml(r){
   let catControl = "";
   if(r.bucket){
     const catsInBucket = state.categories.filter(c=>c.bucket===r.bucket);
-    const bucketLabelObj = PROFILE_CATEGORY_BUCKETS.find(b=>b.key===r.bucket);
     if(catsInBucket.length){
       const options = [`<option value="">${t("importBasisdataCatNone")}</option>`]
         .concat(catsInBucket.map(c=>`<option value="${c.id}" ${r.catId===c.id?"selected":""}>${escapeHtml(c.name)}</option>`));
@@ -4923,28 +5444,78 @@ function renderImportBasisdataRowHtml(r){
           <span class="import-bd-cat-label">${t("importBasisdataCatLabel")}</span>
           <select class="import-bd-cat-select" data-row="${r.id}">${options.join("")}</select>
         </div>`;
-    } else {
-      catControl = `
-        <div class="import-bd-cat-row">
-          <span class="import-bd-cat-hint">${escapeHtml(t("importBasisdataCatEmptyHint")(t(bucketLabelObj.titleKey)))}</span>
-        </div>`;
     }
+    // (Geen "je hebt nog geen categorieën"-hint per rij meer: sinds de rijen per tegenpartij gaan
+    // zijn het er vaak enkele tientallen, en dan stond diezelfde zin tientallen keren onder elkaar.
+    // Hij staat nu één keer boven de lijst, zie renderImportBasisdataReviewStep.)
   }
 
+  // Debet en credit staan naast elkaar, zoals op het afschrift zelf (twee kolommen). Alleen als er
+  // aan beide kanten iets staat is er iets te kiezen; anders zou een keuzeknop alleen maar ruis zijn.
+  const bedragen = `
+    <span class="import-bd-amt-pair">
+      ${r.debet > 0.001 ? `<span class="import-bd-amt neg" title="${escapeHtml(t("importBasisdataDebetLabel"))}">−€ ${fmt(r.debet)}</span>` : ""}
+      ${r.credit > 0.001 ? `<span class="import-bd-amt pos" title="${escapeHtml(t("importBasisdataCreditLabel"))}">+€ ${fmt(r.credit)}</span>` : ""}
+    </span>`;
+
+  const modeKeuze = heeftBeide ? `
+    <div class="import-bd-mode">
+      <span class="import-bd-mode-label">${escapeHtml(t("importBasisdataModeLabel"))}</span>
+      ${[["debet","importBasisdataModeDebet"],["credit","importBasisdataModeCredit"],["net","importBasisdataModeNet"]].map(([m,key])=>
+        `<button type="button" class="import-bd-mode-btn${r.mode===m?" active":""}" data-row="${r.id}" data-mode="${m}">${escapeHtml(t(key))}</button>`
+      ).join("")}
+      <button type="button" class="import-bd-mode-btn split" data-split="${r.id}" title="${escapeHtml(t("importBasisdataSplitHint"))}">${escapeHtml(t("importBasisdataSplitBtn"))}</button>
+      <span class="import-bd-mode-result ${bedrag<0?'neg':'pos'}">${bedrag<0?'−':'+'}€ ${fmt(Math.abs(bedrag))}</span>
+    </div>` : "";
+
+  const aantal = r.entries ? r.entries.length : 0;
+  const expander = aantal > 0 ? `
+    <button type="button" class="import-bd-expand${isOpen?" open":""}" data-expand="${expandKey}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      ${escapeHtml(t("importBasisdataTxCount")(aantal))}
+    </button>` : "";
+
+  const txHtml = (isOpen && aantal) ? `
+    <div class="import-bd-tx-list">
+      ${r.entries.map(e=>`
+        <div class="import-bd-tx">
+          <span class="import-bd-tx-date">${escapeHtml(e.datum || "")}</span>
+          <span class="import-bd-tx-desc" title="${escapeHtml(e.omschrijving || "")}">${escapeHtml(e.omschrijving || "—")}</span>
+          <span class="import-bd-tx-amt ${e.amt<0?'neg':'pos'}">${e.amt<0?'−':'+'}€ ${fmt(Math.abs(e.amt))}</span>
+        </div>`).join("")}
+    </div>` : "";
+
   return `
-    <div class="import-bd-row">
+    <div class="import-bd-row${r.bucket?"":" needs-group"}">
       <div class="import-bd-row-main">
-        <span class="import-bd-row-name">${escapeHtml(r.name)}</span>
-        <span class="import-bd-row-amt ${r.amt<0?'neg':'pos'}">${r.amt<0?'−':'+'}€ ${fmt(Math.abs(r.amt))}</span>
+        <span class="import-bd-row-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}${r.splitKind ? `<span class="import-bd-split-tag">${escapeHtml(r.splitKind === "debet" ? t("importBasisdataModeDebet") : t("importBasisdataModeCredit"))}</span>` : ""}</span>
+        ${bedragen}
       </div>
+      ${suggestieBadge}
       <div class="import-bd-pills">${pills}</div>
+      ${modeKeuze}
       ${catControl}
       ${badge}
+      ${expander}
+      ${txHtml}
     </div>
   `;
 }
 
 function wireImportBasisdataRowHandlers(container){
+  /* Onthoudt de indeling van deze rij als eigen herkenregel. Twee dingen die in fase 1 nog niet
+     klopten en hier goed staan:
+     - de SLEUTEL is de tegenpartijnaam van het afschrift (r.matchName), want daar moet de volgende
+       import op matchen;
+     - het LABEL is de weergavenaam (categorie > voorstel > tegenpartijnaam), niet de rauwe naam.
+       Anders kreeg je "NETFLIX INTERNATIONAL B.V." als postnaam in je budget.
+     Er wordt ook geleerd als je een al voorgestelde groep BEVESTIGT: dat is net zo goed een
+     uitspraak van de gebruiker, en zonder dat zou een voorstel nooit een eigen regel worden. */
+  const leer = (row) => {
+    if(!row || !row.bucket || !row.matchName) return;
+    rememberUserRule(row.matchName, row.bucket, importRowDisplayLabel(row));
+  };
+
   container.querySelectorAll(".import-bd-pill").forEach(btn=>{
     btn.onclick = () => {
       const row = importBasisdataRows.find(r=>r.id===btn.dataset.row);
@@ -4954,14 +5525,39 @@ function wireImportBasisdataRowHandlers(container){
         row.bucket = newBucket;
         row.catId = null; // een categorie hoort bij de vorige groep -- niet automatisch overnemen
       }
+      leer(row);
       renderImportBasisdataScreen();
     };
   });
+
   container.querySelectorAll(".import-bd-cat-select").forEach(sel=>{
     sel.onchange = () => {
       const row = importBasisdataRows.find(r=>r.id===sel.dataset.row);
       if(!row) return;
       row.catId = sel.value || null;
+      leer(row); // de categorie bepaalt de naam, dus de geleerde regel moet mee veranderen
+      renderImportBasisdataScreen();
+    };
+  });
+
+  container.querySelectorAll(".import-bd-mode-btn").forEach(btn=>{
+    btn.onclick = () => {
+      const row = importBasisdataRows.find(r=>r.id===btn.dataset.row);
+      if(!row) return;
+      row.mode = btn.dataset.mode;
+      renderImportBasisdataScreen();
+    };
+  });
+
+  container.querySelectorAll(".import-bd-mode-btn.split").forEach(btn=>{
+    btn.onclick = () => {
+      if(splitImportBasisdataRow(btn.dataset.split)) renderImportBasisdataScreen();
+    };
+  });
+
+  container.querySelectorAll(".import-bd-expand").forEach(btn=>{
+    btn.onclick = () => {
+      toggleBreakdown(btn.dataset.expand);
       renderImportBasisdataScreen();
     };
   });
@@ -4987,7 +5583,7 @@ function renderImportBasisdataReviewStep(container){
   const tilesHtml = CATEGORY_BUCKET_KEYS.map(bucket=>{
     const bucketRows = importBasisdataRows.filter(r=>r.bucket===bucket);
     const lines = computeImportBasisdataResultingLines(bucket);
-    const total = bucketRows.reduce((a,r)=>a+r.amt,0);
+    const total = bucketRows.reduce((a,r)=>a+importRowAmount(r),0);
     const labelObj = PROFILE_CATEGORY_BUCKETS.find(b=>b.key===bucket);
     const rowsWord = state.lang === "nl" ? (bucketRows.length===1?"rij":"rijen") : (bucketRows.length===1?"row":"rows");
     const sub = (lines.length !== bucketRows.length && bucketRows.length>0)
@@ -5026,8 +5622,15 @@ function renderImportBasisdataReviewStep(container){
   const { done, total } = importBasisdataProgress();
   const pct = total ? Math.round((done/total)*100) : 0;
 
+  // Eén gezamenlijke tip i.p.v. dezelfde zin onder elke rij (zie renderImportBasisdataRowHtml).
+  const geenCategorieen = state.categories.length === 0;
+  const catTip = geenCategorieen
+    ? `<p class="import-bd-cat-tip">${escapeHtml(t("importBasisdataCatEmptyTip"))}</p>`
+    : "";
+
   container.innerHTML = `
     <div class="import-bd-tiles">${tilesHtml}${unclassifiedTile}</div>
+    ${catTip}
     <div class="import-bd-rows">${rowsHtml}</div>
     <div class="import-bd-preview">
       <h3>${t("importBasisdataPreviewTitle")}</h3>
@@ -5184,7 +5787,7 @@ function renderScenarioCategories(){
   el.appendChild(renderIncomeCard(s));
   if(isBasisdata){
     el.appendChild(renderVasteLastenCard());
-    el.appendChild(renderWarmtefondsToggle());
+    el.appendChild(renderOffsetToggle());
     el.appendChild(renderCard("abonnementen", { title: t("abonnementen"), items: s.abonnementen.items }));
     el.appendChild(renderCard("variabeleLasten", { title: t("variabeleLasten"), items: s.variabeleLasten.items }));
   } else {
@@ -5214,7 +5817,7 @@ function renderBudgetCategories(){
 
   el.appendChild(renderCard("income", { title: t("income"), items: b.income.items }));
   el.appendChild(renderVasteLastenCardForBudget(b));
-  el.appendChild(renderWarmtefondsToggleForBudget(b));
+  el.appendChild(renderOffsetToggleForBudget(b));
   el.appendChild(renderCard("abonnementen", { title: t("abonnementen"), items: b.abonnementen.items }));
   el.appendChild(renderCard("variabeleLasten", { title: t("variabeleLasten"), items: b.variabeleLasten.items }));
   if(b.outstanding && b.outstanding.items.length){
@@ -5336,9 +5939,9 @@ function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
         return `
         <div class="compare-row-wrap">
           <div class="compare-row">
-            <span class="compare-name" title="${r.label}">
+            <span class="compare-name" title="${escapeHtml(r.label)}">
               ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${key}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
-              <span>${translateLabel(r.label)}</span>
+              <span>${escapeHtml(r.label)}</span>
             </span>
             <span class="compare-col mono">€ ${fmt(r.budget)}</span>
             <span class="compare-col mono">€ ${fmt(r.actual)}</span>
@@ -6168,10 +6771,13 @@ function wireActions(monthObj, scenarioObj, budgetObj){
   document.getElementById("logoutBtn").onclick = signOutCloud;
   updateSaveStatus();
   document.getElementById("exportBtn").onclick = () => {
+    // Naam met "backup" en een datum erin: dit bestand bevat je volledige, ONVERSLEUTELDE data.
+    // Het heette "FinBo.html", wat niet te onderscheiden was van de app zelf — precies hoe je er
+    // per ongeluk een met je cijfers erin doorstuurt.
     const blob = new Blob([buildHtmlWithEmbeddedData()], {type:"text/html"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "FinBo.html";
+    a.download = `FinBo-backup-${new Date().toISOString().slice(0,10)}.html`;
     a.click();
   };
   document.getElementById("importBtn").onclick = () => document.getElementById("importFile").click();
@@ -6191,7 +6797,7 @@ function wireActions(monthObj, scenarioObj, budgetObj){
         if(!state.activeView) state.activeView = {type:"scenario", index: state.activeScenario||0};
         if(!state.months) state.months = [];
         if(!state.lang) state.lang = "nl";
-        if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING;
+        if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING.slice();
         migrateState();
         renderAll();
       }catch(err){ alert(t("importError") + err.message); }
