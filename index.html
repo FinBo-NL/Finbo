@@ -1486,6 +1486,11 @@
   .import-bd-cat-hint{ font-size:11px; color:var(--text-soft); font-style:italic; }
   /* ---- Import basisdata: rij per tegenpartij (v25) ---- */
   /* Debet en credit naast elkaar, zoals de twee bedragkolommen op het afschrift zelf. */
+  .import-bd-success-warn{
+    margin:10px 0 0; padding:8px 10px; font-size:12px;
+    color:var(--text); background:color-mix(in srgb, var(--gold) 12%, transparent);
+    border:1px solid var(--gold); border-radius:4px;
+  }
   .import-bd-success-cats{
     margin:10px 0 0; font-size:12px; color:var(--text-soft);
   }
@@ -1708,9 +1713,9 @@ const i18n = {
     uploadBtn: "+ Upload maand-CSV",
     uploadPdfBtn: "+ Upload maand-PDF",
     income: "Inkomsten",
-    vasteLasten: "Gedeelde vaste lasten",
+    vasteLasten: "Vaste lasten",
     abonnementen: "Abonnementen",
-    variabeleLasten: "Gedeelde variabele lasten",
+    variabeleLasten: "Variabele lasten",
     overigUitgaven: "Overige uitgaven (niet herkend)",
     overigInkomsten: "Overige inkomsten (niet herkend)",
     reviewTitle: "Nog in te delen",
@@ -1895,6 +1900,8 @@ const i18n = {
     importBasisdataSplitTagDebet: "af",
     importBasisdataSplitTagCredit: "bij",
     importBasisdataSplitTagPart: (n) => `deel ${n}`,
+    importBasisdataSuccessSalary: (naam) => `"${naam}" is aangewezen als salarisregel — daarop werkt de loonsverhoging per jaar.`,
+    importBasisdataSuccessNoSalary: "Let op: er kon geen salarisregel worden aangewezen. Klik op Basisdata het sterretje aan bij de regel die je salaris is, anders kunnen de jaren hun loon niet doorrekenen.",
     importBasisdataSuccessNewCats: (namen) => `Nieuwe categorieën aangemaakt voor de samengevoegde regels: ${namen}. Je vindt ze terug onder Profiel → Categorieën.`,
     importBasisdataSplitHint: "Maak er twee losse rijen van: één voor het afgeschreven deel, één voor het bijgeschreven deel. Handig als die twee niet bij elkaar horen (bv. wegenbelasting eraf, belastingteruggave erbij).",
     importBasisdataRenameBadge: (catName) => `komt in Basisdata te staan als "${catName}" — nog geen andere rijen om mee samen te tellen`,
@@ -1951,9 +1958,9 @@ const i18n = {
     uploadBtn: "+ Upload month CSV",
     uploadPdfBtn: "+ Upload month PDF",
     income: "Income",
-    vasteLasten: "Shared fixed costs",
+    vasteLasten: "Fixed costs",
     abonnementen: "Subscriptions",
-    variabeleLasten: "Shared variable costs",
+    variabeleLasten: "Variable costs",
     overigUitgaven: "Other expenses (unrecognised)",
     overigInkomsten: "Other income (unrecognised)",
     reviewTitle: "Still to be filed",
@@ -2138,6 +2145,8 @@ const i18n = {
     importBasisdataSplitTagDebet: "debit",
     importBasisdataSplitTagCredit: "credit",
     importBasisdataSplitTagPart: (n) => `part ${n}`,
+    importBasisdataSuccessSalary: (naam) => `"${naam}" was marked as the salary row — the yearly raise applies to it.`,
+    importBasisdataSuccessNoSalary: "Note: no salary row could be determined. On Basisdata, click the star on the row that is your salary, otherwise the years can't carry your salary forward.",
     importBasisdataSuccessNewCats: (namen) => `New categories created for the merged lines: ${namen}. You'll find them under Profile → Categories.`,
     importBasisdataSplitHint: "Turn this into two separate rows: one for the debited part, one for the credited part. Useful when those two aren't the same thing (e.g. road tax out, tax refund in).",
     importBasisdataRenameBadge: (catName) => `will appear in Basisdata simply renamed to "${catName}" — no other rows to sum it with yet`,
@@ -2411,7 +2420,10 @@ function migrateState(){
   }
   state.scenarios.forEach((s,i) => {
     if(s.jaar === undefined) s.jaar = 2026 + i;
-    if(s.locked === undefined) s.locked = i < 3;
+    // Alleen Basisdata (het basisjaar) staat op slot. In v24 waren ook 2027 en 2028 "ingebouwd"
+    // en dus onverwijderbaar; die jaren zijn nu gewoon zelf aangemaakte jaren, en een bestand uit
+    // die tijd hield ze anders voorgoed vast.
+    s.locked = (i === 0);
   });
   // Migratie naar per-jaar loonsverhoging-blokken: oudere opslagbestanden kennen dit veld nog niet.
   // Voor elk niet-Basisdata jaar zonder "loonstijging" wordt een blok afgeleid dat het al opgeslagen
@@ -2543,15 +2555,23 @@ function getLoonItem(s){
    loonsverhoging niet meer krijgen. Jaren worden op label gematcht (net als elders in FinBo).
    Maandbudgetten blijven bewust ongemoeid: dat zijn bevroren momentopnamen. */
 function setSalaryRole(s, item){
-  const doel = item ? (item.l||"").trim().toLowerCase() : null;
+  const wisIn = (sc) => {
+    if(sc.income && sc.income.items) sc.income.items.forEach(it => { if(it.role === "salary") delete it.role; });
+  };
+  // Markering helemaal weghalen: dan overal.
+  if(!item){ state.scenarios.forEach(wisIn); return; }
+
+  const doel = (item.l||"").trim().toLowerCase();
   state.scenarios.forEach(sc => {
     if(!sc.income || !sc.income.items) return;
-    sc.income.items.forEach(it => { if(it.role === "salary") delete it.role; });
-    if(!doel) return;
-    const match = (sc === s && item)
-      ? item
-      : sc.income.items.find(it => (it.l||"").trim().toLowerCase() === doel);
-    if(match) match.role = "salary";
+    const match = (sc === s) ? item : sc.income.items.find(it => (it.l||"").trim().toLowerCase() === doel);
+    // Vindt dit jaar geen regel met die naam, dan blijft zijn eigen markering staan. Dat gebeurt
+    // zodra de salarisregel op Basisdata een andere naam krijgt — bijvoorbeeld doordat een import
+    // hem "Salaris" noemt terwijl een bestaand jaar nog "Loon" heet. Ze hier tóch wissen zou dat
+    // jaar z'n loonsverhoging afnemen zonder dat iemand daarom vroeg.
+    if(!match) return;
+    wisIn(sc);
+    match.role = "salary";
   });
 }
 
@@ -2582,6 +2602,11 @@ function computedLoon(s){
    zien zonder dat elke plek zelf de cascade hoeft te kennen. Wordt aan het begin van renderAll()
    aangeroepen, dus altijd in sync na elke wijziging. */
 function syncComputedLoons(){
+  // Zonder salarisregel op Basisdata is er niets om vanaf te rekenen: computedLoon() zou dan vanaf
+  // 0 cascaderen en elk jaar overschrijven met een onzinbedrag. Dan liever niets aanraken — de
+  // jaren houden hun laatste goede waarde, en de Inkomsten-kaart van een jaar legt uit dat er nog
+  // een salarisregel aangewezen moet worden (zie noSalaryRowNote).
+  if(!getLoonItem(basisdataScenario())) return;
   state.scenarios.forEach(s => {
     if(s === basisdataScenario()) return;
     const loonItem = getLoonItem(s);
@@ -3022,7 +3047,9 @@ function classifyTransaction(tx){
   // maar wél aan het woord "salaris"/"salary" in de omschrijving — dat zetten werkgevers er vrijwel
   // altijd bij. Alleen bij een bijschrijving, anders is het een terugbetaling of correctie.
   if(amt > 0 && (blobOmschr.includes("salaris") || blobOmschr.includes("salary"))){
-    return {cat:"income", label: resolveRuleLabel("@salary"), naam, amt};
+    // role meegeven: hierdoor weet de import welke inkomstenregel de salarisregel is, en blijft
+    // de loonsverhoging per jaar werken na het vervangen van Basisdata (zie applyImportBasisdata).
+    return {cat:"income", label: resolveRuleLabel("@salary"), role:"salary", naam, amt};
   }
 
   // De algemene regels matchen bewust alleen op de tegenpartijnaam (niet de vrije omschrijving),
@@ -3979,8 +4006,8 @@ function renderHeader(){
    nu toe enige echt uitgewerkte subpagina; "categories" staat er als aankondiging voor een latere
    uitbreiding (eigen categorieën voor geïmporteerde PDF/CSV-transacties). */
 let profilePanelOpen = false;
-let profilePanelTab = "account";
-const PROFILE_TABS = ["account","categories","rules"];
+let profilePanelTab = "categories";
+const PROFILE_TABS = ["categories","rules","account"];
 let profileCategoryExpandedId = null; // welke categorie z'n "koppelingen beheren"-lijst openstaat
 let profileCategoryOpenBucket = null; // welke groep (income/vasteLasten/...) is uitgeklapt
 
@@ -4008,11 +4035,13 @@ function renderProfilePanel(){
   document.getElementById("profileBtn").classList.toggle("active", profilePanelOpen);
   document.getElementById("profilePanelTitle").textContent = t("profilePanelTitle");
 
+  // Volgorde: waar je het vaakst bent staat vooraan. Account is iets wat je één keer instelt en
+  // daarna zelden aanraakt, dus die schuift naar achteren.
   const tabsEl = document.getElementById("profilePanelTabs");
   tabsEl.innerHTML = `
-    <button class="profile-tab-btn ${profilePanelTab==="account"?"active":""}" data-tab="account">${t("profileTabAccount")}</button>
     <button class="profile-tab-btn ${profilePanelTab==="categories"?"active":""}" data-tab="categories">${t("profileTabCategories")}</button>
     <button class="profile-tab-btn ${profilePanelTab==="rules"?"active":""}" data-tab="rules">${t("profileTabRules")}</button>
+    <button class="profile-tab-btn ${profilePanelTab==="account"?"active":""}" data-tab="account">${t("profileTabAccount")}</button>
   `;
   tabsEl.querySelectorAll(".profile-tab-btn").forEach(b=>{
     b.onclick = () => { profilePanelTab = b.dataset.tab; renderProfilePanel(); };
@@ -4585,12 +4614,38 @@ function renderTabs(){
   wireGroupHeadCollapse(budgetGroup.querySelector(".tab-group-head"), () => { collapsedGroups.budgets = !collapsedGroups.budgets; renderTabs(); });
   if(!collapsedGroups.budgets){
     state.budgets.forEach(b=>{
+      // Rij-wrapper i.p.v. een kale knop, zodat er een prullenbak naast past — net als bij de
+      // geïmporteerde maanden. De wrapper draagt nu de sleep-markering (was de knop zelf), zodat
+      // slepen om te herordenen de hele rij pakt en niet alleen het label.
+      const row = document.createElement("div");
+      row.className = "tab-row tab-draggable";
+      row.dataset.dragId = b.id;
+
       const btn = document.createElement("button");
-      btn.className = "tab tab-draggable" + (state.activeView.type==="budget" && state.activeView.id===b.id ? " active":"");
+      btn.className = "tab" + (state.activeView.type==="budget" && state.activeView.id===b.id ? " active":"");
       btn.textContent = b.title;
-      btn.dataset.dragId = b.id;
       btn.onclick = ()=>{ state.activeView = {type:"budget", id:b.id}; renderAll(); };
-      budgetGroup.appendChild(btn);
+      row.appendChild(btn);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "tab-delete-btn";
+      delBtn.type = "button";
+      delBtn.title = t("deleteBudgetBtn");
+      delBtn.setAttribute("aria-label", t("deleteBudgetBtn"));
+      delBtn.innerHTML = TRASH_ICON;
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        if(confirm(t("deleteBudgetConfirm"))){
+          state.budgets = state.budgets.filter(x=>x!==b);
+          if(state.activeView.type==="budget" && state.activeView.id===b.id){
+            state.activeScenario = 0;
+            state.activeView = {type:"scenario", index:0};
+          }
+          renderAll();
+        }
+      };
+      row.appendChild(delBtn);
+      budgetGroup.appendChild(row);
     });
     // Klikken en (op muis) ingedrukt houden, of (op touch) vasthouden, laat je een maandbudget
     // naar een andere plek in het lijstje slepen — handig omdat nieuwe maandbudgetten anders altijd
@@ -4624,14 +4679,41 @@ function renderTabs(){
   scenGroup.querySelector("#addJaarBtn").onclick = () => createNewYear();
   wireGroupHeadCollapse(scenGroup.querySelector(".tab-group-head"), () => { collapsedGroups.years = !collapsedGroups.years; renderTabs(); });
   if(!collapsedGroups.years){
-    state.scenarios.slice(1).forEach((s,offset)=>{
+    state.scenarios.slice(1).forEach((sc,offset)=>{
       const i = offset + 1;
+      const row = document.createElement("div");
+      row.className = "tab-row";
+
       const b = document.createElement("button");
       b.className = "tab" + (state.activeView.type==="scenario" && state.activeView.index===i ? " active":"");
-      const labelText = s.label === String(s.jaar) ? s.label : `${s.label} · ${s.jaar}`;
+      const labelText = sc.label === String(sc.jaar) ? sc.label : `${sc.label} · ${sc.jaar}`;
       b.innerHTML = `<span class="tab-idx">${String(i+1).padStart(2,"0")}</span>${labelText}`;
       b.onclick = ()=>{ state.activeScenario = i; state.activeView = {type:"scenario", index:i}; renderAll(); };
-      scenGroup.appendChild(b);
+      row.appendChild(b);
+
+      // Een jaar was tot nu toe alleen te verwijderen via een knop onderaan de jaarpagina zelf, en
+      // alleen als het niet "locked" was — waardoor 2027/2028 uit een oud bestand nergens weg te
+      // krijgen waren. De prullenbak staat nu in het menu, net als bij maandbudgetten en maanden.
+      if(!sc.locked){
+        const delBtn = document.createElement("button");
+        delBtn.className = "tab-delete-btn";
+        delBtn.type = "button";
+        delBtn.title = t("deleteScenarioBtn");
+        delBtn.setAttribute("aria-label", t("deleteScenarioBtn"));
+        delBtn.innerHTML = TRASH_ICON;
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          if(confirm(t("deleteScenarioConfirm"))){
+            const idx = state.scenarios.indexOf(sc);
+            state.scenarios = state.scenarios.filter(x=>x!==sc);
+            state.activeScenario = Math.max(0, Math.min(idx-1, state.scenarios.length-1));
+            state.activeView = {type:"scenario", index: state.activeScenario};
+            renderAll();
+          }
+        };
+        row.appendChild(delBtn);
+      }
+      scenGroup.appendChild(row);
     });
   }
   groupPair.appendChild(scenGroup);
@@ -5321,7 +5403,7 @@ function buildImportBasisdataRows(rows){
         // Het voorstel van de herkenning: welke groep, en onder welke naam het anders zou gaan.
         // "review" betekent: niets herkend, de gebruiker moet het zelf zeggen.
         suggestion: (result.cat && result.cat !== "review")
-          ? { bucket: result.cat, label: result.label || rawNaam }
+          ? { bucket: result.cat, label: result.label || rawNaam, role: result.role || null }
           : null,
       });
     }
@@ -5331,7 +5413,7 @@ function buildImportBasisdataRows(rows){
     // Eén tegenpartij kan in theorie verschillend uitvallen per transactie (een regel die op de
     // omschrijving kijkt). Het eerste voorstel wint; een leeg voorstel mag nog aangevuld worden.
     if(!rij.suggestion && result.cat && result.cat !== "review"){
-      rij.suggestion = { bucket: result.cat, label: result.label || rawNaam };
+      rij.suggestion = { bucket: result.cat, label: result.label || rawNaam, role: result.role || null };
     }
   });
 
@@ -5507,9 +5589,10 @@ function computeImportBasisdataResultingLines(bucketKey){
   bucketRows.forEach(r=>{
     const amt = importRowAmount(r);
     if(r.catId){
-      if(!byCat[r.catId]) byCat[r.catId] = { catId:r.catId, sum:0, sources:[] };
+      if(!byCat[r.catId]) byCat[r.catId] = { catId:r.catId, sum:0, sources:[], role:null };
       byCat[r.catId].sum += amt;
       byCat[r.catId].sources.push(r.name);
+      if(r.suggestion && r.suggestion.role) byCat[r.catId].role = r.suggestion.role;
     } else {
       // Zonder categorie is de regelnaam het voorstel van de herkenning, en pas als dat er niet is
       // de kale tegenpartijnaam. Je wilt "Netflix" in je Basisdata zien, niet
@@ -5522,17 +5605,18 @@ function computeImportBasisdataResultingLines(bucketKey){
       // rommelig maar ook stuk.
       const label = importRowDisplayLabel(r);
       const sleutel = label.trim().toLowerCase();
-      if(!byLabel[sleutel]) byLabel[sleutel] = { label, sum:0, sources:[] };
+      if(!byLabel[sleutel]) byLabel[sleutel] = { label, sum:0, sources:[], role:null };
       byLabel[sleutel].sum += amt;
       byLabel[sleutel].sources.push(r.name);
+      if(r.suggestion && r.suggestion.role) byLabel[sleutel].role = r.suggestion.role;
     }
   });
   Object.values(byLabel).forEach(g=>{
-    solo.push({ label: g.label, amt: g.sum, merged: g.sources.length, sources: g.sources });
+    solo.push({ label: g.label, amt: g.sum, merged: g.sources.length, sources: g.sources, role: g.role });
   });
   const merged = Object.values(byCat).map(g=>{
     const cat = findCategory(g.catId);
-    return { label: cat ? cat.name : "?", amt: g.sum, merged: g.sources.length, sources: g.sources };
+    return { label: cat ? cat.name : "?", amt: g.sum, merged: g.sources.length, sources: g.sources, role: g.role };
   });
   return [...merged, ...solo];
 }
@@ -5934,6 +6018,22 @@ function applyImportBasisdata(){
   const linesByBucket = {};
   CATEGORY_BUCKET_KEYS.forEach(bucket=>{ linesByBucket[bucket] = computeImportBasisdataResultingLines(bucket); });
 
+  // De salarisregel moet de vervanging van Basisdata overleven. Doet hij dat niet, dan vindt
+  // getLoonItem() niets meer, valt baseLoonRaw() terug op 0 en cascadeert elk volgend jaar vanaf
+  // nul — precies wat er gebeurde: een jaar kwam uit op € 100 + de overige inkomsten, en de
+  // Loonstijgingstabel liet een "groei" van -84% zien zonder dat er iets van waarschuwde.
+  //
+  // Drie manieren om 'm terug te vinden, in deze volgorde:
+  //   1. de import herkende zelf een salarisbetaling (zie classifyTransaction, role:"salary");
+  //   2. er staat een regel onder precies dezelfde naam als de vorige salarisregel;
+  //   3. er is maar één inkomstenregel — dan kan het niets anders zijn.
+  // Lukt geen van drieën, dan blijft de markering leeg en zegt het succesbericht dat je 'm zelf
+  // even moet aanwijzen. Liever dat dan stilzwijgend verkeerde jaren.
+  const vorigeSalarisNaam = (() => {
+    const vorige = getLoonItem(bd);
+    return vorige ? (vorige.l||"").trim().toLowerCase() : null;
+  })();
+
   bd.income.items = linesByBucket.income.map(l=>({ l: l.label, v: Math.round(Math.max(0,l.amt)*100)/100 }));
   bd.vasteLasten.items = linesByBucket.vasteLasten.map(l=>({ l: l.label, v: Math.round(Math.abs(l.amt)*100)/100 }));
   bd.abonnementen.items = linesByBucket.abonnementen.map(l=>({ l: l.label, v: Math.round(Math.abs(l.amt)*100)/100 }));
@@ -5958,7 +6058,20 @@ function applyImportBasisdata(){
     });
   });
 
-  importBasisdataSuccessInfo = { sourceLabel: importBasisdataSourceLabel, linesByBucket, nieuweCategorieen };
+  // Salarisregel aanwijzen volgens de drie stappen hierboven.
+  let salarisItem = null;
+  const herkendIndex = linesByBucket.income.findIndex(l => l.role === "salary");
+  if(herkendIndex !== -1) salarisItem = bd.income.items[herkendIndex];
+  if(!salarisItem && vorigeSalarisNaam){
+    salarisItem = bd.income.items.find(it => (it.l||"").trim().toLowerCase() === vorigeSalarisNaam) || null;
+  }
+  if(!salarisItem && bd.income.items.length === 1) salarisItem = bd.income.items[0];
+  if(salarisItem) setSalaryRole(bd, salarisItem);
+
+  importBasisdataSuccessInfo = {
+    sourceLabel: importBasisdataSourceLabel, linesByBucket, nieuweCategorieen,
+    salarisNaam: salarisItem ? salarisItem.l : null,
+  };
   importBasisdataStep = "success";
   syncComputedLoons();
   renderAll();
@@ -5977,6 +6090,10 @@ function renderImportBasisdataSuccessStep(container){
 
   // Aangemaakte categorieën expliciet noemen: ze verschijnen anders zonder aankondiging in
   // Profiel > Categorieën, en dan lijkt het alsof de app iets achter je rug om heeft gedaan.
+  const salarisHtml = info.salarisNaam
+    ? `<p class="import-bd-success-cats">${escapeHtml(t("importBasisdataSuccessSalary")(info.salarisNaam))}</p>`
+    : `<p class="import-bd-success-warn">${escapeHtml(t("importBasisdataSuccessNoSalary"))}</p>`;
+
   const catsHtml = (info.nieuweCategorieen && info.nieuweCategorieen.length)
     ? `<p class="import-bd-success-cats">${escapeHtml(t("importBasisdataSuccessNewCats")(info.nieuweCategorieen.map(c=>c.name).join(", ")))}</p>`
     : "";
@@ -5986,6 +6103,7 @@ function renderImportBasisdataSuccessStep(container){
       <h3>${t("importBasisdataSuccessTitle")}</h3>
       <p>${t("importBasisdataSuccessNote")(escapeHtml(info.sourceLabel))}</p>
       <ul>${summaryHtml}</ul>
+      ${salarisHtml}
       ${catsHtml}
       <button type="button" id="importBdDoneBtn" style="font-family:'Segoe UI',sans-serif; font-size:13px; font-weight:600; padding:9px 16px; border-radius:5px; cursor:pointer; background:var(--gold); border:1px solid var(--gold); color:#fff;">${t("importBasisdataDoneBtn")}</button>
     </div>
