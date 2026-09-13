@@ -159,7 +159,13 @@
     transition:transform .24s cubic-bezier(.4,0,.2,1);
   }
   html[data-mode="dark"] .nav-drawer{ box-shadow:0 18px 40px rgba(0,0,0,.5); }
-  .nav-drawer.open{ transform:translateX(0); }
+  /* visibility (en `inert` op het element zelf, zie setNavDrawer) en niet alleen transform:
+     met uitsluitend transform staat de lade weliswaar buiten beeld, maar blijven de tien knoppen
+     erin gewoon tabbaar — terwijl hij aria-hidden="true" draagt. Twee keer Tab vanaf de menuknop
+     en je focus verdween onzichtbaar in een menu dat de schermlezer juist weigert voor te lezen.
+     De vertraging op visibility laat de schuifanimatie eerst aflopen. */
+  .nav-drawer{ visibility:hidden; transition:transform .24s cubic-bezier(.4,0,.2,1), visibility 0s linear .24s; }
+  .nav-drawer.open{ transform:translateX(0); visibility:visible; transition-delay:0s; }
   @media (prefers-reduced-motion: reduce){
     .nav-drawer, .nav-backdrop{ transition:none; }
   }
@@ -295,7 +301,8 @@
     transform:translateX(100%);
     transition:transform .3s cubic-bezier(.4,0,.2,1);
   }
-  .profile-panel.open{ transform:translateX(0); }
+  .profile-panel{ visibility:hidden; transition:transform .3s cubic-bezier(.4,0,.2,1), visibility 0s linear .3s; }
+  .profile-panel.open{ transform:translateX(0); visibility:visible; transition-delay:0s; }
   @media (prefers-reduced-motion: reduce){
     .profile-panel{ transition:none; }
     .profile-backdrop{ transition:none; }
@@ -1860,11 +1867,17 @@ const i18n = {
     subtotaal: "Subtotaal",
     exportBtn: "Exporteer kopie",
     importBtn: "Importeer bestand",
-    resetBtn: "Reset",
+    resetBtn: "Herladen",
+    csvNoMonthError: "Kon geen maand herkennen uit de bestandsnaam of de datums in het bestand.",
+    pdfLibError: "PDF-bibliotheek kon niet geladen worden (controleer je internetverbinding).",
+    supabaseLibError: "Supabase-library kon niet geladen worden — check je internetverbinding.",
+    unknownCounterparty: "Onbekend",
     deleteMonthBtn: "Verwijder deze maand",
     deleteMonthConfirm: "Dit maandoverzicht verwijderen?",
     resetConfirm: "Alle wijzigingen ongedaan maken en teruggaan naar de basiswaarden?",
+    reloadConfirm: "De laatst opgeslagen versie opnieuw uit de cloud ophalen? Wijzigingen die nog niet zijn opgeslagen, gaan daarbij verloren.",
     importError: "Kon dit bestand niet lezen: ",
+    importShapeError: "dit lijkt geen FinBo-back-up te zijn (geen jaren met posten gevonden). Er is niets gewijzigd.",
     csvParseError: "Kon deze CSV niet verwerken: ",
     pdfParseError: "Kon deze PDF niet verwerken: ",
     saveNowBtn: "Opslaan",
@@ -1873,7 +1886,10 @@ const i18n = {
     cloudSaveStatus: (email) => `Cloud-sync actief (${email})`,
     cloudSaveOff: "Niet ingelogd.",
     cloudSaveErrorStatus: "Opslaan naar de cloud mislukt — controleer je internetverbinding. Je wijzigingen staan nog wel lokaal in de app en worden opnieuw geprobeerd.",
+    cloudSaveConflictStatus: "Er is elders (ander tabblad of apparaat) een nieuwere versie opgeslagen. Er wordt hier niets meer weggeschreven totdat je kiest wat er moet gebeuren — klik op Opslaan.",
+    cloudSaveConflictPrompt: "Er is elders al een nieuwere versie opgeslagen — waarschijnlijk vanaf een ander tabblad of apparaat.\n\nOK = wat er nu op dit scherm staat wordt de nieuwe versie, en die andere wijzigingen gaan verloren.\nAnnuleren = niets opslaan; ververs deze pagina om de nieuwste versie op te halen.",
     logoutBtn: "Uitloggen",
+    retryBtn: "Opnieuw proberen",
     loginTitle: "Inloggen bij FinBo",
     loginSubtitle: "Je data wordt lokaal versleuteld vóórdat 'm de cloud in gaat — alleen jij kunt 'm lezen.",
     loginEmailLabel: "E-mailadres",
@@ -1909,6 +1925,7 @@ const i18n = {
     profileCurrentPasswordWrong: "Huidig wachtwoord onjuist.",
     profileUpdateErrorPrefix: "Bijwerken mislukt: ",
     profileSignOutBtn: "Uitloggen",
+    signOutUnsavedWarn: "Je laatste wijzigingen konden niet naar de cloud worden opgeslagen. Uitloggen betekent dat ze verloren gaan.\n\nToch uitloggen?",
     profileCategoriesComingSoonTitle: "Binnenkort beschikbaar",
     profileCategoriesComingSoonText: "Hier kun je straks je eigen categorieën aanmaken en beheren, zodat geïmporteerde PDF/CSV-transacties automatisch bij de juiste post terechtkomen — bijvoorbeeld een vaste regel voor een bepaalde winkel of tegenpartij.",
     profileCategoryNewTitle: "Nieuwe categorie",
@@ -1963,7 +1980,7 @@ const i18n = {
     groeiGroupLabel: "Groei",
     loonstijgingEyebrow: "Loonstijgingstabel",
     loonstijgingTitle: "Netto inkomen vs kosten per maand",
-    loonstijgingSub: "Bron: tabblad “Loonstijging 2021-2030” uit Rekensheet 2026.xlsx. Jaren met een groen bolletje (2026 en verder) zijn gekoppeld aan een tabblad hierboven — Gemiddeld/Totaal per maand en Totaal per jaar komen dan live uit dat tabblad, niet uit de Excel. De kolom Kosten komt nooit uit de Excel: die is altijd de actuele totale uitgaven van Basisdata.",
+    loonstijgingSub: "Per jaar één regel met je netto inkomen. Een jaar met een groen bolletje is gekoppeld aan een jaar-tabblad hierboven: Gemiddeld/Totaal per maand en Totaal per jaar komen dan rechtstreeks uit dat tabblad. De kolom Kosten komt altijd uit de actuele totale uitgaven van Basisdata. Jaren zonder koppeling vul je zelf in — handig om je historie erbij te zetten.",
     colJaar: "Jaar",
     colTotaalJaar: "Totaal per jaar",
     colGemPerMaand: "Gemiddeld per maand",
@@ -1982,7 +1999,7 @@ const i18n = {
     importBasisdataIntro: "Importeer een bankafschrift (PDF of CSV) en zet 'm direct om in je Basisdata — het basisjaar waar elk scenario en elke vergelijking op verder bouwt. Handig als je net met FinBo begint, of als je Basisdata liever opnieuw opbouwt vanuit echte transacties dan hem met de hand in te typen.",
     importBasisdataWarning: "Dit <b>vervangt</b> je huidige Basisdata volledig — Inkomsten, Vaste lasten, Abonnementen en Variabele lasten worden allemaal opnieuw opgebouwd vanuit deze import. <b>Dit verandert ook meteen elk jaar dat je al hebt aangemaakt</b>: vaste lasten, abonnementen en variabele lasten tonen altijd de actuele cijfers van Basisdata (die staan niet los per jaar opgeslagen), en Loon werkt jaar-op-jaar door, dus een nieuw Loon in Basisdata bereikt ook elk later jaar. Al aangemaakte maandbudgetten zijn bevroren momentopnamen en worden <b>niet</b> geraakt. Dit staat los van het vergelijken van een maand-import met een bestaand maandbudget.",
     importBasisdataUploadTitle: "Upload een bankafschrift",
-    importBasisdataUploadHint: "Eén schone maand is genoeg — elke regel wordt hieronder ingedeeld.",
+    importBasisdataUploadHint: "Eén schone maand is genoeg — elke regel wordt hieronder ingedeeld. Let op: de inlezer is gebouwd op de export van Rabobank (CSV of PDF). Een bestand van een andere bank wordt waarschijnlijk niet herkend; komt alles leeg of bij \"Nog in te delen\" terecht, dan is dat de reden.",
     importBasisdataUploadPdfBtn: "+ Upload PDF",
     importBasisdataUploadCsvBtn: "+ Upload CSV",
     importBasisdataCatLabel: "Categorie (optioneel — telt gelijke categorieën samen tot één regel, of hernoemt een losse rij):",
@@ -2006,6 +2023,7 @@ const i18n = {
     importBasisdataSuccessSalary: (naam) => `"${naam}" is aangewezen als salarisregel — daarop werkt de loonsverhoging per jaar.`,
     importBasisdataSuccessNoSalary: "Let op: er kon geen salarisregel worden aangewezen. Klik op Basisdata het sterretje aan bij de regel die je salaris is, anders kunnen de jaren hun loon niet doorrekenen.",
     importBasisdataSuccessNewCats: (namen) => `Nieuwe categorieën aangemaakt voor de samengevoegde regels: ${namen}. Je vindt ze terug onder Profiel → Categorieën.`,
+    importBasisdataSuccessOpposite: (regels) => `Let op: deze regels gaan tegen hun groep in en staan er dus als negatief bedrag in — een bijschrijving tussen de kosten, of een inkomstenregel die netto negatief uitkwam: ${regels}. Klopt dat niet, pas het bedrag dan aan in Basisdata.`,
     importBasisdataSplitHint: "Maak er twee losse rijen van: één voor het afgeschreven deel, één voor het bijgeschreven deel. Handig als die twee niet bij elkaar horen (bv. wegenbelasting eraf, belastingteruggave erbij).",
     importBasisdataRenameBadge: (catName) => `komt in Basisdata te staan als "${catName}" — nog geen andere rijen om mee samen te tellen`,
     importBasisdataPreviewTitle: "Voorbeeld: wat er in Basisdata terechtkomt",
@@ -2108,11 +2126,17 @@ const i18n = {
     subtotaal: "Subtotal",
     exportBtn: "Export a copy",
     importBtn: "Import file",
-    resetBtn: "Reset",
+    resetBtn: "Reload",
+    csvNoMonthError: "Could not determine a month from the file name or the dates in the file.",
+    pdfLibError: "The PDF library could not be loaded (check your internet connection).",
+    supabaseLibError: "The Supabase library could not be loaded — check your internet connection.",
+    unknownCounterparty: "Unknown",
     deleteMonthBtn: "Delete this month",
     deleteMonthConfirm: "Delete this month overview?",
     resetConfirm: "Undo all changes and go back to the base values?",
+    reloadConfirm: "Fetch the last saved version from the cloud again? Any changes that have not been saved yet will be lost.",
     importError: "Could not read this file: ",
+    importShapeError: "this does not look like a FinBo backup (no years with entries found). Nothing was changed.",
     csvParseError: "Could not process this CSV: ",
     pdfParseError: "Could not process this PDF: ",
     saveNowBtn: "Save",
@@ -2121,7 +2145,10 @@ const i18n = {
     cloudSaveStatus: (email) => `Cloud sync active (${email})`,
     cloudSaveOff: "Not signed in.",
     cloudSaveErrorStatus: "Saving to the cloud failed — check your internet connection. Your changes are still in the app locally and will be retried.",
+    cloudSaveConflictStatus: "A newer version was saved elsewhere (another tab or device). Nothing more is written from here until you decide what should happen — click Save.",
+    cloudSaveConflictPrompt: "A newer version has already been saved elsewhere — most likely from another tab or device.\n\nOK = what is on this screen becomes the new version, and those other changes are lost.\nCancel = save nothing; reload this page to fetch the newest version.",
     logoutBtn: "Sign out",
+    retryBtn: "Try again",
     loginTitle: "Sign in to FinBo",
     loginSubtitle: "Your data is encrypted locally before it goes to the cloud — only you can read it.",
     loginEmailLabel: "Email address",
@@ -2157,6 +2184,7 @@ const i18n = {
     profileCurrentPasswordWrong: "Current password is incorrect.",
     profileUpdateErrorPrefix: "Update failed: ",
     profileSignOutBtn: "Sign out",
+    signOutUnsavedWarn: "Your most recent changes could not be saved to the cloud. Signing out means losing them.\n\nSign out anyway?",
     profileCategoriesComingSoonTitle: "Coming soon",
     profileCategoriesComingSoonText: "This is where you'll be able to create and manage your own categories, so imported PDF/CSV transactions land under the right line automatically — for example a standing rule for a particular shop or counterparty.",
     profileCategoryNewTitle: "New category",
@@ -2211,7 +2239,7 @@ const i18n = {
     groeiGroupLabel: "Growth",
     loonstijgingEyebrow: "Salary growth table",
     loonstijgingTitle: "Net income vs. costs per month",
-    loonstijgingSub: "Source: “Loonstijging 2021-2030” tab from Rekensheet 2026.xlsx. Years with a green dot (2026 onward) are linked to a tab above — Average/Total per month and Total per year then come live from that tab, not from the Excel. The Costs column never comes from the Excel — it's always the current total expenses from Basisdata.",
+    loonstijgingSub: "One row per year with your net income. A year with a green dot is linked to a year tab above: Average/Total per month and Total per year then come straight from that tab. The Costs column always comes from Basisdata's current total expenses. Years without a link you fill in yourself — useful for adding your history.",
     colJaar: "Year",
     colTotaalJaar: "Total per year",
     colGemPerMaand: "Average per month",
@@ -2230,7 +2258,7 @@ const i18n = {
     importBasisdataIntro: "Import a bank statement (PDF or CSV) and turn it straight into your Basisdata — the base year every scenario and comparison starts from. Useful the first time you set up FinBo, or whenever you'd rather rebuild Basisdata from real transactions instead of typing it in by hand.",
     importBasisdataWarning: "This <b>replaces</b> your current Basisdata entirely — Income, Fixed costs, Subscriptions and Variable costs will all be rebuilt from this import. <b>This also immediately changes every Jaar you've already created</b>: Fixed costs, Subscriptions and Variable costs always show Basisdata's current numbers (they're not stored separately per year), and Loon carries forward year to year, so a new Basisdata Loon reaches every later Jaar too. Already-created Maandbudgetten are frozen snapshots and are <b>not</b> affected. This is separate from comparing a monthly import against an existing budget.",
     importBasisdataUploadTitle: "Upload a bank statement",
-    importBasisdataUploadHint: "One clean month is enough — every row gets classified below.",
+    importBasisdataUploadHint: "One clean month is enough — every row gets classified below. Note: the reader is built for Rabobank's export (CSV or PDF). A file from another bank will most likely not be recognised; if everything comes out empty or lands in \"Not yet classified\", that is why.",
     importBasisdataUploadPdfBtn: "+ Upload PDF",
     importBasisdataUploadCsvBtn: "+ Upload CSV",
     importBasisdataCatLabel: "Category (optional — sums matching rows into one line, or just renames a single row):",
@@ -2254,6 +2282,7 @@ const i18n = {
     importBasisdataSuccessSalary: (naam) => `"${naam}" was marked as the salary row — the yearly raise applies to it.`,
     importBasisdataSuccessNoSalary: "Note: no salary row could be determined. On Basisdata, click the star on the row that is your salary, otherwise the years can't carry your salary forward.",
     importBasisdataSuccessNewCats: (namen) => `New categories created for the merged lines: ${namen}. You'll find them under Profile → Categories.`,
+    importBasisdataSuccessOpposite: (regels) => `Note: these lines run against their group and are therefore stored as a negative amount — a credit among the costs, or an income line that came out negative overall: ${regels}. If that is not right, adjust the amount in Basisdata.`,
     importBasisdataSplitHint: "Turn this into two separate rows: one for the debited part, one for the credited part. Useful when those two aren't the same thing (e.g. road tax out, tax refund in).",
     importBasisdataRenameBadge: (catName) => `will appear in Basisdata simply renamed to "${catName}" — no other rows to sum it with yet`,
     importBasisdataPreviewTitle: "Preview: what lands in Basisdata",
@@ -2517,6 +2546,19 @@ let state = makeBlankState();
 /* Migratie voor oudere opgeslagen bestanden (vóór de onafhankelijke jaren): als het geladen bestand
    nog de oude platte state.income/vasteLasten/abonnementen/variabeleLasten heeft, zet dat om naar
    het nieuwe model zodat oude opslagbestanden/exports bruikbaar blijven. */
+/* Een verwijderd maandbudget laat verwijzingen achter in de maanden die eraan gekoppeld waren.
+   Tot v25 werden die niet opgeruimd: migrateState repareert een `budgetId` alleen als hij
+   ONTBREEKT, dus een maand die naar een verdwenen budget wees bleef voorgoed kapot. Het zichtbare
+   gevolg zat bij "toepassen ongedaan maken": reverseApplyMonthToBudget zoekt het budget op, vindt
+   niets, doet stilletjes niets — en wist daarna wél `appliedToBudget`, zodat de knop meldde dat het
+   gelukt was terwijl er niets hersteld werd. */
+function detachMonthsFromBudget(budgetId){
+  (state.months||[]).forEach(m => {
+    if(m.budgetId === budgetId) m.budgetId = null;
+    if(m.appliedToBudget && m.appliedToBudget.budgetId === budgetId) m.appliedToBudget = null;
+  });
+}
+
 function migrateState(){
   if(!state.scenarios || !state.scenarios.length) return;
   const legacy = state.income && state.vasteLasten && state.abonnementen && state.variabeleLasten;
@@ -2533,6 +2575,19 @@ function migrateState(){
     // en dus onverwijderbaar; die jaren zijn nu gewoon zelf aangemaakte jaren, en een bestand uit
     // die tijd hield ze anders voorgoed vast.
     s.locked = (i === 0);
+  });
+  /* Welke inkomstenregel het salaris is, wordt gemarkeerd met role:"salary". Oudere opslagbestanden
+     kennen die markering niet; daar heette de regel simpelweg "Loon".
+     Deze migratie MOET vóór het loonstijging-blok hieronder staan: dat blok leidt zijn cijfers af uit
+     baseLoonRaw(), en die zoekt de loonregel juist op role:"salary". Stond de markering nog niet,
+     dan gaf baseLoonRaw voor élk jaar 0, werd elk blok {vast:0, pct:0}, en herschreef de
+     syncComputedLoons() aan het eind van deze functie ieder jaar naar het Basisdata-loon — precies
+     het stilzwijgend veranderen van bestaande cijfers dat het blok hoort te voorkomen. */
+  state.scenarios.forEach(s => {
+    if(!s.income || !s.income.items) return;
+    if(s.income.items.some(it => it.role === "salary")) return;
+    const legacy = s.income.items.find(it => (it.l||"").trim().toLowerCase() === "loon");
+    if(legacy) legacy.role = "salary";
   });
   // Migratie naar per-jaar loonsverhoging-blokken: oudere opslagbestanden kennen dit veld nog niet.
   // Voor elk niet-Basisdata jaar zonder "loonstijging" wordt een blok afgeleid dat het al opgeslagen
@@ -2601,13 +2656,13 @@ function migrateState(){
   if(!state.userRules) state.userRules = [];
   if(state.offsetsEnabled === undefined) state.offsetsEnabled = (state.warmtefondsAftrek === undefined) ? true : state.warmtefondsAftrek;
   delete state.warmtefondsAftrek;
-  state.scenarios.forEach(s => {
-    if(!s.income || !s.income.items) return;
-    if(s.income.items.some(it => it.role === "salary")) return;
-    const legacy = s.income.items.find(it => (it.l||"").trim().toLowerCase() === "loon");
-    if(legacy) legacy.role = "salary";
-  });
+  /* Deze koppeling bestaat alleen om twee regelnamen uit de tijd vóór de generieke
+     aftrekkoppeling alsnog aan elkaar te knopen. Het zijn letterlijke namen van de oorspronkelijke
+     gebruiker; voor iedereen die ná v25 begint is dit dode code. Hij draait daarom nog maar één
+     keer: zodra de staat als v25 gemarkeerd is (zie onderaan deze functie) wordt hij overgeslagen,
+     en bij een volgende opruimronde kan het hele blok weg. */
   const linkLegacyOffset = (container) => {
+    if(state.schemaVersion >= 25) return;
     if(!container || !container.vasteLasten || !container.vasteLasten.items) return;
     const items = container.vasteLasten.items;
     if(items.some(it => it.offsetTarget)) return;
@@ -2617,18 +2672,37 @@ function migrateState(){
   };
   state.scenarios.forEach(linkLegacyOffset);
   state.budgets.forEach(linkLegacyOffset);
+  // Verweesde budgetverwijzingen opruimen: bestanden van vóór deze reparatie kunnen maanden bevatten
+  // die naar een allang verwijderd maandbudget wijzen (zie detachMonthsFromBudget).
+  (state.months||[]).forEach(m => {
+    if(m.budgetId && !state.budgets.some(b => b.id === m.budgetId)) m.budgetId = null;
+    if(m.appliedToBudget && !state.budgets.some(b => b.id === m.appliedToBudget.budgetId)) m.appliedToBudget = null;
+  });
   // (v24 had hier een migratie die een vaste "Rabobank"-post van € 3,60 aan Basisdata én aan elk
   // bestaand maandbudget toevoegde. Die was gebaseerd op de bankkosten van één specifieke
   // gebruiker en werd bij ELKE keer laden opnieuw uitgevoerd, dus ook in het bestand van iemand
   // anders. Verwijderd in v25 — een eigen bankkostenpost voegt de gebruiker zelf toe.)
   syncComputedLoons();
+  // Vanaf hier is de staat naar v25-vorm gebracht. Migraties die alleen over oudere bestanden gaan,
+  // kunnen hierop afgaan en zichzelf overslaan.
+  state.schemaVersion = 25;
 }
 
-const fmt = n => (isNaN(n) ? 0 : n).toLocaleString("nl-NL", {minimumFractionDigits:2, maximumFractionDigits:2});
+/* De taal bepaalt de opmaak, niet een vaste "nl-NL". Stond dat er wél, dan schreef de Engelse
+   versie in haar eigen teksten "€0.00" terwijl fmt() er "0,00" van maakte — twee schrijfwijzen door
+   elkaar op hetzelfde scherm. */
+const fmtLocale = () => (state && state.lang === "en") ? "en-GB" : "nl-NL";
+const fmt = n => (isNaN(n) ? 0 : n).toLocaleString(fmtLocale(), {minimumFractionDigits:2, maximumFractionDigits:2});
 const sum = items => items.reduce((a,b)=>a+(parseFloat(b.v)||0),0);
-// Alleen gebruikt door de nieuwe "Import basisdata"-flow: namen daar komen rechtstreeks uit de
-// bank-export (dus buiten FinBo's eigen controle), i.p.v. bv. een categorienaam die al begrensd is
-// op 20 tekens via <input maxlength> -- vandaar hier wél expliciet escapen vóór interpolatie in HTML.
+/* Elke tekst die van de gebruiker of uit een bankbestand komt en in een HTML-sjabloon terechtkomt,
+   gaat hier doorheen — ook een budgettitel of categorienaam die de gebruiker zelf typte.
+   Dat is niet alleen een veiligheidsmaatregel. Tot v25 stond een budgettitel rechtstreeks in
+   value="${b.title}": typte je `Mijn "extra" budget`, dan las de parser de rest als twee losse
+   attributen, toonde het veld alleen nog `Mijn `, en schreef de volgende toetsaanslag díe afgeknotte
+   tekst terug over de titel. Een gewoon aanhalingsteken kostte je dus je titel.
+   Daarbovenop draait de hele app in één paginacontext waarin ook het versleutelingswachtwoord, de
+   Supabase-sessie en de volledige gegevens in platte tekst leven: een <img onerror=...> in een
+   geïmporteerde back-up of een afschriftregel zou daar bij kunnen. */
 const escapeHtml = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 function activeScenarioObj(){
@@ -2832,7 +2906,7 @@ function huidigKosten(){
    en elk zelf aangemaakt jaar erna) "Gemiddeld per maand" en "Totaal
    inkomsten per maand" live overneemt uit dat scenario's inkomsten, i.p.v. de vaste Excel-waarde.
    "Totaal per jaar" is steeds gemiddelde × 12 (netto-naar-jaar-omrekening — bevestigd te kloppen
-   met de originele Excel-cijfers, bijv. 2025: 3.918,67 × 12 = 47.024,04 ≈ 47.024). "Groei %" wordt
+   met de oorspronkelijke jaarcijfers, bijv. een maandbedrag × 12 dat tot op de euro gelijk uitkomt). "Groei %" wordt
    voor elk jaar herberekend t.o.v. het vorige jaar in deze reeks, zodat een gekoppeld jaar ook de
    groei van het jaar erna correct laat zien (i.p.v. de nu mogelijk achterhaalde vaste Excel-waarde). */
 function effectiveLoonstijgingRows(){
@@ -2901,6 +2975,38 @@ function monthLabelIn(m, lang){
 }
 
 /* ---------- CSV IMPORT: parsing & vertaallijst (translation list) ---------- */
+/* Bankexports komen in verschillende coderingen binnen. De export van de bank zelf is
+   windows-1252; haal je datzelfde bestand door Excel of LibreOffice, dan komt er UTF-8 uit — vaak
+   mét byte-order-mark. Tot v25 werd er onvoorwaardelijk als windows-1252 gedecodeerd, met twee
+   gevolgen: mét BOM werd de eerste kolomnaam "ï»¿Datum", waardoor r["Datum"] voor élke rij
+   undefined was en geen enkele datum overkwam; zónder BOM werd "Café René" tot "CafÃ© RenÃ©",
+   waarna dezelfde winkel in twee rijen uiteenviel en de geleerde regels niet meer matchten.
+   Daarom eerst kijken wat het is: een BOM is beslissend, en anders wordt UTF-8 geprobeerd met
+   `fatal` aan — mislukt dat, dan is het geen geldige UTF-8 en valt hij terug op windows-1252. */
+/* Losse getallen die eerder verspreid in de code stonden, hier één keer benoemd. */
+const MAX_CATEGORY_NAME_LEN = 20;   // lengte van een categorienaam (invoerveld, teller én controle)
+const NAME_FALLBACK_MAXLEN = 40;    // hoeveel omschrijving er als naam dient als de tegenpartij ontbreekt
+const AUTOSAVE_DEBOUNCE_MS = 500;   // wachttijd na de laatste bewerking voor er wordt opgeslagen
+const SAVE_BUTTON_RESET_MS = 1500;  // hoe lang "Opgeslagen" op de knop blijft staan
+/* Toleranties voor geldbedragen. CENT_EPSILON is "kleiner dan een halve cent" — daarmee is een
+   verschil dat alleen uit drijvende-komma-afronding komt geen verschil. AMOUNT_MATCH_EPSILON is
+   ruimer: die vergelijkt twee bedragen uit het afschrift met elkaar, waar een cent verschil door
+   afronding bij de bank zelf kan ontstaan. Eerder stonden hier drie losse waarden (0,001 / 0,005 /
+   0,01) zonder dat het verschil ergens uitgelegd werd. */
+const CENT_EPSILON = 0.001;
+const AMOUNT_MATCH_EPSILON = 0.005;
+
+function decodeBankBytes(bytes){
+  if(bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF){
+    return new TextDecoder("utf-8").decode(bytes.subarray(3));
+  }
+  try{
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  }catch(e){
+    return new TextDecoder("windows-1252").decode(bytes);
+  }
+}
+
 function parseCSV(text){
   const rows = [];
   let row = [];
@@ -3121,7 +3227,7 @@ function classifyTransaction(tx){
   const partij = (tx["Naam tegenpartij"]||"").trim();
   const initieel = (tx["Naam initiërende partij"]||"").trim();
   const omschr = ((tx["Omschrijving-1"]||"") + " " + (tx["Omschrijving-2"]||"")).trim();
-  const naam = partij || initieel || (omschr ? omschr.slice(0,40) : "Onbekend");
+  const naam = partij || initieel || (omschr ? omschr.slice(0, NAME_FALLBACK_MAXLEN) : t("unknownCounterparty"));
   const blobNaam = naam.toLowerCase();
   const blobOmschr = omschr.toLowerCase();
   const amt = parseNLAmount(tx["Bedrag"]);
@@ -3137,8 +3243,8 @@ function classifyTransaction(tx){
   const eigen = matchUserRule(blobNaam);
   if(eigen) return {cat: eigen.bucket, label: eigen.label || naam, naam, amt};
 
-  // Geldmaat-geldopnames hebben een locatiesuffix in de naam (bv. "Geldmaat Ganzeweide 74" vs
-  // "Geldmaat Bautscherw 43") — dat zou anders als losse rijen in "Nog in te delen" komen te staan.
+  // Geldmaat-geldopnames hebben een locatiesuffix in de naam (bv. "Geldmaat <straat A> 74" vs
+  // "Geldmaat <straat B> 43") — dat zou anders als losse rijen in "Nog in te delen" komen te staan.
   // Samenvoegen tot één post zodra 'm die kant op gaat (via review), zodat je 'm in één keer kunt
   // toevoegen. Let op: "naam" blijft hier bewust de ORIGINELE tegenpartijnaam (mét locatie) — de
   // samengevoegde reviewregel heet zelf "Geldopname" (dat komt uit "label"), maar de individuele
@@ -3194,31 +3300,45 @@ function resolveStornos(rows){
     return naam + "|" + omschr;
   };
 
+  /* Eerst ALLE mislukte oorspronkelijke afschrijvingen wegstrepen (zelfde Transactiereferentie als
+     een terugboeking), en pas daarna op zoek naar een geslaagde betaling. Die volgorde is wezenlijk:
+     doe je het per terugboeking in één doorloop, dan is de nog niet weggestreepte helft van de
+     tweede terugboeking een geldige kandidaat voor de eerste — en dan lijkt alles opgelost terwijl
+     er niets betaald is. */
+  rows.forEach(storno => {
+    if(!isStorno(storno)) return;
+    const ref = storno["Transactiereferentie"];
+    if(!ref) return;
+    rows.forEach(r => {
+      if(r === storno) return;
+      if(r["Transactiereferentie"] === ref && !isStorno(r)) excluded.add(r);
+    });
+  });
+
   const openTerugboekingen = [];
+  // Welke geslaagde betalingen al aan een eerdere terugboeking zijn toegewezen.
+  const geclaimd = new Set();
   stornoRows.forEach(storno => {
     const amt = Math.abs(parseNLAmount(storno["Bedrag"]));
-    const naam = (storno["Naam tegenpartij"]||storno["Naam initiërende partij"]||"Onbekend").trim();
-    const ref = storno["Transactiereferentie"];
+    const naam = (storno["Naam tegenpartij"]||storno["Naam initiërende partij"]||t("unknownCounterparty")).trim();
 
-    // De rechtstreeks gekoppelde, mislukte oorspronkelijke afschrijving (zelfde Transactiereferentie)
-    // telt sowieso nooit mee als kostenpost — ongeacht of de terugboeking verderop alsnog voldaan is.
-    if(ref){
-      rows.forEach(r => {
-        if(r === storno) return;
-        if(r["Transactiereferentie"] === ref && !isStorno(r)) excluded.add(r);
-      });
-    }
-
+    /* Eén geslaagde betaling lost precies ÉÉN terugboeking op. Daarom wordt de gevonden regel
+       hieronder geclaimd (`geclaimd`) en telt hij bij een volgende storno niet meer mee.
+       Tot v25 stond hier een stateless `rows.some(...)`: die claimde niets, dus twee mislukte
+       incasso's van € 50 werden allebei "opgelost" door dezelfde ene betaling van € 50. De maand
+       toonde dan € 50 kosten terwijl er € 100 openstond, en de kaart met openstaande
+       terugboekingen — het enige vangnet hiervoor — bleef leeg. */
     const key = identityKey(storno);
-    const resolved = rows.some(r => {
-      if(isStorno(r) || excluded.has(r)) return false;
+    const kandidaat = rows.find(r => {
+      if(isStorno(r) || excluded.has(r) || geclaimd.has(r)) return false;
       const rAmt = parseNLAmount(r["Bedrag"]);
       if(rAmt >= 0) return false; // moet zelf ook een afschrijving zijn
-      if(Math.abs(Math.abs(rAmt) - amt) > 0.005) return false;
+      if(Math.abs(Math.abs(rAmt) - amt) > AMOUNT_MATCH_EPSILON) return false;
       return identityKey(r) === key;
     });
+    if(kandidaat) geclaimd.add(kandidaat);
 
-    if(!resolved){
+    if(!kandidaat){
       openTerugboekingen.push({
         naam,
         amt: Math.round(amt*100)/100,
@@ -3234,7 +3354,7 @@ function resolveStornos(rows){
 
 function buildMonthFromCSV(rows, filename){
   const ym = detectMonthFromFilename(filename) || detectMonthFromRows(rows);
-  if(!ym) throw new Error("Kon geen maand herkennen uit de bestandsnaam of de datums in het bestand.");
+  if(!ym) throw new Error(t("csvNoMonthError"));
   const key = `${ym.year}-${String(ym.month).padStart(2,"0")}`;
 
   const { rows: filteredRows, openTerugboekingen } = resolveStornos(rows);
@@ -3299,7 +3419,7 @@ function buildMonthFromCSV(rows, filename){
   const byDatum = (a,b) => (a.datum||"").localeCompare(b.datum||"");
   const toItems = bucket => Object.entries(bucket)
     .map(([l,data])=>({ l, v: Math.round(data.total*100)/100, entries: data.entries.slice().sort(byDatum) }))
-    .filter(it=>Math.abs(it.v) > 0.001)
+    .filter(it=>Math.abs(it.v) > CENT_EPSILON)
     .sort((a,b)=> b.v - a.v);
 
   // Issue #11: nieuw geïmporteerde "nog in te delen"-posten staan standaard NIET aangevinkt — de
@@ -3311,7 +3431,7 @@ function buildMonthFromCSV(rows, filename){
       entries: data.entries.slice().sort(byDatum),
       ...(data.inferredCat ? { inferredCat: data.inferredCat } : {}),
     }))
-    .filter(it=>Math.abs(it.amt) > 0.001)
+    .filter(it=>Math.abs(it.amt) > CENT_EPSILON)
     .sort((a,b)=> Math.abs(b.amt) - Math.abs(a.amt));
 
   // Issue #10: FinBo's eigen naamgevingsconventie voor imports ("JJJJ-CSV-MM"/"JJJJ-PDF-MM")
@@ -3356,7 +3476,7 @@ function handleCSVUpload(e){
   reader.onload = (ev) => {
     try{
       const bytes = new Uint8Array(ev.target.result);
-      const text = new TextDecoder("windows-1252").decode(bytes);
+      const text = decodeBankBytes(bytes);
       const rows = parseCSV(text);
       const monthObj = buildMonthFromCSV(rows, file.name);
       upsertMonth(monthObj);
@@ -3386,7 +3506,7 @@ function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
 async function parsePdfTransactions(arrayBuffer){
   if(!window.pdfjsLib){
-    throw new Error("PDF-bibliotheek kon niet geladen worden (controleer je internetverbinding).");
+    throw new Error(t("pdfLibError"));
   }
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
@@ -3395,7 +3515,8 @@ async function parsePdfTransactions(arrayBuffer){
   const Y_TOL = 2.5;
 
   const transactions = [];
-  let debetCreditThreshold = null; // x-grens tussen de "Bedrag af"- en "Bedrag bij"-kolom
+  let debetCreditThreshold = null; // x-grens tussen de "Bedrag af"- en "Bedrag bij"-kolom;
+                                   // per blok vastgelegd (zie hieronder), want hij verschilt per pagina
   let naamColumnX = null; // linker x-grens van de "Naam/omschrijving"-kolom
   // Bewust BUITEN de pagina-loop: een enkele transactie kan met zijn vervolgregels over een
   // pagina-einde heen lopen (dat gebeurt echt — bv. een terugboeking waarvan de laatste regels
@@ -3446,9 +3567,17 @@ async function parsePdfTransactions(arrayBuffer){
         if(naamItem) naamColumnX = naamItem.x;
         headerLineIdx = idx;
       }
-      if(iDebet>=0 && iCredit>=0){
-        const debetItem = map[iDebet], creditItem = map[iCredit];
-        if(debetItem && creditItem) debetCreditThreshold = (debetItem.x + creditItem.x) / 2;
+      /* De grens tussen de "Bedrag af"- en "Bedrag bij"-kolom.
+         Tot v25 was dat het midden tussen de LINKERranden van de twee koplabels. Dat klopt niet:
+         bedragen staan rechts uitgelijnd in hun kolom, dus een korte afschrijving begint ver naar
+         rechts — op de testpagina's tot x=485, terwijl dat midden op 480 lag. Elke afschrijving die
+         net iets voorbij dat midden begon, werd als bijschrijving gelezen.
+         Wat wél houdbaar is: een bedrag begint nooit vóór het koplabel van zijn eigen kolom. Een
+         bijschrijving begint dus op of voorbij de linkerrand van "Bedrag bij", en een afschrijving
+         altijd ervóór. De kleine speling vangt afrondingsverschillen in de PDF-coördinaten op. */
+      if(iCredit>=0){
+        const creditItem = map[iCredit];
+        if(creditItem) debetCreditThreshold = creditItem.x - 10;
       }
     });
 
@@ -3477,6 +3606,13 @@ async function parsePdfTransactions(arrayBuffer){
         block = {
           firstLineRest: startMatch[3],
           naamFromPosition,
+          // De debet/credit-grens van de pagina waarop dit blok BEGINT. Tot v25 werd één gedeelde
+          // variabele na afloop van de paginalus uitgelezen, waardoor de kolomindeling van de
+          // laatste pagina met terugwerkende kracht gold voor het hele afschrift. Die grens
+          // verschilt per pagina (op het testafschrift 480 / 455 / 527,5), dus bij een afschrift
+          // waarvan de laatste pagina anders is opgemaakt sloegen tientallen afschrijvingen om in
+          // inkomsten: een tekort van € 431 werd een overschot van € 456.
+          debetCreditThreshold,
           amountStr: null,
           amountX: null,
           extraLines: [],
@@ -3514,7 +3650,8 @@ async function parsePdfTransactions(arrayBuffer){
   return transactions
     .filter(b => b.amountStr && b.verwerkingsdatum)
     .map(b => {
-      const isCredit = debetCreditThreshold !== null && b.amountX > debetCreditThreshold;
+      const grens = b.debetCreditThreshold;
+      const isCredit = grens !== null && grens !== undefined && b.amountX > grens;
       const amt = parseNLAmount(b.amountStr) * (isCredit ? 1 : -1);
 
       // Naam bij voorkeur positioneel bepaald (zie b.naamFromPosition hierboven) — robuuster dan
@@ -3522,7 +3659,12 @@ async function parsePdfTransactions(arrayBuffer){
       // onderscheiden van een stukje Tegenrekening-IBAN. Alleen als de Naam-kolomgrens deze pagina
       // niet gevonden kon worden (geen kopregel herkend) valt dit terug op tekstpatronen gokken.
       let naam;
-      if(b.naamFromPosition !== undefined){
+      // `!b.naamFromPosition` en niet `=== undefined`: naamFromPosition is ALTIJD een string (hij
+      // wordt op "" geïnitialiseerd), dus de undefined-check die hier tot v25 stond was altijd waar
+      // en maakte de tekstuele terugval hieronder onbereikbaar. Die terugval is juist nodig als de
+      // kolomkop niet gevonden is — bijvoorbeeld wanneer pdf.js "Naam/omschrijving" in twee stukjes
+      // aanlevert, waarna elke tegenpartijnaam op deze pagina leeg blijft.
+      if(b.naamFromPosition){
         naam = b.naamFromPosition;
       } else {
         const rest = b.firstLineRest.replace(new RegExp(escapeRegExp(b.amountStr) + "\\s*$"), "").trim();
@@ -3553,7 +3695,7 @@ async function parsePdfTransactions(arrayBuffer){
           extraLines = extraLines.slice(1);
         }
       }
-      naam = naam || "Onbekend";
+      naam = naam || t("unknownCounterparty");
 
       const omschrijving = extraLines.join(" ").replace(/\s+/g," ").trim();
       const isStorno = /terugboeking\s*:/i.test(omschrijving);
@@ -3653,8 +3795,18 @@ function extractEmbeddedDataFromHtml(text){
      naar je eigen rij in `finbo_state` geschreven (Row Level Security zorgt dat dat ook echt
      alleen jouw rij kan zijn — zie finbo_supabase_setup.sql). */
 
-const SUPABASE_URL = "https://qlsnjlnzvbgwvyjnswvd.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsc25qbG56dmJnd3Z5am5zd3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczOTIwNjQsImV4cCI6MjEwMjk2ODA2NH0.5kByeZpQjtB7DPeQtFidOUSrdGst1Ox5_wyUZ9g9wKo";
+/* ---- CONFIGURATIE: waar dit bestand zijn gegevens bewaart ----
+   Let op wie hier de eigenaar is. Elke kopie van dit bestand schrijft naar het Supabase-project
+   hieronder: iedereen die het opent maakt daar een account aan, op dat quotum en onder die
+   verwerkingsverantwoordelijkheid. De anon-key hoort publiek te zijn (Row Level Security bepaalt de
+   toegang, zie finbo_supabase_setup.sql) — dit is dus geen sleutellek, maar wel een keuze die je
+   bewust maakt zodra je het bestand aan iemand anders geeft.
+   Wie het naar zijn eigen project wil laten wijzen hoeft de code niet aan te raken: zet vóór dit
+   script een window.FINBO_CONFIG = { supabaseUrl, supabaseAnonKey } neer, dan wint die. */
+const FINBO_DEFAULT_SUPABASE_URL = "https://qlsnjlnzvbgwvyjnswvd.supabase.co";
+const FINBO_DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsc25qbG56dmJnd3Z5am5zd3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczOTIwNjQsImV4cCI6MjEwMjk2ODA2NH0.5kByeZpQjtB7DPeQtFidOUSrdGst1Ox5_wyUZ9g9wKo";
+const SUPABASE_URL = (window.FINBO_CONFIG && window.FINBO_CONFIG.supabaseUrl) || FINBO_DEFAULT_SUPABASE_URL;
+const SUPABASE_ANON_KEY = (window.FINBO_CONFIG && window.FINBO_CONFIG.supabaseAnonKey) || FINBO_DEFAULT_SUPABASE_ANON_KEY;
 
 /* ---- Versleuteling (WebCrypto: PBKDF2 sleutelafleiding + AES-GCM) ----
    Zie finbo_crypto_module.js voor de losstaand geteste versie hiervan — functioneel identiek. */
@@ -3695,7 +3847,7 @@ let saveErrorFlag = false;
 let autoSaveTimer = null;
 
 /* ---- Versleutelingswachtwoord tijdelijk onthouden bij verversen (issue #6) ----
-   Bewuste afweging, expliciet op verzoek van Joshua: het versleutelingswachtwoord werd tot nu toe
+   Bewuste afweging, expliciet op verzoek van de gebruiker: het versleutelingswachtwoord werd tot nu toe
    NERGENS opgeslagen (alleen in het geheugen, weg bij verversen/uitloggen) — dat was de veiligste
    optie, maar betekende dat je het bij elke paginaverversing opnieuw moest intypen. Nu wordt het,
    ná een geslaagde ontsleuteling, ook (versleuteld noch onversleuteld — gewoon als tekst) in de
@@ -3736,7 +3888,47 @@ function clearEncPasswordForSession(userId){
    stilzwijgend verloren gaat doordat het tabblad dichtgaat vóórdat er daadwerkelijk geschreven is. */
 let dirty = false;
 
-async function writeStateToCloud(){
+/* Volgnummer van de laatste bewerking. Nodig omdat writeStateToCloud een momentopname van `state`
+   versleutelt en die daarna over het netwerk stuurt: bewerkt de gebruiker in die tussentijd iets,
+   dan zit die bewerking NIET in de verzonden tekst. Tot v25 zette de geslaagde schrijving
+   desondanks `dirty = false`, waarmee die verse bewerking als "opgeslagen" werd afgeboekt — en
+   omdat de drie afsluit-hooks allemaal op `dirty` afgaan, deed ook geen van die iets meer. Pagina
+   verversen in dat venster (tot de volle 500 ms debounce) verloor de invoer geruisloos, zónder de
+   browserwaarschuwing. Nu boekt een schrijving alleen af wat ze werkelijk meenam. */
+let stateGeneration = 0;
+let savedGeneration = 0;
+
+/* De cloudrij die deze sessie het laatst gelezen óf geschreven heeft. Er is één rij per gebruiker,
+   zonder versiekolom, en de upsert vervangt hem in z'n geheel — dus tot v25 won simpelweg de
+   laatste schrijver, zonder dat iemand het merkte. De staat wordt bovendien precies één keer
+   gelezen (bij het invoeren van het versleutelingswachtwoord), dus een tabblad dat sinds
+   vanochtend openstaat, houdt het beeld van vanochtend vast. Eén hernoemde budgetnaam daar
+   overschreef dan een hele middag werk op je telefoon.
+   Voor een echte vergrendeling is een versiekolom in de database nodig. Wat hier wél kan zonder
+   schemawijziging: vlak voor het schrijven de rij teruglezen en kijken of hij nog is zoals we hem
+   achterlieten. Dat is geen atomair slot — twee schrijvingen binnen dezelfde milliseconden glippen
+   er nog langs — maar het vangt wel het geval dat in de praktijk voorkomt: een tabblad dat uren
+   achterloopt. Bij een verschil wordt er niets geschreven en krijgt de gebruiker de keuze. */
+let lastSeenCiphertext = null;
+let saveConflictFlag = false;
+let retryTimer = null;
+let retryDelay = 0;
+
+/* Een mislukte schrijving (tunnel, slapende laptop, verlopen token) liet de gebruiker tot v25
+   achter met `dirty = true` en verder niets: geen nieuwe poging, geen backoff, geen reactie op
+   terugkerende verbinding. Wie klaar was met invullen en stopte met typen, verloor bij het sluiten
+   alles sinds de laatste geslaagde opslag. Nu loopt er een oplopende herhaalpoging (2s, 4s, 8s …
+   tot een minuut) die vanzelf stopt zodra het lukt. */
+function scheduleRetry(){
+  clearTimeout(retryTimer);
+  retryDelay = retryDelay ? Math.min(retryDelay * 2, 60000) : 2000;
+  retryTimer = setTimeout(() => { if(dirty) writeStateToCloud(); }, retryDelay);
+}
+function cancelRetry(){ clearTimeout(retryTimer); retryTimer = null; retryDelay = 0; }
+// Komt de verbinding terug, dan niet wachten op de volgende backoff-tik.
+window.addEventListener("online", () => { if(dirty && cloudSession){ cancelRetry(); writeStateToCloud(); } });
+
+async function writeStateToCloud(forceOverwrite){
   // Sessie/wachtwoord meteen in lokale variabelen vastleggen: hieronder wordt ge-awaited
   // (versleutelen + netwerkschrijving), en in die tussentijd kan de gebruiker uitloggen
   // (signOutCloud zet cloudSession/encryptionPassword dan op null). Zonder deze snapshot
@@ -3745,10 +3937,29 @@ async function writeStateToCloud(){
   const passwordAtStart = encryptionPassword;
   if(!cloudClient || !sessionAtStart || !passwordAtStart) return;
   try{
+    // Vastleggen wélke bewerking deze schrijving meeneemt, vóór het versleutelen (dat maakt de
+    // momentopname van `state`). Alles wat de gebruiker daarna typt hoort bij een hoger nummer.
+    const genAtStart = stateGeneration;
     const record = await finboEncryptState(state, passwordAtStart);
     // Nog steeds dezelfde gebruiker/sessie? Zo niet (bv. inmiddels uitgelogd), dan niet meer
     // wegschrijven — anders kan er een schrijving voor de verkeerde/oude sessie plaatsvinden.
     if(cloudSession !== sessionAtStart) return;
+
+    if(!forceOverwrite){
+      const { data: huidig, error: leesFout } = await cloudClient.from("finbo_state")
+        .select("ciphertext").eq("user_id", sessionAtStart.user.id).maybeSingle();
+      if(leesFout) throw leesFout;
+      if(huidig && lastSeenCiphertext !== null && huidig.ciphertext !== lastSeenCiphertext){
+        // Elders is er sinds onze laatste lees-/schrijfbeurt iets opgeslagen. Niet overschrijven.
+        saveConflictFlag = true;
+        saveErrorFlag = false;
+        cancelRetry();
+        clearTimeout(autoSaveTimer);
+        updateSaveStatus();
+        return;
+      }
+    }
+
     const { error } = await cloudClient.from("finbo_state").upsert({
       user_id: sessionAtStart.user.id,
       ciphertext: record.ciphertext,
@@ -3756,21 +3967,29 @@ async function writeStateToCloud(){
       iv: record.iv,
     });
     if(error) throw error;
+    lastSeenCiphertext = record.ciphertext;
+    saveConflictFlag = false;
     saveErrorFlag = false;
-    dirty = false;
+    cancelRetry();
+    savedGeneration = Math.max(savedGeneration, genAtStart);
+    // Alleen schoon als er sinds de momentopname niets meer bij is gekomen.
+    dirty = stateGeneration !== savedGeneration;
+    if(dirty){ clearTimeout(autoSaveTimer); autoSaveTimer = setTimeout(writeStateToCloud, AUTOSAVE_DEBOUNCE_MS); }
   }catch(err){
     console.error("Cloud-opslaan mislukt:", err);
     saveErrorFlag = true;
+    scheduleRetry();
   }
   updateSaveStatus();
 }
 
 function scheduleAutoSave(){
   dirty = true;
+  stateGeneration++;
   updateSaveStatus();
   if(!cloudSession) return;
   clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(writeStateToCloud, 500);
+  autoSaveTimer = setTimeout(writeStateToCloud, AUTOSAVE_DEBOUNCE_MS);
 }
 
 /* Vóór het tabblad/venster écht dichtgaat of ververst (klik op de ververs-knop van de browser
@@ -3812,7 +4031,12 @@ window.addEventListener("pagehide", () => {
 function updateSaveStatus(){
   document.querySelectorAll(".save-status").forEach(el=>{
     if(!cloudClient){
-      el.textContent = "Supabase-library kon niet geladen worden — check je internetverbinding.";
+      el.textContent = t("supabaseLibError");
+      el.className = "save-status error";
+      return;
+    }
+    if(saveConflictFlag){
+      el.textContent = t("cloudSaveConflictStatus");
       el.className = "save-status error";
       return;
     }
@@ -3838,15 +4062,30 @@ async function saveNow(){
   const btns = document.querySelectorAll("#saveNowBtn");
   btns.forEach(b=>{ b.disabled = true; b.textContent = t("saveNowSaving"); });
   await writeStateToCloud();
+  if(saveConflictFlag){
+    // Alleen bij een bewuste klik op Opslaan de vraag stellen — nooit midden in het typen.
+    if(confirm(t("cloudSaveConflictPrompt"))) await writeStateToCloud(true);
+    else { btns.forEach(b=>{ b.disabled = false; b.textContent = t("saveNowBtn"); }); return; }
+  }
   btns.forEach(b=>{ b.disabled = false; b.textContent = saveErrorFlag ? t("saveNowBtn") : t("saveNowSaved"); });
-  setTimeout(()=>{ document.querySelectorAll("#saveNowBtn").forEach(b=>{ b.textContent = t("saveNowBtn"); }); }, 1500);
+  setTimeout(()=>{ document.querySelectorAll("#saveNowBtn").forEach(b=>{ b.textContent = t("saveNowBtn"); }); }, SAVE_BUTTON_RESET_MS);
 }
 
 async function signOutCloud(){
   // Een eventueel nog geplande auto-save (debounce-timer) annuleren vóórdat we zelf meteen
   // wegschrijven — anders kan die losse timer later alsnog afgaan, ná het uitloggen hieronder.
   clearTimeout(autoSaveTimer);
+  cancelRetry();
   if(dirty) await writeStateToCloud();
+  /* writeStateToCloud vangt zijn eigen fouten af en gooit nooit, dus na het awaiten is `dirty` het
+     enige dat vertelt of het gelukt is. Tot v25 werd dat niet gecontroleerd: bij een mislukte
+     laatste schrijving logde de app gewoon uit en was alles sinds de vorige geslaagde opslag weg —
+     zonder één signaal. Juist iemand die "opslaan mislukt" ziet en dan even opnieuw wil inloggen,
+     raakte zo zijn werk kwijt. Nu is dat een expliciete keuze van de gebruiker. */
+  if(dirty){
+    const toch = confirm(t("signOutUnsavedWarn"));
+    if(!toch){ updateSaveStatus(); return false; }
+  }
   if(cloudClient) await cloudClient.auth.signOut();
   // Een expliciete uitlog-actie wist het 8-uur-onthouden versleutelingswachtwoord (issue #6) ook
   // meteen weer — dat "onthouden" is puur bedoeld om verversen te overbruggen, niet om na bewust
@@ -3854,7 +4093,9 @@ async function signOutCloud(){
   if(cloudSession) clearEncPasswordForSession(cloudSession.user.id);
   cloudSession = null;
   encryptionPassword = null;
+  dirty = false;
   renderAuthGate();
+  return true;
 }
 
 /* ---------- AUTH GATE: login + versleutelingswachtwoord vóór de rest van de app laadt ---------- */
@@ -3946,10 +4187,22 @@ function renderEncryptionPrompt(){
   el.innerHTML = authGateHTML(`<p>Bezig met controleren…</p>`);
   cloudClient.from("finbo_state").select("*").eq("user_id", cloudSession.user.id).maybeSingle().then(({ data, error }) => {
     if(error){
-      el.innerHTML = authGateHTML(`<p class="auth-gate-error">${error.message}</p>`);
+      // Tot v25 was dit een doodlopend scherm: alleen de foutmelding, geen knop. De enige uitweg
+      // was de pagina handmatig verversen.
+      el.innerHTML = authGateHTML(`
+        <p class="auth-gate-error">${escapeHtml(error.message || String(error))}</p>
+        <button id="cloudRetryBtn" class="auth-gate-btn">${t("retryBtn")}</button>
+        <button id="authSignOutBtn" class="ghost">${t("logoutBtn")}</button>`);
+      const retry = document.getElementById("cloudRetryBtn");
+      if(retry) retry.onclick = () => renderAuthGate();
+      const uit = document.getElementById("authSignOutBtn");
+      if(uit) uit.onclick = () => signOutCloud();
       return;
     }
     if(data){
+      // Vastleggen welke versie deze sessie gezien heeft, zodat een latere schrijving kan merken
+      // dat er elders iets overheen is gegaan (zie lastSeenCiphertext).
+      lastSeenCiphertext = data.ciphertext;
       // Staat er nog een niet-vervallen versleutelingswachtwoord voor dit account uit een eerdere
       // verversing binnen de laatste 8 uur (issue #6)? Dan meteen zelf ontsleutelen en doorstarten,
       // zonder de gebruiker opnieuw te laten typen.
@@ -4146,6 +4399,9 @@ function renderProfilePanel(){
   if(!panel || !backdrop) return; // nog niet in de DOM tijdens de allereerste boot
   panel.classList.toggle("open", profilePanelOpen);
   panel.setAttribute("aria-hidden", profilePanelOpen ? "false" : "true");
+  // Zie de lade: aria-hidden alleen is niet genoeg, de sluitknop en de drie tabbladen bleven
+  // anders tabbaar terwijl het paneel dicht is.
+  if("inert" in panel) panel.inert = !profilePanelOpen;
   backdrop.classList.toggle("open", profilePanelOpen);
   document.getElementById("profileBtn").classList.toggle("active", profilePanelOpen);
   document.getElementById("profilePanelTitle").textContent = t("profilePanelTitle");
@@ -4248,7 +4504,7 @@ function renderBucketAccordion(){
         <div class="profile-bucket-body">
           <div class="profile-cat-add-row">
             <div class="profile-cat-add-field">
-              <input type="text" maxlength="20" placeholder="${t('profileCategoryNamePlaceholder')}" data-cat-input="${b.key}">
+              <input type="text" maxlength="${MAX_CATEGORY_NAME_LEN}" placeholder="${t('profileCategoryNamePlaceholder')}" data-cat-input="${b.key}">
               <div class="profile-cat-add-field-foot">
                 <span class="profile-cat-inline-msg" data-cat-err="${b.key}"></span>
                 <span class="profile-cat-counter" data-cat-counter="${b.key}">0 / 20</span>
@@ -4277,7 +4533,7 @@ function renderBucketAccordion(){
     const addBtn = listEl.querySelector(`[data-cat-add="${bucket}"]`);
     const validateInput = () => {
       const v = input.value;
-      counter.textContent = `${v.length} / 20`;
+      counter.textContent = `${v.length} / ${MAX_CATEGORY_NAME_LEN}`;
       counter.classList.toggle("warn", v.length >= 18);
       const trimmed = v.trim();
       const dup = !!trimmed && state.categories.some(c => c.bucket === bucket && c.name.toLowerCase() === trimmed.toLowerCase());
@@ -4344,7 +4600,7 @@ function renderBucketCategoryList(bucket){
       const linkRows = usage.map(({month, entry}) => `
         <div class="profile-cat-link-row" data-month="${month.key}" data-entry="${encodeURIComponent(entry.naam)}">
           <div class="profile-cat-link-desc">
-            <span class="who">${entry.naam}</span> —
+            <span class="who">${escapeHtml(entry.naam)}</span> —
             <span class="amt ${entry.amt>=0?'credit':'debit'}">${entry.amt>=0?'+':'−'} € ${fmt(Math.abs(entry.amt))}</span>
             <span class="profile-cat-link-month mono">${month.key}</span>
           </div>
@@ -4372,7 +4628,7 @@ function renderBucketCategoryList(bucket){
       <div class="profile-cat-row">
         <div class="profile-cat-row-main">
           <span class="profile-cat-swatch"></span>
-          <span class="profile-cat-name">${cat.name}</span>
+          <span class="profile-cat-name">${escapeHtml(cat.name)}</span>
           ${badge}
           ${isUsed ? `<button type="button" class="profile-cat-manage-link" data-toggle="${cat.id}">${isExpanded ? t("profileCategoryHideLinksBtn") : t("profileCategoryManageLinksBtn")}</button>` : ""}
           ${deleteBtn}
@@ -4523,9 +4779,11 @@ function renderProfileAccountTab(body){
     btn.disabled = false;
   };
 
-  document.getElementById("profileSignOutBtn").onclick = () => {
-    closeProfilePanel();
-    signOutCloud();
+  document.getElementById("profileSignOutBtn").onclick = async () => {
+    // Bewust awaiten: signOutCloud kan om bevestiging vragen als er niet-opgeslagen werk is, en
+    // pas daarna sluit het paneel — anders klapt het paneel dicht boven een vraag die nog openstaat.
+    const uit = await signOutCloud();
+    if(uit) closeProfilePanel();
   };
 }
 
@@ -4691,7 +4949,7 @@ function renderTabs(){
   const bd = basisdataScenario();
   const bdBtn = document.createElement("button");
   bdBtn.className = "tab-group-head tab-group-head-direct" + (state.activeView.type==="scenario" && state.activeView.index===0 ? " active":"");
-  bdBtn.innerHTML = `<span class="tab-group-label">${bd.label}</span>`;
+  bdBtn.innerHTML = `<span class="tab-group-label">${escapeHtml(bd.label)}</span>`;
   bdBtn.onclick = ()=>{ state.activeScenario = 0; state.activeView = {type:"scenario", index:0}; renderAll(); };
   bdGroup.appendChild(bdBtn);
 
@@ -4752,6 +5010,7 @@ function renderTabs(){
       delBtn.onclick = (e) => {
         e.stopPropagation();
         if(confirm(t("deleteBudgetConfirm"))){
+          detachMonthsFromBudget(b.id);
           state.budgets = state.budgets.filter(x=>x!==b);
           if(state.activeView.type==="budget" && state.activeView.id===b.id){
             state.activeScenario = 0;
@@ -4803,7 +5062,7 @@ function renderTabs(){
       const b = document.createElement("button");
       b.className = "tab" + (state.activeView.type==="scenario" && state.activeView.index===i ? " active":"");
       const labelText = sc.label === String(sc.jaar) ? sc.label : `${sc.label} · ${sc.jaar}`;
-      b.innerHTML = `<span class="tab-idx">${String(i+1).padStart(2,"0")}</span>${labelText}`;
+      b.innerHTML = `<span class="tab-idx">${String(i+1).padStart(2,"0")}</span>${escapeHtml(labelText)}`;
       b.onclick = ()=>{ state.activeScenario = i; state.activeView = {type:"scenario", index:i}; renderAll(); };
       row.appendChild(b);
 
@@ -4820,10 +5079,22 @@ function renderTabs(){
         delBtn.onclick = (e) => {
           e.stopPropagation();
           if(confirm(t("deleteScenarioConfirm"))){
+            /* Het jaar waar je NU op staat vasthouden, niet het jaar dat je verwijdert.
+               Tot v25 werd het nieuwe actieve jaar berekend uit de index van het verwijderde jaar
+               (`idx-1`), waardoor je bij het wissen van 2027 terwijl je op 2029 stond opeens op
+               Basisdata belandde. Maandbudgetten en maanden deden dit al goed: alleen verspringen
+               als je op het verwijderde item zelf stond.
+               Scenario's worden bovendien op POSITIE geadresseerd (activeView.index), dus na het
+               wegvallen van een eerder jaar moet die index meeschuiven — anders wijst hij stil naar
+               een ander jaar dan je dacht. */
             const idx = state.scenarios.indexOf(sc);
+            const huidig = state.scenarios[state.activeScenario] || state.scenarios[0];
             state.scenarios = state.scenarios.filter(x=>x!==sc);
-            state.activeScenario = Math.max(0, Math.min(idx-1, state.scenarios.length-1));
-            state.activeView = {type:"scenario", index: state.activeScenario};
+            const nieuweIndex = (huidig === sc)
+              ? Math.max(0, Math.min(idx - 1, state.scenarios.length - 1))
+              : Math.max(0, state.scenarios.indexOf(huidig));
+            state.activeScenario = nieuweIndex;
+            state.activeView = {type:"scenario", index: nieuweIndex};
             renderAll();
           }
         };
@@ -5092,7 +5363,7 @@ function categoryBasisdataUsage(cat){
 function createCategory(name, bucket){
   const trimmed = (name||"").trim();
   if(!trimmed) return { error:"empty" };
-  if(trimmed.length > 20) return { error:"toolong" };
+  if(trimmed.length > MAX_CATEGORY_NAME_LEN) return { error:"toolong" };
   if(!CATEGORY_BUCKET_KEYS.includes(bucket)) return { error:"invalidbucket" };
   if(state.categories.some(c => c.bucket === bucket && c.name.toLowerCase() === trimmed.toLowerCase())) return { error:"duplicate" };
   const category = { id:"cat-"+Date.now()+"-"+Math.random().toString(36).slice(2,7), name:trimmed, bucket };
@@ -5172,7 +5443,7 @@ function renderCard(key, cat, opts={}){
     const row = document.createElement("div");
     row.className = "row";
     row.innerHTML = `
-      ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${breakdownKey}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
+      ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${escapeHtml(breakdownKey)}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
       ${opts.salaryPicker ? `<button type="button" class="role-btn salary-btn ${isSalary?'active':''}" title="${escapeHtml(isSalary ? t('salaryRoleBtnUnset') : t('salaryRoleBtnSet'))}" aria-pressed="${isSalary}">${isSalary ? "★" : "☆"}</button>` : ""}
       <input class="label-input" value="${displayLabel}" ${labelEditable ? "" : "disabled"} />
       <div class="value-wrap">
@@ -5314,9 +5585,24 @@ function renderIncomeCard(s){
    kaarttotaal komt van de bijbehorende totals-functie. Gedeeld door de Basisdata- en de
    budgetversie, zodat die twee niet uit elkaar kunnen lopen. */
 function offsetCardOpts(items, enabled, totalOverride){
-  // Toelichtingen van een vorige render altijd eerst weghalen — ook als de aftrek nu uit staat,
-  // anders blijft er een "is hier al van afgetrokken"-regel onder een bedrag staan dat het niet meer is.
-  findOffsetPairs(items).forEach(p => { p.tgt.note = undefined; });
+  /* Toelichtingen van een vorige render eerst weghalen — over ALLE regels, niet alleen over de
+     regels die nu nog doelwit zijn. Dat laatste stond hier tot v25, en dan bleef precies het geval
+     staan dat je wilt opruimen: haal je de koppeling weg (of verwijder je de bronregel), dan is er
+     geen paar meer, dus werd er niets gewist en hield de doelregel eeuwig de grijze tekst
+     "Warmtefonds (€ 50,00) is hier al van afgetrokken" — naast een bedrag waar niets meer van
+     afgetrokken wordt. `note` zit in `state`, dus die onzin werd ook opgeslagen, gesynct en
+     meegeëxporteerd.
+     Alleen áfrek-toelichtingen wissen: `note` wordt ook gebruikt voor "€ 0,00 — geen transactie
+     gevonden" bij het toepassen van een maand op een budget. Onderscheiden gebeurt aan de zinsnede
+     zelf, en bewust niet via een extra veld in `state`: notities zijn volledig afgeleid, en een
+     opgeslagen soort-veld zou bij "toepassen ongedaan maken" een verschil opleveren tussen de
+     momentopname en de herstelde toestand. */
+  const isOffsetNote = (it) => {
+    if(!it || !it.note) return false;
+    const nl = String(it.note.nl || ""), en = String(it.note.en || "");
+    return nl.includes("is hier al van afgetrokken") || en.includes("already subtracted here");
+  };
+  items.forEach(it => { if(isOffsetNote(it)) it.note = undefined; });
   const pairs = enabled ? findOffsetPairs(items) : [];
   if(!pairs.length) return {};
 
@@ -5445,11 +5731,16 @@ let importBasisdataStep = "upload"; // "upload" | "review" | "success"
 let importBasisdataRows = [];       // [{id, name, amt (signed: - = kosten, + = inkomen), bucket, catId, entries}]
 let importBasisdataSourceLabel = "";
 let importBasisdataSuccessInfo = null; // pas gevuld ná bevestigen, voor het succes-scherm
+/* Kladlijst van herkenregels die tijdens het indelen zijn "geleerd", gesleuteld op de
+   tegenpartijnaam in kleine letters. Blijft buiten `state` tot de gebruiker de import bevestigt —
+   annuleren gooit hem simpelweg weg (zie resetImportBasisdataUI). */
+const importBasisdataPendingRules = new Map();
 
 function resetImportBasisdataUI(){
   importBasisdataStep = "upload";
   importBasisdataRows = [];
   importSplitSelection.clear();
+  importBasisdataPendingRules.clear();
   importBasisdataSourceLabel = "";
   importBasisdataSuccessInfo = null;
 }
@@ -5504,7 +5795,7 @@ function buildImportBasisdataRows(rows){
     const result = classifyTransaction(r);
     if(result.cat === "ignore") return; // terugboeking/herincasso, zie classifyTransaction
 
-    const rawNaam = (result.naam || result.label || "Onbekend").trim();
+    const rawNaam = (result.naam || result.label || t("unknownCounterparty")).trim();
     const sleutel = counterpartyKey(rawNaam);
     const amt = result.amt;                    // rauw en getekend: - = af, + = bij
     const datum = r["Datum"] || "";
@@ -5538,7 +5829,7 @@ function buildImportBasisdataRows(rows){
   perTegenpartij.forEach(rij=>{
     const debet = Math.round(rij.debet*100)/100;
     const credit = Math.round(rij.credit*100)/100;
-    if(debet <= 0.001 && credit <= 0.001) return;
+    if(debet <= CENT_EPSILON && credit <= CENT_EPSILON) return;
     // Bestaat er al een eigen categorie met precies deze naam in dezelfde groep, koppel 'm dan
     // meteen. Zonder dit bleven zelfgemaakte categorieën bij elke import ongebruikt staan en moest
     // je ze rij voor rij opnieuw aanwijzen. Werkt vooral samen met geleerde regels: die geven een
@@ -5556,7 +5847,7 @@ function buildImportBasisdataRows(rows){
       suggestion: rij.suggestion,
       debet, credit,
       // Standaardkeuze: staat er maar één kant op, dan die; staan er beide, dan het saldo.
-      mode: (debet > 0.001 && credit > 0.001) ? "net" : (credit > 0.001 ? "credit" : "debet"),
+      mode: (debet > CENT_EPSILON && credit > CENT_EPSILON) ? "net" : (credit > CENT_EPSILON ? "credit" : "debet"),
       entries: rij.entries.sort((a,b)=> String(a.datum).localeCompare(String(b.datum))),
       bucket: bucketVoorstel,
       catId: passendeCat ? passendeCat.id : null,
@@ -5594,7 +5885,7 @@ function makeImportRowFromEntries(basis, entries, tag){
   credit = Math.round(credit*100)/100;
   // Alleen het voorstel van de herkenning meenemen als het nog ergens op slaat: bij een
   // afgesplitste bijschrijvingen-rij zegt "Boodschappen" niets meer.
-  const houdVoorstel = basis.suggestion && debet > 0.001;
+  const houdVoorstel = basis.suggestion && debet > CENT_EPSILON;
   return {
     id: basis.id + ":" + tag,
     name: basis.name,
@@ -5606,7 +5897,7 @@ function makeImportRowFromEntries(basis, entries, tag){
     splitKind: tag,
     suggestion: houdVoorstel ? basis.suggestion : null,
     debet, credit,
-    mode: (debet > 0.001 && credit > 0.001) ? "net" : (credit > 0.001 ? "credit" : "debet"),
+    mode: (debet > CENT_EPSILON && credit > CENT_EPSILON) ? "net" : (credit > CENT_EPSILON ? "credit" : "debet"),
     entries: entries.slice(),
     bucket: houdVoorstel ? basis.suggestion.bucket : null,
     catId: null,
@@ -5620,7 +5911,7 @@ function splitImportBasisdataRow(rowId){
   const idx = importBasisdataRows.findIndex(r => r.id === rowId);
   if(idx === -1) return false;
   const r = importBasisdataRows[idx];
-  if(!(r.debet > 0.001 && r.credit > 0.001)) return false;
+  if(!(r.debet > CENT_EPSILON && r.credit > CENT_EPSILON)) return false;
   const af = r.entries.filter(e => e.amt < 0);
   const bij = r.entries.filter(e => e.amt > 0);
   if(!af.length || !bij.length) return false;
@@ -5673,13 +5964,21 @@ function importRowDisplayLabel(r){
     if(cat) return cat.name;
   }
   const basis = (r.suggestion && r.suggestion.label) ? r.suggestion.label : r.name;
-  // Een afgesplitste rij krijgt er een woordje bij ("(af)", "(deel 1)"). Zonder dat zouden de
-  // helften van dezelfde tegenpartij dezelfde naam houden, en dan voegt
-  // computeImportBasisdataResultingLines ze in dezelfde groep gewoon weer samen — precies wat je
-  // met splitsen probeerde te voorkomen. Kies je een categorie, dan is die naam leidend en
-  // verdwijnt het woordje weer.
+  /* Een afgesplitste rij krijgt er een woordje bij ("(af)", "(deel 1)"). Zonder dat zouden de
+     helften van dezelfde tegenpartij dezelfde naam houden, en dan voegt
+     computeImportBasisdataResultingLines ze in dezelfde groep gewoon weer samen — precies wat je
+     met splitsen probeerde te voorkomen. Kies je een categorie, dan is die naam leidend en
+     verdwijnt het woordje weer.
+     Ook de TEGENPARTIJ hoort in dat woordje. Splits je Hornbach én Praxis, en stellen die allebei
+     "Bouwmarkt" voor, dan heetten beide helften tot v25 "Bouwmarkt (deel 1)" en plakten ze alsnog
+     aan elkaar — met als extra gevolg dat applyImportBasisdata er een categorie van maakte die
+     letterlijk "Bouwmarkt (deel 1)" heette. De naam van de tegenpartij houdt ze uit elkaar; het
+     voorstel zelf blijft voorop staan, zodat de regel leesbaar blijft. */
   const tag = importRowSplitTag(r);
-  return tag ? `${basis} (${tag})` : basis;
+  if(!tag) return basis;
+  const herkomst = (r.name||"").trim();
+  const anders = herkomst && herkomst.trim().toLowerCase() !== (basis||"").trim().toLowerCase();
+  return anders ? `${basis} (${herkomst} — ${tag})` : `${basis} (${tag})`;
 }
 
 /* Kort, leesbaar woord voor de herkomst van een afgesplitste rij. Leeg voor een gewone rij. */
@@ -5734,7 +6033,25 @@ function computeImportBasisdataResultingLines(bucketKey){
     const cat = findCategory(g.catId);
     return { label: cat ? cat.name : "?", amt: g.sum, merged: g.sources.length, sources: g.sources, role: g.role };
   });
-  return [...merged, ...solo];
+
+  /* Laatste samenvoeging over de twee groeperingen heen.
+     Hierboven worden gecategoriseerde rijen op categorie gegroepeerd en ongecategoriseerde op hun
+     voorstelnaam — in twee gescheiden verzamelingen die elkaar niet zien. Zet je bij een import
+     twee van de vier "Boodschappen"-rijen op "Geen categorie", dan leverde dat twee Basisdata-regels
+     met exact dezelfde naam in dezelfde groep op. Alles in de app (maand-versus-budget, de
+     aftrekkoppelingen, het categoriegebruik) koppelt op naam, dus dat is precies de kapotte
+     toestand waar het commentaar hierboven zelf voor waarschuwt. */
+  const perNaam = new Map();
+  [...merged, ...solo].forEach(r => {
+    const k = (r.label||"").trim().toLowerCase();
+    const best = perNaam.get(k);
+    if(!best){ perNaam.set(k, { ...r, sources: r.sources.slice() }); return; }
+    best.amt += r.amt;
+    best.sources = best.sources.concat(r.sources);
+    best.merged = best.sources.length;
+    best.role = best.role || r.role;
+  });
+  return [...perNaam.values()];
 }
 
 function importBasisdataProgress(){
@@ -5751,7 +6068,7 @@ function handleImportBasisdataCSVUpload(e){
   reader.onload = (ev) => {
     try{
       const bytes = new Uint8Array(ev.target.result);
-      const text = new TextDecoder("windows-1252").decode(bytes);
+      const text = decodeBankBytes(bytes);
       const rows = parseCSV(text);
       importBasisdataRows = buildImportBasisdataRows(rows);
       if(!importBasisdataRows.length){ alert(t("importBasisdataNoRowsError")); return; }
@@ -5783,7 +6100,7 @@ function handleImportBasisdataPDFUpload(e){
 
 function renderImportBasisdataRowHtml(r){
   const bedrag = importRowAmount(r);
-  const heeftBeide = (r.debet > 0.001) && (r.credit > 0.001);
+  const heeftBeide = (r.debet > CENT_EPSILON) && (r.credit > CENT_EPSILON);
   const expandKey = `importbd::${r.id}`;
   const isOpen = expandedBreakdowns.has(expandKey);
 
@@ -5848,8 +6165,8 @@ function renderImportBasisdataRowHtml(r){
   // aan beide kanten iets staat is er iets te kiezen; anders zou een keuzeknop alleen maar ruis zijn.
   const bedragen = `
     <span class="import-bd-amt-pair">
-      ${r.debet > 0.001 ? `<span class="import-bd-amt neg" title="${escapeHtml(t("importBasisdataDebetLabel"))}">−€ ${fmt(r.debet)}</span>` : ""}
-      ${r.credit > 0.001 ? `<span class="import-bd-amt pos" title="${escapeHtml(t("importBasisdataCreditLabel"))}">+€ ${fmt(r.credit)}</span>` : ""}
+      ${r.debet > CENT_EPSILON ? `<span class="import-bd-amt neg" title="${escapeHtml(t("importBasisdataDebetLabel"))}">−€ ${fmt(r.debet)}</span>` : ""}
+      ${r.credit > CENT_EPSILON ? `<span class="import-bd-amt pos" title="${escapeHtml(t("importBasisdataCreditLabel"))}">+€ ${fmt(r.credit)}</span>` : ""}
     </span>`;
 
   const modeKeuze = heeftBeide ? `
@@ -5920,9 +6237,17 @@ function wireImportBasisdataRowHandlers(container){
        Anders kreeg je "NETFLIX INTERNATIONAL B.V." als postnaam in je budget.
      Er wordt ook geleerd als je een al voorgestelde groep BEVESTIGT: dat is net zo goed een
      uitspraak van de gebruiker, en zonder dat zou een voorstel nooit een eigen regel worden. */
+  /* Belangrijk: dit schrijft NIET meteen in state.userRules, maar in een kladlijst die pas bij het
+     bevestigen wordt vastgelegd (zie applyImportBasisdata). Tot v25 ging elke pilklik rechtstreeks
+     naar `state`, waarna renderAll() → scheduleAutoSave() het binnen 500 ms naar de cloud schreef.
+     Veertig rijen indelen en dan op Annuleren drukken liet dus veertig regels achter die elke
+     volgende import stilletjes stuurden — terwijl de annuleerknop om bevestiging vraagt alsof hij
+     weggooit, en het commentaar bovenaan dit scherm het omgekeerde belooft. */
   const leer = (row) => {
     if(!row || !row.bucket || !row.matchName) return;
-    rememberUserRule(row.matchName, row.bucket, importRowDisplayLabel(row));
+    importBasisdataPendingRules.set((row.matchName||"").trim().toLowerCase(), {
+      match: row.matchName, bucket: row.bucket, label: importRowDisplayLabel(row),
+    });
   };
 
   container.querySelectorAll(".import-bd-pill").forEach(btn=>{
@@ -6150,10 +6475,32 @@ function applyImportBasisdata(){
     return vorige ? (vorige.l||"").trim().toLowerCase() : null;
   })();
 
-  bd.income.items = linesByBucket.income.map(l=>({ l: l.label, v: Math.round(Math.max(0,l.amt)*100)/100 }));
-  bd.vasteLasten.items = linesByBucket.vasteLasten.map(l=>({ l: l.label, v: Math.round(Math.abs(l.amt)*100)/100 }));
-  bd.abonnementen.items = linesByBucket.abonnementen.map(l=>({ l: l.label, v: Math.round(Math.abs(l.amt)*100)/100 }));
-  bd.variabeleLasten.items = linesByBucket.variabeleLasten.map(l=>({ l: l.label, v: Math.round(Math.abs(l.amt)*100)/100 }));
+  /* Van bankbedrag naar postbedrag. In het afschrift is een afschrijving negatief en een
+     bijschrijving positief; in FinBo staat een kostenpost als positief getal in een kostengroep.
+     De omrekening is dus een TEKENOMKERING voor de drie kostengroepen, niet Math.abs.
+     Tot v25 stond hier wél Math.abs (en Math.max(0,…) voor inkomsten), met drie stille fouten:
+      - een belastingteruggave van € 1.200 die je bij Vaste lasten zette werd € 1.200 kósten: een
+        verschil van € 2.400 op jaarbasis;
+      - een samengevoegde groep van −100 en +400 werd € 300 kosten in plaats van € 300 terug;
+      - een inkomstenregel die netto negatief uitkwam werd stil 0, mét role:"salary" — precies de
+        salariscascade die we eerder hebben gerepareerd, via een andere deur.
+     Een bedrag dat tegen zijn groep in gaat (een teruggave bij de kosten, een negatieve
+     inkomstenregel) blijft nu gewoon zichtbaar als negatief getal, en wordt hieronder ook expliciet
+     gemeld op het successcherm in plaats van weggepoetst. */
+  // Nu pas de tijdens het indelen geleerde herkenregels vastleggen (zie `leer`).
+  importBasisdataPendingRules.forEach(r => rememberUserRule(r.match, r.bucket, r.label));
+
+  const rond = n => Math.round(n*100)/100;
+  const tegendraads = [];
+  const naarPost = (l, bucket) => {
+    const v = bucket === "income" ? rond(l.amt) : rond(-l.amt);
+    if(v < 0) tegendraads.push({ label: l.label, bucket, v });
+    return { l: l.label, v };
+  };
+  bd.income.items = linesByBucket.income.map(l=>naarPost(l, "income"));
+  bd.vasteLasten.items = linesByBucket.vasteLasten.map(l=>naarPost(l, "vasteLasten"));
+  bd.abonnementen.items = linesByBucket.abonnementen.map(l=>naarPost(l, "abonnementen"));
+  bd.variabeleLasten.items = linesByBucket.variabeleLasten.map(l=>naarPost(l, "variabeleLasten"));
 
   // Voegde deze import meerdere tegenpartijen samen onder één naam (drie supermarkten die allemaal
   // "Boodschappen" voorstelden), dan is die naam functioneel precies wat een categorie is. Hem niet
@@ -6166,6 +6513,10 @@ function applyImportBasisdata(){
   CATEGORY_BUCKET_KEYS.forEach(bucket=>{
     linesByBucket[bucket].forEach(l=>{
       if(l.merged < 2) return;
+      // Een naam die alleen door het splitsen ontstaan is ("Bouwmarkt (Praxis — deel 1)") is geen
+      // categorie maar een gelegenheidslabel; die hoort niet permanent onder Profiel > Categorieën
+      // te belanden.
+      if(/\(.*\)\s*$/.test(l.label||"")) return;
       const bestaat = state.categories.some(c => c.bucket === bucket
         && c.name.trim().toLowerCase() === (l.label||"").trim().toLowerCase());
       if(bestaat) return;
@@ -6187,6 +6538,7 @@ function applyImportBasisdata(){
   importBasisdataSuccessInfo = {
     sourceLabel: importBasisdataSourceLabel, linesByBucket, nieuweCategorieen,
     salarisNaam: salarisItem ? salarisItem.l : null,
+    tegendraads,
   };
   importBasisdataStep = "success";
   syncComputedLoons();
@@ -6210,6 +6562,15 @@ function renderImportBasisdataSuccessStep(container){
     ? `<p class="import-bd-success-cats">${escapeHtml(t("importBasisdataSuccessSalary")(info.salarisNaam))}</p>`
     : `<p class="import-bd-success-warn">${escapeHtml(t("importBasisdataSuccessNoSalary"))}</p>`;
 
+  /* Regels die tegen hun groep in gaan (een teruggave tussen de kosten, een negatieve
+     inkomstenregel) worden bewust benoemd. Ze zijn niet fout — een teruggave die de energiekosten
+     verlaagt is precies goed — maar ze staan als negatief getal in de groep, en dat wil je gezien
+     hebben in plaats van ontdekken. */
+  const tegenHtml = (info.tegendraads && info.tegendraads.length)
+    ? `<p class="import-bd-success-warn">${escapeHtml(t("importBasisdataSuccessOpposite")(
+        info.tegendraads.map(x=>`${x.label} (€ ${fmt(x.v)})`).join(", ")))}</p>`
+    : "";
+
   const catsHtml = (info.nieuweCategorieen && info.nieuweCategorieen.length)
     ? `<p class="import-bd-success-cats">${escapeHtml(t("importBasisdataSuccessNewCats")(info.nieuweCategorieen.map(c=>c.name).join(", ")))}</p>`
     : "";
@@ -6220,6 +6581,7 @@ function renderImportBasisdataSuccessStep(container){
       <p>${t("importBasisdataSuccessNote")(escapeHtml(info.sourceLabel))}</p>
       <ul>${summaryHtml}</ul>
       ${salarisHtml}
+      ${tegenHtml}
       ${catsHtml}
       <button type="button" id="importBdDoneBtn" style="font-family:'Segoe UI',sans-serif; font-size:13px; font-weight:600; padding:9px 16px; border-radius:5px; cursor:pointer; background:var(--gold); border:1px solid var(--gold); color:#fff;">${t("importBasisdataDoneBtn")}</button>
     </div>
@@ -6305,7 +6667,7 @@ function renderBudgetCategories(){
   titleWrap.innerHTML = `
     <div class="card-head"><h2>${t("maandbudgetTitleLabel")}</h2></div>
     <div class="rows"><div class="row">
-      <input class="label-input" id="budgetTitleInput" value="${b.title}" />
+      <input class="label-input" id="budgetTitleInput" value="${escapeHtml(b.title)}" />
     </div></div>
   `;
   const titleInput = titleWrap.querySelector("#budgetTitleInput");
@@ -6340,7 +6702,7 @@ function renderBudgetPickerCard(m){
     <div class="compare-picker">
       <select id="budgetPickerSelect">
         <option value="" ${!m.budgetId ? "selected" : ""}>${t("noBudgetOption")}</option>
-        ${state.budgets.map(b=>`<option value="${b.id}" ${m.budgetId===b.id ? "selected" : ""}>${b.title}</option>`).join("")}
+        ${state.budgets.map(b=>`<option value="${escapeHtml(b.id)}" ${m.budgetId===b.id ? "selected" : ""}>${escapeHtml(b.title)}</option>`).join("")}
       </select>
     </div>
     ${linkedBudget ? `
@@ -6381,19 +6743,32 @@ function renderBudgetPickerCard(m){
    de kleurbetekenis van het verschil: bij "income" is méér dan begroot goed (groen), bij "cost"
    is méér dan begroot juist slecht (rood, boven budget). */
 function buildCompareRows(budgetItems, actualItems){
-  const map = {};
-  (budgetItems||[]).forEach(it=>{
-    if(!map[it.l]) map[it.l] = { label: it.l, budget:0, actual:0 };
-    map[it.l].budget = parseFloat(it.v)||0;
-  });
+  /* Een Map en niet `{}`: bij een gewoon object botsen labels met namen uit Object.prototype.
+     Een regel die letterlijk "toString" of "__proto__" heet werd door `if(!map[it.l])` als "bestaat
+     al" gezien en verdween daarna volledig uit Object.values() — inclusief zijn bedrag, óók uit het
+     subtotaal. Met __proto__ werd er bovendien op de prototype-keten geschreven.
+
+     En de sleutel is trim().toLowerCase(), niet het label zoals het er staat. applyMonthToBudget
+     koppelt namelijk wél zo, dus de twee helften van dezelfde functie waren het oneens over wat
+     "dezelfde regel" is: met "Energie" in het budget en "energie" in de maand voegde Toepassen ze
+     samen, waarna deze kaart ze weer als twee regels toonde — waarvan één rood als "deze maand niet
+     betaald", voor een rekening die juist wél betaald was. Een spatie achteraan was al genoeg. */
+  const map = new Map();
+  const sleutel = l => (l||"").trim().toLowerCase();
+  const pak = (it) => {
+    const k = sleutel(it.l);
+    if(!map.has(k)) map.set(k, { label: it.l, budget:0, actual:0 });
+    return map.get(k);
+  };
+  (budgetItems||[]).forEach(it=>{ pak(it).budget = parseFloat(it.v)||0; });
   (actualItems||[]).forEach(it=>{
-    if(!map[it.l]) map[it.l] = { label: it.l, budget:0, actual:0 };
-    map[it.l].actual = parseFloat(it.v)||0;
+    const r = pak(it);
+    r.actual = parseFloat(it.v)||0;
     // "entries": de individuele transacties achter dit werkelijke bedrag (zie buildMonthFromCSV) —
     // een begroot/budget-item heeft dit nooit, dat is een los ingevoerde plancijfer.
-    if(it.entries && it.entries.length) map[it.l].entries = it.entries;
+    if(it.entries && it.entries.length) r.entries = it.entries;
   });
-  return Object.values(map)
+  return [...map.values()]
     .map(r=>({ ...r, diff: r.actual - r.budget }))
     .sort((a,b)=> Math.max(Math.abs(b.budget),Math.abs(b.actual)) - Math.max(Math.abs(a.budget),Math.abs(a.actual)));
 }
@@ -6421,7 +6796,7 @@ function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
   wrap.className = "card";
   wrap.innerHTML = `
     <div class="card-head">
-      <div class="htitle">${CARD_ICONS[iconKey] || ""}<h2>${title}</h2></div>
+      <div class="htitle">${CARD_ICONS[iconKey] || ""}<h2>${escapeHtml(title)}</h2></div>
     </div>
     <div class="compare-head-row">
       <span class="compare-name"></span>
@@ -6652,20 +7027,20 @@ function renderReviewCard(m){
           const catsInBucket = state.categories.filter(c=>c.bucket===b.key);
           if(!catsInBucket.length) return "";
           return `<optgroup label="${t(b.titleKey)}">
-            ${catsInBucket.map(c=>`<option value="${c.id}" ${entry.catId===c.id ? "selected" : ""}>${c.name}</option>`).join("")}
+            ${catsInBucket.map(c=>`<option value="${escapeHtml(c.id)}" ${entry.catId===c.id ? "selected" : ""}>${escapeHtml(c.name)}</option>`).join("")}
           </optgroup>`;
         }).join("")}
       </select>` : "";
 
     row.innerHTML = `
       <input type="checkbox" class="review-row-check" ${entry.selected ? "checked" : ""} ${isAdded ? "disabled" : ""} />
-      <span class="review-name" title="${entry.naam}">
-        ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${breakdownKey}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
-        <span>${entry.naam}</span>
+      <span class="review-name" title="${escapeHtml(entry.naam)}">
+        ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${escapeHtml(breakdownKey)}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
+        <span>${escapeHtml(entry.naam)}</span>
       </span>
       <span class="review-amt mono ${entry.amt>=0?'pos':'neg'}">${sign} € ${fmt(Math.abs(entry.amt))}</span>
       <select class="review-select" ${isAdded ? "disabled" : ""}>
-        ${targets.map(o=>`<option value="${o.key}" ${defaultTarget===o.key ? "selected" : ""}>${o.label}</option>`).join("")}
+        ${targets.map(o=>`<option value="${escapeHtml(o.key)}" ${defaultTarget===o.key ? "selected" : ""}>${escapeHtml(o.label)}</option>`).join("")}
       </select>
       ${catSelectHtml}
       <button class="review-btn ${isAdded ? "added" : ""}">${isAdded ? t("reverseBtn") : t("addBtn")}</button>
@@ -6766,7 +7141,7 @@ function findMatchingOutstandingItem(budget, entry){
   if(!budget || !budget.outstanding) return null;
   const amt = Math.round(Math.abs(entry.amt)*100)/100;
   const key = entry.naam.trim().toLowerCase();
-  return budget.outstanding.items.find(it => it.l.trim().toLowerCase() === key && Math.abs((parseFloat(it.v)||0) - amt) < 0.01) || null;
+  return budget.outstanding.items.find(it => it.l.trim().toLowerCase() === key && Math.abs((parseFloat(it.v)||0) - amt) < AMOUNT_MATCH_EPSILON) || null;
 }
 
 function renderStornoReviewCard(m){
@@ -6827,11 +7202,11 @@ function renderStornoReviewCard(m){
     const defaultBudgetId = entry.budgetId || entry.addedBudgetId || "";
 
     row.innerHTML = `
-      <span class="review-name" title="${entry.naam}">${entry.naam}</span>
+      <span class="review-name" title="${escapeHtml(entry.naam)}">${escapeHtml(entry.naam)}</span>
       <span class="review-amt mono neg">− € ${fmt(Math.abs(entry.amt))}</span>
       <select class="review-select" ${isAdded ? "disabled" : ""}>
         <option value="" ${!defaultBudgetId ? "selected" : ""}>${t("noBudgetOptionShort")}</option>
-        ${state.budgets.map(b=>`<option value="${b.id}" ${defaultBudgetId===b.id ? "selected" : ""}>${b.title}</option>`).join("")}
+        ${state.budgets.map(b=>`<option value="${escapeHtml(b.id)}" ${defaultBudgetId===b.id ? "selected" : ""}>${escapeHtml(b.title)}</option>`).join("")}
       </select>
       <button class="review-btn ${isAdded ? "added" : ""}" ${(!isAdded && !defaultBudgetId) ? "disabled" : ""}>${isAdded ? t("reverseBtn") : t("addBtn")}</button>
     `;
@@ -7038,7 +7413,7 @@ function loonstijgingLegendHTML(){
   `;
 }
 
-/* Lijngrafiek "Netto inkomen vs kosten per maand" (bron: grafiekentabblad in Rekensheet 2026).
+/* Lijngrafiek "Netto inkomen vs kosten per maand".
    X-as = jaren, twee lijnen (netto inkomen per maand / vaste kosten per maand). Inclusief
    hover-crosshair die naar het dichtstbijzijnde jaar snapt en één tooltip met beide waarden,
    zoals de interactie-richtlijn voor lijn-/vlakgrafieken voorschrijft. */
@@ -7067,7 +7442,7 @@ function loonstijgingLineChart(data, selectedYear, onSelect){
     const v = chartMax*i/ticks;
     const y = yScale(v);
     gridSvg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="color-mix(in srgb, var(--text-onink) 8%, transparent)" stroke-width="1"/>`;
-    gridSvg += `<text x="${(padL-8).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8.5" fill="var(--text-onink-soft)" font-family="Segoe UI,sans-serif">€${Math.round(v).toLocaleString('nl-NL')}</text>`;
+    gridSvg += `<text x="${(padL-8).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8.5" fill="var(--text-onink-soft)" font-family="Segoe UI,sans-serif">€${Math.round(v).toLocaleString(fmtLocale())}</text>`;
   }
 
   const labelEvery = n > 9 ? 2 : 1;
@@ -7291,21 +7666,54 @@ function wireActions(monthObj, scenarioObj, budgetObj){
         const trimmed = text.trim();
         const data = trimmed.startsWith("<") ? extractEmbeddedDataFromHtml(text) : JSON.parse(text);
         if(!data) throw new Error(t("importError"));
-        state = data;
-        if(!state.activeView) state.activeView = {type:"scenario", index: state.activeScenario||0};
-        if(!state.months) state.months = [];
-        if(!state.lang) state.lang = "nl";
-        if(!state.loonstijging) state.loonstijging = DEFAULT_LOONSTIJGING.slice();
-        migrateState();
-        renderAll();
+
+        /* Het bestand wordt eerst volledig op een KOPIE beproefd: vorm controleren, aanvullen,
+           migreren en zelfs proefdraaien met renderAll(). Pas als dat allemaal lukt, wordt de echte
+           `state` vervangen.
+           Tot v25 gebeurde het omgekeerde — `state = data` stond bovenaan, en als de migratie of het
+           tekenen daarna struikelde ving de catch dat af met een melding terwijl de administratie al
+           weg was. Er is één cloudrij zonder versiegeschiedenis, en de eerstvolgende automatische
+           opslag (500 ms na de eerstvolgende klik) schreef de rommel eroverheen. Eén keer het
+           verkeerde bestand aanklikken in de bestandskiezer was genoeg. */
+        if(typeof data !== "object" || Array.isArray(data)) throw new Error(t("importShapeError"));
+        if(!Array.isArray(data.scenarios) || !data.scenarios.length) throw new Error(t("importShapeError"));
+        const heeftGroepen = data.scenarios.every(s => s && s.income && Array.isArray(s.income.items)
+          && s.vasteLasten && s.abonnementen && s.variabeleLasten);
+        const legacyVorm = data.income && data.vasteLasten && data.abonnementen && data.variabeleLasten;
+        if(!heeftGroepen && !legacyVorm) throw new Error(t("importShapeError"));
+
+        const vorigeState = state;
+        const kandidaat = data;
+        if(!kandidaat.activeView) kandidaat.activeView = {type:"scenario", index: kandidaat.activeScenario||0};
+        if(!kandidaat.months) kandidaat.months = [];
+        if(!kandidaat.lang) kandidaat.lang = "nl";
+        if(!kandidaat.loonstijging) kandidaat.loonstijging = DEFAULT_LOONSTIJGING.slice();
+        try{
+          state = kandidaat;
+          migrateState();
+          renderAll();
+        }catch(binnenErr){
+          // Terug naar precies waar de gebruiker was; er is niets verloren gegaan.
+          state = vorigeState;
+          renderAll();
+          throw binnenErr;
+        }
       }catch(err){ alert(t("importError") + err.message); }
     };
     reader.readAsText(file);
   };
+  /* "Herladen" en niet "Reset". Deze knop kán geen wijzigingen ongedaan maken: hij deed
+     location.reload(), en juist het verversen laat de beforeunload-hook de openstaande wijzigingen
+     nog snel opslaan — waarna ze meteen weer worden ingeladen. De knop beloofde dus het
+     tegenovergestelde van wat hij deed. Wat hij wél kan: de laatst opgeslagen versie uit de cloud
+     opnieuw ophalen, bijvoorbeeld nadat er elders iets is opgeslagen. Openstaande wijzigingen gaan
+     daarbij verloren, en dat wordt nu eerlijk gevraagd. */
   document.getElementById("resetBtn").onclick = () => {
-    if(confirm(t("resetConfirm"))){
-      location.reload();
-    }
+    if(!confirm(t("reloadConfirm"))) return;
+    clearTimeout(autoSaveTimer);
+    cancelRetry();
+    dirty = false; // zodat de beforeunload-hook niets meer wegschrijft
+    location.reload();
   };
   const delBtn = document.getElementById("deleteMonthBtn");
   if(delBtn && monthObj){
@@ -7333,6 +7741,7 @@ function wireActions(monthObj, scenarioObj, budgetObj){
   if(delBudgetBtn && budgetObj){
     delBudgetBtn.onclick = () => {
       if(confirm(t("deleteBudgetConfirm"))){
+        detachMonthsFromBudget(budgetObj.id);
         state.budgets = state.budgets.filter(b=>b!==budgetObj);
         state.activeView = {type:"scenario", index: 0};
         renderAll();
@@ -7376,7 +7785,7 @@ function renderBudgetSummary(){
   const totaalUitgaven = vasteLasten + abonnementen + variabeleLasten + outstanding;
   const over = income - totaalUitgaven;
   el.innerHTML = `
-    <h2>${b.title}</h2>
+    <h2>${escapeHtml(b.title)}</h2>
     <div class="stamp ${over<0?'negative':''}">
       <div class="stamp-label">${over<0? t("tekort") : t("overTeSpenderen")}</div>
       <div class="stamp-value">€ ${fmt(Math.abs(over))}</div>
@@ -7408,7 +7817,7 @@ function renderScenarioSummary(){
   const over = totals.overTeSpenderen[i];
   const el = document.getElementById("summary");
   el.innerHTML = `
-    <h2>${s.label} (${s.jaar})</h2>
+    <h2>${escapeHtml(s.label)} (${escapeHtml(s.jaar)})</h2>
     <div class="stamp ${over<0?'negative':''}">
       <div class="stamp-label">${over<0? t("tekort") : t("overTeSpenderen")}</div>
       <div class="stamp-value">€ ${fmt(Math.abs(over))}</div>
@@ -7449,14 +7858,18 @@ function renderMonthSummary(){
   let budgetLine = "";
   if(budget){
     const bIncome = sum(budget.income.items);
-    const bTotaalUitgaven = sum(budget.vasteLasten.items) + sum(budget.abonnementen.items) + sum(budget.variabeleLasten.items) + (budget.outstanding ? sum(budget.outstanding.items) : 0);
+    // vasteLastenTotalForBudget en niet sum(): een regel die via een aftrekkoppeling van een andere
+    // regel wordt afgetrokken, telt in de kale som twee keer mee (los én verwerkt in zijn doelregel).
+    // Dit was de enige plek die dat nog met sum() deed, waardoor de budgetpagina en de maandpagina
+    // over hetzelfde budget verschillende bedragen lieten zien.
+    const bTotaalUitgaven = vasteLastenTotalForBudget(budget) + sum(budget.abonnementen.items) + sum(budget.variabeleLasten.items) + (budget.outstanding ? sum(budget.outstanding.items) : 0);
     const bOver = bIncome - bTotaalUitgaven;
     const diff = over - bOver;
     secondStamp = `
       <div class="stamp ${bOver<0?'negative':''}">
         <div class="stamp-label">${bOver<0? t("tekort") : t("overTeSpenderen")}</div>
         <div class="stamp-value">€ ${fmt(Math.abs(bOver))}</div>
-        <div class="stamp-sub">${t("begrootSaldo")(budget.title)}</div>
+        <div class="stamp-sub">${escapeHtml(t("begrootSaldo")(budget.title))}</div>
       </div>
     `;
     budgetLine = `
@@ -7584,6 +7997,9 @@ function setNavDrawer(open){
   }
   drawer.classList.toggle("open", open);
   drawer.setAttribute("aria-hidden", open ? "false" : "true");
+  // inert waar de browser het kent: haalt de inhoud uit de tabvolgorde én uit de toegankelijkheids-
+  // boom, zodat aria-hidden en de werkelijke focusvolgorde niet langer tegenstrijdig zijn.
+  if("inert" in drawer) drawer.inert = !open;
   backdrop.classList.toggle("open", open);
   toggle.setAttribute("aria-expanded", open ? "true" : "false");
   if(open){
