@@ -437,6 +437,10 @@
     box-shadow:0 20px 50px rgba(0,0,0,.3); max-height:90vh; overflow-y:auto;
   }
   .confirm-card h3{ font-family:Georgia,serif; font-size:18px; margin:0 0 10px; color:var(--debit); }
+  /* Een waarschuwing is geen verwijderactie: goudkleurig in plaats van rood, zodat de rode kop
+     voorbehouden blijft aan "hier gaat iets onherroepelijk weg". */
+  .confirm-card h3.confirm-warn{ color:var(--gold); }
+  .confirm-actions button.primary{ background:var(--forest); border-color:var(--forest); color:#fff; }
   .confirm-card p{ font-size:13px; color:var(--text); line-height:1.6; margin:0 0 12px; }
   .confirm-card p.confirm-list{
     font-size:12.5px; color:var(--text-soft); background:var(--paper-2);
@@ -2009,6 +2013,12 @@ const i18n = {
     encryptionPromptTextExisting: "Voer je versleutelingswachtwoord in om je data te ontsleutelen.",
     encryptionPromptTitleNew: "Kies een versleutelingswachtwoord",
     encryptionPromptTextNew: "Dit wachtwoord versleutelt je data lokaal, vóórdat 'm naar de cloud gaat — bewaar het goed. Zonder dit wachtwoord is je data later niet meer terug te halen, ook niet door ons.",
+    encSavedTitle: "Heb je dit wachtwoord apart opgeslagen?",
+    encSavedText: "Dit wachtwoord verlaat je apparaat niet en staat nergens anders opgeslagen — niet bij ons, niet bij Supabase. Raak je het kwijt, dan is alles wat je vanaf nu invult onherstelbaar versleuteld. Er is geen \u201cwachtwoord vergeten\u201d.",
+    encSavedAdvice: "Zet het nu in je wachtwoordmanager, of schrijf het op en bewaar het ergens waar je het over een jaar nog terugvindt. Het is niet hetzelfde wachtwoord als waarmee je inlogt.",
+    encSavedCheckbox: "Ja, ik heb dit wachtwoord apart opgeslagen",
+    encSavedBackBtn: "Terug",
+    encSavedContinueBtn: "Doorgaan",
     encryptionPasswordLabel: "Versleutelingswachtwoord",
     encryptionConfirmLabel: "Bevestig wachtwoord",
     encryptionSubmitBtn: "Doorgaan",
@@ -2281,6 +2291,12 @@ const i18n = {
     encryptionPromptTextExisting: "Enter your encryption password to decrypt your data.",
     encryptionPromptTitleNew: "Choose an encryption password",
     encryptionPromptTextNew: "This password encrypts your data locally, before it's sent to the cloud — keep it safe. Without this password your data can't be recovered later, not even by us.",
+    encSavedTitle: "Have you stored this password somewhere safe?",
+    encSavedText: "This password never leaves your device and is stored nowhere else \u2014 not with us, not with Supabase. Lose it and everything you enter from now on is encrypted beyond recovery. There is no \u201cforgot password\u201d.",
+    encSavedAdvice: "Put it in your password manager now, or write it down and keep it somewhere you will still find it a year from now. It is not the same password you sign in with.",
+    encSavedCheckbox: "Yes, I have stored this password separately",
+    encSavedBackBtn: "Back",
+    encSavedContinueBtn: "Continue",
     encryptionPasswordLabel: "Encryption password",
     encryptionConfirmLabel: "Confirm password",
     encryptionSubmitBtn: "Continue",
@@ -4182,8 +4198,37 @@ function authGateHTML(inner){
   `;
 }
 
+/* Enter in een invoerveld = op de hoofdknop van dat blok drukken.
+   Klinkt vanzelfsprekend, maar in gewone HTML werkt dat alleen binnen een <form>, en de
+   inlogschermen en het profielpaneel bouwen hun velden los op. Gevolg: je typte je e-mailadres en
+   wachtwoord, drukte op Enter, en er gebeurde niets — je moest met de muis naar de knop. Bij het
+   aanmaken van een account tikte je dat twee keer achter elkaar mis (eerst de accountgegevens, dan
+   het versleutelingswachtwoord).
+   Eén luisteraar op het omhullende element is genoeg: die blijft bestaan terwijl de inhoud
+   eronder telkens opnieuw wordt opgebouwd. De "hoofdknop" is de knop met class="primary" binnen
+   hetzelfde blok — zo kiest Enter in het profielpaneel het juiste blok (e-mailadres bijwerken
+   versus wachtwoord bijwerken) en niet zomaar de eerste knop op het scherm. */
+function wireEnterSubmit(container){
+  if(!container || container.dataset.enterWired) return;
+  container.dataset.enterWired = "1";
+  container.addEventListener("keydown", (e) => {
+    if(e.key !== "Enter" || e.isComposing) return;
+    const veld = e.target;
+    if(!veld || veld.tagName !== "INPUT") return;
+    // Een vinkje of keuzerondje heeft zijn eigen Enter/spatie-gedrag; daar blijven we vanaf.
+    if(["checkbox","radio","button","submit","file"].includes(veld.type)) return;
+    const blok = veld.closest("div") || container;
+    const knop = blok.querySelector("button.primary:not([disabled])")
+              || container.querySelector("button.primary:not([disabled])");
+    if(!knop) return;
+    e.preventDefault();
+    knop.click();
+  });
+}
+
 function renderAuthGate(){
   const el = document.getElementById("authGate");
+  wireEnterSubmit(el);
   if(!cloudClient){
     el.style.display = "flex";
     el.innerHTML = authGateHTML(`<p class="auth-gate-error">Kon de cloud-database niet laden — check je internetverbinding en herlaad de pagina.</p>`);
@@ -4349,7 +4394,7 @@ function renderEncryptionPromptExisting(record){
     }
   };
   document.getElementById("encSubmitBtn").onclick = submit;
-  document.getElementById("encPasswordInput").addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
+  // (Enter wordt afgehandeld door wireEnterSubmit op #authGate — geldt voor élk scherm daarbinnen.)
   document.getElementById("authSignOutBtn").onclick = signOutCloud;
 }
 
@@ -4397,6 +4442,58 @@ function renderEncryptionPromptNew(){
   document.getElementById("firstTimeBlankBtn").onclick = () => proceedToNewPassword(false);
 }
 
+/* Laatste waarschuwing vóór het versleutelingswachtwoord in gebruik wordt genomen.
+   De tekst op het invulscherm zegt al dat het wachtwoord nergens anders bestaat, maar dat is een
+   regel die je leest terwijl je aan het typen bent — precies het moment waarop niemand stilstaat bij
+   wat "onherstelbaar" betekent. Hier wordt het één keer expliciet gevraagd, mét een vinkje, zodat
+   het een bewuste handeling is en geen zin die je overgeslagen hebt.
+   Bewust alleen bij het AANMAKEN: bij elke volgende keer inloggen weet de gebruiker het wachtwoord
+   al, en dan is dit alleen maar in de weg lopen.
+   Gebruikt hetzelfde .confirm-overlay/.confirm-card als het venster bij Account verwijderen. */
+function showEncryptionSavedWarning(onDoorgaan){
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.innerHTML = `
+    <div class="confirm-card">
+      <h3 class="confirm-warn">${escapeHtml(t("encSavedTitle"))}</h3>
+      <p>${escapeHtml(t("encSavedText"))}</p>
+      <p class="confirm-list">${escapeHtml(t("encSavedAdvice"))}</p>
+      <label class="confirm-check">
+        <input type="checkbox" id="encSavedCheck">
+        <span>${escapeHtml(t("encSavedCheckbox"))}</span>
+      </label>
+      <div class="confirm-actions">
+        <button type="button" id="encSavedBackBtn">${escapeHtml(t("encSavedBackBtn"))}</button>
+        <button type="button" class="primary" id="encSavedContinueBtn" disabled>${escapeHtml(t("encSavedContinueBtn"))}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const check = overlay.querySelector("#encSavedCheck");
+  const doorgaan = overlay.querySelector("#encSavedContinueBtn");
+  const sluit = () => { overlay.remove(); document.removeEventListener("keydown", opEscape, true); };
+  // Capture + stopPropagation: zie het venster bij Account verwijderen — anders vangt een
+  // Escape-handler elders op de pagina dezelfde toetsaanslag ook op.
+  const opEscape = (e) => { if(e.key !== "Escape") return; e.stopPropagation(); sluit(); };
+
+  check.onchange = () => { doorgaan.disabled = !check.checked; };
+  overlay.querySelector("#encSavedBackBtn").onclick = () => {
+    sluit();
+    // Terug naar het formulier met de ingetypte waarden er nog in — je wilt het wachtwoord kunnen
+    // overschrijven of nog even kopiëren, niet opnieuw beginnen.
+    const veld = document.getElementById("encPasswordInput");
+    if(veld) veld.focus();
+  };
+  overlay.onclick = (e) => { if(e.target === overlay) sluit(); };
+  document.addEventListener("keydown", opEscape, true);
+  check.focus();
+
+  doorgaan.onclick = () => { sluit(); onDoorgaan(); };
+}
+
 function renderEncryptionPromptNewPassword(){
   const el = document.getElementById("authGate");
   el.innerHTML = authGateHTML(`
@@ -4417,12 +4514,15 @@ function renderEncryptionPromptNewPassword(){
       errEl.style.display = "block";
       return;
     }
-    encryptionPassword = pw;
-    saveEncPasswordForSession(cloudSession.user.id, pw);
-    renderAuthGate();
-    bootApp();
-    dirty = true;
-    writeStateToCloud();
+    // Pas ná de waarschuwing wordt het wachtwoord echt in gebruik genomen en gaat de app open.
+    showEncryptionSavedWarning(() => {
+      encryptionPassword = pw;
+      saveEncPasswordForSession(cloudSession.user.id, pw);
+      renderAuthGate();
+      bootApp();
+      dirty = true;
+      writeStateToCloud();
+    });
   };
   document.getElementById("encSubmitBtn").onclick = submit;
   document.getElementById("authSignOutBtn").onclick = signOutCloud;
@@ -4479,6 +4579,7 @@ function renderProfilePanel(){
   const panel = document.getElementById("profilePanel");
   const backdrop = document.getElementById("profileBackdrop");
   if(!panel || !backdrop) return; // nog niet in de DOM tijdens de allereerste boot
+  wireEnterSubmit(panel);
   panel.classList.toggle("open", profilePanelOpen);
   panel.setAttribute("aria-hidden", profilePanelOpen ? "false" : "true");
   // Zie de lade: aria-hidden alleen is niet genoeg, de sluitknop en de drie tabbladen bleven
