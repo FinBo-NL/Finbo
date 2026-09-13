@@ -411,7 +411,51 @@
   .profile-panel-body button.primary:hover{ opacity:.9; }
   .profile-panel-body button.danger-outline{ border-color:color-mix(in srgb, var(--debit) 55%, transparent); color:var(--debit); }
   .profile-panel-body button.danger-outline:hover{ background:color-mix(in srgb, var(--debit) 10%, transparent); }
+  .profile-panel-body button.danger-solid{
+    background:var(--debit); border-color:var(--debit); color:#fff; font-weight:600;
+  }
+  .profile-panel-body button.danger-solid:hover{ filter:brightness(1.08); }
   .profile-panel-body button:disabled{ opacity:.6; cursor:default; }
+  /* Het verwijderblok staat bewust apart en visueel afgezonderd onderaan het accounttabblad, zodat
+     je er niet per ongeluk in belandt terwijl je je e-mailadres aan het wijzigen bent. */
+  .profile-danger-zone{
+    border:1px solid color-mix(in srgb, var(--debit) 35%, transparent);
+    border-radius:6px;
+    padding:14px;
+    background:color-mix(in srgb, var(--debit) 5%, transparent);
+  }
+
+  /* Bevestigingsvenster voor het verwijderen van een account. Bewust een eigen venster in de app en
+     geen confirm() van de browser: die is met één Enter weg te klikken, toont geen opsomming van wat
+     er precies verdwijnt, en heeft geen plek voor de "eerst een kopie downloaden"-uitweg. */
+  .confirm-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .confirm-card{
+    background:var(--paper); border-radius:10px; padding:24px; max-width:480px; width:100%;
+    box-shadow:0 20px 50px rgba(0,0,0,.3); max-height:90vh; overflow-y:auto;
+  }
+  .confirm-card h3{ font-family:Georgia,serif; font-size:18px; margin:0 0 10px; color:var(--debit); }
+  .confirm-card p{ font-size:13px; color:var(--text); line-height:1.6; margin:0 0 12px; }
+  .confirm-card p.confirm-list{
+    font-size:12.5px; color:var(--text-soft); background:var(--paper-2);
+    border-radius:5px; padding:10px 12px;
+  }
+  .confirm-check{
+    display:flex; align-items:flex-start; gap:9px; font-size:13px; margin:16px 0 18px;
+    cursor:pointer; line-height:1.5;
+  }
+  .confirm-check input{ margin-top:2px; flex-shrink:0; width:16px; height:16px; cursor:pointer; }
+  .confirm-actions{ display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+  .confirm-actions button{
+    font-family:"Segoe UI",sans-serif; font-size:13px; font-weight:600;
+    padding:9px 16px; border-radius:5px; cursor:pointer;
+    border:1px solid var(--rule); background:var(--paper); color:var(--text);
+  }
+  .confirm-actions button.danger{ background:var(--debit); border-color:var(--debit); color:#fff; }
+  .confirm-actions button:disabled{ opacity:.45; cursor:default; }
+  .confirm-actions .confirm-export{ margin-right:auto; }
   .profile-msg{
     font-size:12px;
     border-radius:4px;
@@ -1925,6 +1969,19 @@ const i18n = {
     profileCurrentPasswordWrong: "Huidig wachtwoord onjuist.",
     profileUpdateErrorPrefix: "Bijwerken mislukt: ",
     profileSignOutBtn: "Uitloggen",
+    profileDeleteSectionTitle: "Account verwijderen",
+    profileDeleteHint: "Hiermee verdwijnt je account samen met alles wat erin staat: je Basisdata, je jaren, je maandbudgetten, je geïmporteerde maanden, je categorieën en je herkenregels. Dit kan niet ongedaan gemaakt worden en er is geen back-up waar wij bij kunnen — wil je je cijfers bewaren, gebruik dan eerst \u201cExporteer kopie\u201d.",
+    profileDeleteBtn: "Account verwijderen",
+    profileDeleteModalTitle: "Weet je het zeker?",
+    profileDeleteModalText: (email) => `Je staat op het punt het account ${email} en alle bijbehorende gegevens definitief te verwijderen. Dit kan niet ongedaan gemaakt worden.`,
+    profileDeleteModalList: "Wat er verdwijnt: Basisdata, alle jaren, alle maandbudgetten, alle geïmporteerde maanden, je categorieën en je herkenregels.",
+    profileDeleteModalCheckbox: "Ja, ik begrijp dat dit definitief is",
+    profileDeleteModalExport: "Eerst een kopie downloaden",
+    profileDeleteConfirmBtn: "Definitief verwijderen",
+    profileDeleteBusy: "Bezig met verwijderen\u2026",
+    profileDeleteDataOnlyNotice: "Je gegevens zijn verwijderd. Je inlogaccount zelf kon niet automatisch worden opgeheven — neem contact op met de beheerder van deze FinBo om ook het inloggen te laten verwijderen.",
+    profileDeleteError: "Verwijderen mislukt: ",
+    profileDeleteDone: "Je account en al je gegevens zijn verwijderd.",
     signOutUnsavedWarn: "Je laatste wijzigingen konden niet naar de cloud worden opgeslagen. Uitloggen betekent dat ze verloren gaan.\n\nToch uitloggen?",
     profileCategoriesComingSoonTitle: "Binnenkort beschikbaar",
     profileCategoriesComingSoonText: "Hier kun je straks je eigen categorieën aanmaken en beheren, zodat geïmporteerde PDF/CSV-transacties automatisch bij de juiste post terechtkomen — bijvoorbeeld een vaste regel voor een bepaalde winkel of tegenpartij.",
@@ -2184,6 +2241,19 @@ const i18n = {
     profileCurrentPasswordWrong: "Current password is incorrect.",
     profileUpdateErrorPrefix: "Update failed: ",
     profileSignOutBtn: "Sign out",
+    profileDeleteSectionTitle: "Delete account",
+    profileDeleteHint: "This removes your account along with everything in it: your Basisdata, your years, your monthly budgets, your imported months, your categories and your recognition rules. It cannot be undone and there is no backup we can reach \u2014 if you want to keep your figures, use \u201cExport copy\u201d first.",
+    profileDeleteBtn: "Delete account",
+    profileDeleteModalTitle: "Are you sure?",
+    profileDeleteModalText: (email) => `You are about to permanently delete the account ${email} and all data belonging to it. This cannot be undone.`,
+    profileDeleteModalList: "What goes: Basisdata, every year, every monthly budget, every imported month, your categories and your recognition rules.",
+    profileDeleteModalCheckbox: "Yes, I understand this is permanent",
+    profileDeleteModalExport: "Download a copy first",
+    profileDeleteConfirmBtn: "Delete permanently",
+    profileDeleteBusy: "Deleting\u2026",
+    profileDeleteDataOnlyNotice: "Your data has been deleted. The login account itself could not be removed automatically \u2014 contact the administrator of this FinBo to have the login deleted as well.",
+    profileDeleteError: "Deletion failed: ",
+    profileDeleteDone: "Your account and all your data have been deleted.",
     signOutUnsavedWarn: "Your most recent changes could not be saved to the cloud. Signing out means losing them.\n\nSign out anyway?",
     profileCategoriesComingSoonTitle: "Coming soon",
     profileCategoriesComingSoonText: "This is where you'll be able to create and manage your own categories, so imported PDF/CSV transactions land under the right line automatically — for example a standing rule for a particular shop or counterparty.",
@@ -4100,6 +4170,8 @@ async function signOutCloud(){
 
 /* ---------- AUTH GATE: login + versleutelingswachtwoord vóór de rest van de app laadt ---------- */
 let authGateMode = "signin"; // "signin" | "signup"
+// Melding die één keer op het inlogscherm getoond wordt nadat een account is verwijderd.
+let accountDeletedNotice = null;
 
 function authGateHTML(inner){
   return `
@@ -4142,6 +4214,16 @@ function renderLoginForm(){
     <button id="authSubmitBtn" class="primary">${isSignUp ? t("loginSignUpBtn") : t("loginSignInBtn")}</button>
     <button id="authToggleModeBtn" class="ghost">${isSignUp ? t("loginToggleToSignIn") : t("loginToggleToSignUp")}</button>
   `);
+  /* Eenmalige melding na het verwijderen van een account. Het inlogscherm is de enige plek waar
+     die nog getoond kan worden — het profielpaneel en de app zelf bestaan op dat moment niet meer
+     voor deze gebruiker. Daarna wordt hij gewist, zodat hij niet bij elke verversing terugkomt. */
+  if(accountDeletedNotice){
+    const noticeEl = document.getElementById("authGateNotice");
+    noticeEl.textContent = accountDeletedNotice;
+    noticeEl.style.display = "block";
+    accountDeletedNotice = null;
+  }
+
   document.getElementById("authToggleModeBtn").onclick = () => {
     authGateMode = isSignUp ? "signin" : "signup";
     renderLoginForm();
@@ -4675,6 +4757,125 @@ function renderBucketCategoryList(bucket){
   });
 }
 
+/* Download een volledige kopie van de administratie. Bewust een aparte functie: het verwijderen
+   van een account (zie showDeleteAccountConfirm) biedt dezelfde download aan als laatste uitweg,
+   en dat moet exact hetzelfde bestand opleveren.
+   Let op: dit bestand bevat de volledige, ONVERSLEUTELDE gegevens. De naam zegt daarom "backup"
+   met een datum erin; hij heette ooit "FinBo.html", wat niet te onderscheiden was van de app zelf —
+   precies hoe je er per ongeluk een met je cijfers erin doorstuurt. */
+function downloadBackupCopy(){
+  const blob = new Blob([buildHtmlWithEmbeddedData()], {type:"text/html"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `FinBo-backup-${new Date().toISOString().slice(0,10)}.html`;
+  a.click();
+}
+
+/* ---------- Account verwijderen ----------
+   Twee dingen moeten weg, en ze zitten op verschillende plekken:
+
+   1. De GEGEVENS — de rij in `finbo_state`. Die kan de gebruiker zelf verwijderen: Row Level
+      Security staat precies dat toe voor de eigen rij (zie finbo_supabase_setup.sql).
+   2. Het INLOGACCOUNT zelf, in auth.users. Dat kan een browser met de anon-key niet: daar is de
+      service_role-sleutel voor nodig, en die hoort nooit in een pagina te staan. Het gebruikelijke
+      antwoord is een database-functie met SECURITY DEFINER die alleen de eigen account opheft,
+      aangeroepen via rpc(). Staat die functie in dit project, dan is het account daarna echt weg.
+
+   Ontbreekt die functie, dan doen we NIET alsof: de gegevens zijn dan wel degelijk verwijderd —
+   dat is het deel dat ertoe doet — maar de gebruiker krijgt te zien dat het inloggen zelf blijft
+   bestaan en bij wie hij daarvoor moet zijn. Liever een eerlijke halve boodschap dan een
+   "alles verwijderd" dat niet klopt. */
+async function deleteOwnAccount(){
+  if(!cloudClient || !cloudSession) throw new Error("geen sessie");
+  const userId = cloudSession.user.id;
+
+  // Eerst de gegevens. Mislukt dit, dan stoppen we hier — anders blijft er een rij achter bij een
+  // account dat niet meer bestaat.
+  const { error: dataFout } = await cloudClient.from("finbo_state").delete().eq("user_id", userId);
+  if(dataFout) throw dataFout;
+
+  // Dan het inlogaccount, als dit project daar een functie voor heeft.
+  let accountWeg = false;
+  try{
+    const { error: rpcFout } = await cloudClient.rpc("delete_own_account");
+    accountWeg = !rpcFout;
+  }catch(e){
+    accountWeg = false;
+  }
+  return { accountWeg };
+}
+
+/* Het bevestigingsvenster. Geen confirm() van de browser: die is met één Enter weg te klikken,
+   somt niet op wat er precies verdwijnt, en heeft geen plek voor de uitweg "download eerst een
+   kopie". Het vinkje dwingt bovendien een tweede, bewuste handeling af — een enkele misklik op een
+   rode knop mag geen administratie kosten. */
+function showDeleteAccountConfirm(onDone){
+  const email = (cloudSession && cloudSession.user && cloudSession.user.email) || "—";
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.innerHTML = `
+    <div class="confirm-card">
+      <h3>${escapeHtml(t("profileDeleteModalTitle"))}</h3>
+      <p>${escapeHtml(t("profileDeleteModalText")(email))}</p>
+      <p class="confirm-list">${escapeHtml(t("profileDeleteModalList"))}</p>
+      <div id="deleteAccountMsg"></div>
+      <label class="confirm-check">
+        <input type="checkbox" id="deleteAccountCheck">
+        <span>${escapeHtml(t("profileDeleteModalCheckbox"))}</span>
+      </label>
+      <div class="confirm-actions">
+        <button type="button" class="confirm-export" id="deleteAccountExportBtn">${escapeHtml(t("profileDeleteModalExport"))}</button>
+        <button type="button" id="deleteAccountCancelBtn">${escapeHtml(t("importBasisdataCancelBtn"))}</button>
+        <button type="button" class="danger" id="deleteAccountConfirmBtn" disabled>${escapeHtml(t("profileDeleteConfirmBtn"))}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const check = overlay.querySelector("#deleteAccountCheck");
+  const bevestig = overlay.querySelector("#deleteAccountConfirmBtn");
+  const msg = overlay.querySelector("#deleteAccountMsg");
+  const sluit = () => { overlay.remove(); document.removeEventListener("keydown", opEscape, true); };
+  /* In de capture-fase én met stopPropagation: er luisteren elders ook Escape-handlers mee (de
+     navigatielade, het profielpaneel). Zonder dit zou één druk op Escape dit venster sluiten én het
+     paneel eronder dichtklappen — je verliest dan de plek waar je vandaan kwam. */
+  const opEscape = (e) => {
+    if(e.key !== "Escape") return;
+    e.stopPropagation();
+    sluit();
+  };
+
+  check.onchange = () => { bevestig.disabled = !check.checked; };
+  overlay.querySelector("#deleteAccountExportBtn").onclick = () => downloadBackupCopy();
+  overlay.querySelector("#deleteAccountCancelBtn").onclick = sluit;
+  // Klikken naast de kaart sluit ook, maar alleen op de overlay zelf — niet op iets erbinnen.
+  overlay.onclick = (e) => { if(e.target === overlay) sluit(); };
+  document.addEventListener("keydown", opEscape, true);
+  check.focus();
+
+  bevestig.onclick = async () => {
+    bevestig.disabled = true;
+    check.disabled = true;
+    bevestig.textContent = t("profileDeleteBusy");
+    try{
+      // Geen achtergrondschrijving meer laten afgaan terwijl we de rij juist weggooien.
+      clearTimeout(autoSaveTimer);
+      cancelRetry();
+      dirty = false;
+      const { accountWeg } = await deleteOwnAccount();
+      sluit();
+      onDone(null, accountWeg);
+    }catch(err){
+      bevestig.disabled = false;
+      check.disabled = false;
+      bevestig.textContent = t("profileDeleteConfirmBtn");
+      msg.innerHTML = `<div class="profile-msg error">${escapeHtml(t("profileDeleteError") + (err.message || String(err)))}</div>`;
+    }
+  };
+}
+
 function renderProfileAccountTab(body){
   const email = (cloudSession && cloudSession.user && cloudSession.user.email) || "—";
   body.innerHTML = `
@@ -4708,6 +4909,15 @@ function renderProfileAccountTab(body){
 
     <div>
       <button id="profileSignOutBtn" class="danger-outline">${t("profileSignOutBtn")}</button>
+    </div>
+
+    <hr class="profile-divider">
+
+    <div class="profile-danger-zone">
+      <p class="profile-section-title">${t("profileDeleteSectionTitle")}</p>
+      <p class="profile-hint">${t("profileDeleteHint")}</p>
+      <div id="profileDeleteMsg"></div>
+      <button id="profileDeleteAccountBtn" class="danger-solid">${t("profileDeleteBtn")}</button>
     </div>
   `;
 
@@ -4777,6 +4987,27 @@ function renderProfileAccountTab(body){
       showMsg(passwordMsgEl, t("profileUpdateErrorPrefix") + (err.message || String(err)), "error");
     }
     btn.disabled = false;
+  };
+
+  /* Na het verwijderen is er niets meer om naar terug te keren: de sessie wordt beëindigd en de
+     gebruiker komt op het inlogscherm uit, met een melding van wat er gebeurd is. `dirty` staat al
+     op false (zie het bevestigingsvenster), dus er wordt niets meer weggeschreven naar een rij die
+     we net hebben verwijderd. */
+  document.getElementById("profileDeleteAccountBtn").onclick = () => {
+    showDeleteAccountConfirm(async (fout, accountWeg) => {
+      if(fout) return;
+      closeProfilePanel();
+      state = makeBlankState();
+      if(cloudSession) clearEncPasswordForSession(cloudSession.user.id);
+      try{ if(cloudClient) await cloudClient.auth.signOut(); }catch(e){ /* sessie is toch al waardeloos */ }
+      cloudSession = null;
+      encryptionPassword = null;
+      lastSeenCiphertext = null;
+      saveConflictFlag = false;
+      saveErrorFlag = false;
+      accountDeletedNotice = accountWeg ? t("profileDeleteDone") : t("profileDeleteDataOnlyNotice");
+      renderAuthGate();
+    });
   };
 
   document.getElementById("profileSignOutBtn").onclick = async () => {
@@ -7643,16 +7874,7 @@ function wireActions(monthObj, scenarioObj, budgetObj){
   document.getElementById("saveNowBtn").onclick = saveNow;
   document.getElementById("logoutBtn").onclick = signOutCloud;
   updateSaveStatus();
-  document.getElementById("exportBtn").onclick = () => {
-    // Naam met "backup" en een datum erin: dit bestand bevat je volledige, ONVERSLEUTELDE data.
-    // Het heette "FinBo.html", wat niet te onderscheiden was van de app zelf — precies hoe je er
-    // per ongeluk een met je cijfers erin doorstuurt.
-    const blob = new Blob([buildHtmlWithEmbeddedData()], {type:"text/html"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `FinBo-backup-${new Date().toISOString().slice(0,10)}.html`;
-    a.click();
-  };
+  document.getElementById("exportBtn").onclick = downloadBackupCopy;
   document.getElementById("importBtn").onclick = () => document.getElementById("importFile").click();
   document.getElementById("importFile").onchange = (e) => {
     const file = e.target.files[0];
