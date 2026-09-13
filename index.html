@@ -5608,7 +5608,11 @@ function renderImportBasisdataRowHtml(r){
     const total = siblings.reduce((a,s2)=>a+importRowAmount(s2),0) + bedrag;
     badge = `<div class="import-bd-badge">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h10M7 12h10M7 17h6"/></svg>
-      ${escapeHtml(t("importBasisdataMergeBadge")(siblings.map(s2=>s2.name).join(", "), cat?cat.name:"", fmt(Math.abs(total))))}
+      ${/* Het bedrag ONgeformatteerd doorgeven: importBasisdataMergeBadge draait er zelf al fmt()
+            overheen. Stond hier fmt(...) omheen, dan kreeg fmt() een string ("372,20") binnen,
+            werd isNaN() waar en toonde de badge "samen € 0,00" — precies bij de regels waar het
+            totaal het interessantst is. */ ""}
+      ${escapeHtml(t("importBasisdataMergeBadge")(siblings.map(s2=>s2.name).join(", "), cat?cat.name:"", Math.abs(total)))}
     </div>`;
   } else if(r.catId){
     const cat = findCategory(r.catId);
