@@ -726,6 +726,23 @@
     color:var(--forest);
     min-width:0;
   }
+  /* Accentkleur per groep — dezelfde vier kleuren als in Profiel > Categorieën en op de tegels van
+     het importscherm (zie bucketColorVar). Tot v25 waren alle kaartkoppen dezelfde tint groen,
+     waardoor Inkomsten en Vaste lasten er op een vol scherm identiek uitzagen; nu is in één
+     oogopslag te zien bij welke groep een kaart hoort, en sluit het aan op de kleuren die elders in
+     de app al voor diezelfde groepen gebruikt worden.
+     --bucket-color wordt per kaart gezet in renderCard(); kaarten zonder groep (review, "overig")
+     krijgen 'm niet en houden dus gewoon hun eigen bestaande stijl. */
+  .card-bucket .card-head{
+    background:color-mix(in srgb, var(--bucket-color) 11%, var(--paper-2));
+    border-bottom-color:color-mix(in srgb, var(--bucket-color) 35%, var(--rule));
+  }
+  .card-bucket .card-head .htitle{ color:var(--bucket-color); }
+  /* Smalle kleurstreep langs de linkerkant van de kaart: die loopt door langs alle rijen, zodat de
+     groep ook herkenbaar blijft als de kop uit beeld is gescrold. */
+  .card-bucket{
+    border-left:3px solid var(--bucket-color);
+  }
   .card-head h2{
     font-size:15px;
     color:inherit;
@@ -4846,6 +4863,12 @@ const CARD_ICONS = {
 function renderCard(key, cat, opts={}){
   const wrap = document.createElement("div");
   wrap.className = "card";
+  // Groepskleur meegeven aan de CSS (zie .card-bucket hierboven). Alleen voor de vier echte
+  // groepen; een kaart met een andere sleutel (bv. een reviewkaart) blijft ongekleurd.
+  if(CATEGORY_BUCKET_KEYS.includes(key)){
+    wrap.classList.add("card-bucket");
+    wrap.style.setProperty("--bucket-color", bucketColorVar(key));
+  }
   const total = (opts.totalOverride !== undefined) ? opts.totalOverride : sum(cat.items);
   wrap.innerHTML = `
     <div class="card-head">
@@ -5081,7 +5104,10 @@ function renderVasteLastenCard(){
    en dus niet meer los te bewerken op dit jaar zelf. Zie ontwerp-doc §3.1. */
 function renderKostenUitBasisdataCard(){
   const wrap = document.createElement("div");
-  wrap.className = "card";
+  // Bouwt zijn eigen markup i.p.v. via renderCard, dus de groepskleur hier ook zelf zetten —
+  // anders was dit de enige kostenkaart zonder accent.
+  wrap.className = "card card-bucket";
+  wrap.style.setProperty("--bucket-color", bucketColorVar("vasteLasten"));
   const costs = basisdataCostTotals();
   wrap.innerHTML = `
     <div class="card-head">
