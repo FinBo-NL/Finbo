@@ -280,9 +280,11 @@
     height:100vh;
     /* Letterlijk 30% van de paginabreedte, met een ondergrens zodat de formuliervelden op smalle
        schermen niet onbruikbaar smal worden, en een bovengrens zodat het op erg brede schermen geen
-       overdreven brede kolom wordt. */
+       overdreven brede kolom wordt.
+       De ondergrens is zelf ook begrensd (min(...)): op een telefoon of bij ver ingezoomd is een
+       harde 300px breder dan het scherm, en dan valt de rechterhelft van het paneel buiten beeld. */
     width:30vw;
-    min-width:300px;
+    min-width:min(300px, 92vw);
     max-width:460px;
     background:var(--paper);
     border-left:1px solid var(--rule);
@@ -737,14 +739,21 @@
   }
 
   /* Layout */
+  /* minmax(0,1fr) en niet 1fr: een `1fr`-kolom weigert smaller te worden dan de min-content van
+     z'n inhoud, en die min-content is hier ~420px omdat een invoerveld standaard zo'n 20 tekens
+     breed wil zijn. Gevolg: inzoomen (of een smal venster) duwde de hele pagina breder dan het
+     scherm en je kreeg een horizontale schuifbalk in plaats van meekrimpende kolommen. Met
+     minmax(0,…) + min-width:0 mag de kolom wél onder die min-content zakken, waarna de
+     flex-shrink op de labelvelden het werk doet. */
   .layout{
     display:grid;
-    grid-template-columns:1fr 380px;
+    grid-template-columns:minmax(0,1fr) 380px;
     gap:0;
     align-items:start;
   }
+  main.categories, aside.summary{ min-width:0; }
   @media (max-width:980px){
-    .layout{grid-template-columns:1fr;}
+    .layout{grid-template-columns:minmax(0,1fr);}
     aside.summary{
       position:static;
       min-height:0;
@@ -4526,7 +4535,8 @@ function renderProfileAccountTab(body){
 // Standaard dichtgeklapt bij het inloggen/openen (issue #1) — de actieve maand/jaar blijft altijd
 // gewoon bereikbaar via de kop van de pagina/het actieve tabblad, dus dichtgeklapt is geen
 // probleem, en zo oogt het menu meteen rustiger bij het inloggen.
-let collapsedGroups = { budgets: true, years: true, growth: true };
+function defaultCollapsedGroups(){ return { budgets: true, years: true, growth: true }; }
+let collapsedGroups = defaultCollapsedGroups();
 
 /* Welke samengevoegde regels (bv. "Geldmaat", "Online") op dit moment uitgeklapt staan om hun
    onderliggende, individuele transacties te tonen — zie renderBreakdownRows(). Bewust NIET
@@ -7558,11 +7568,20 @@ document.getElementById("modeBtn").addEventListener("click", ()=>{
 let navDrawerOpen = false;
 
 function setNavDrawer(open){
+  const stondOpen = navDrawerOpen;
   navDrawerOpen = open;
   const drawer = document.getElementById("navDrawer");
   const backdrop = document.getElementById("navBackdrop");
   const toggle = document.getElementById("navToggleBtn");
   if(!drawer || !backdrop || !toggle) return;
+  // Elke keer dat de lade opengaat begint hij weer in z'n uitgangsstand: alles dichtgeklapt.
+  // Het menu is er om ergens naartoe te springen, niet om open te laten staan — en na een week
+  // met drie uitgeklapte groepen scroll je bij elke opening langs een lijst die je niet zocht.
+  // Bewust vóór het openschuiven, zodat je de groepen niet ziet dichtklappen.
+  if(open && !stondOpen){
+    collapsedGroups = defaultCollapsedGroups();
+    renderTabs();
+  }
   drawer.classList.toggle("open", open);
   drawer.setAttribute("aria-hidden", open ? "false" : "true");
   backdrop.classList.toggle("open", open);
