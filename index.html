@@ -1486,6 +1486,9 @@
   .import-bd-cat-hint{ font-size:11px; color:var(--text-soft); font-style:italic; }
   /* ---- Import basisdata: rij per tegenpartij (v25) ---- */
   /* Debet en credit naast elkaar, zoals de twee bedragkolommen op het afschrift zelf. */
+  .import-bd-success-cats{
+    margin:10px 0 0; font-size:12px; color:var(--text-soft);
+  }
   .import-bd-cat-tip{
     margin:0 0 10px; padding:8px 10px;
     font-size:11.5px; color:var(--text-soft);
@@ -1531,7 +1534,21 @@
   .import-bd-tx{
     display:flex; align-items:baseline; gap:8px;
     padding:3px 0; font-size:11.5px; color:var(--text-soft);
+    cursor:default;
   }
+  /* Aanvinkbaar zodra er iets te splitsen valt (meer dan één transactie). */
+  .import-bd-tx:has(.import-bd-tx-pick){ cursor:pointer; }
+  .import-bd-tx:has(.import-bd-tx-pick):hover{ color:var(--text); }
+  .import-bd-tx.picked{ color:var(--text); }
+  .import-bd-tx-pick{ flex-shrink:0; margin:0; accent-color:var(--gold-bright); cursor:pointer; }
+  .import-bd-tx-actions{ padding:6px 0 2px; }
+  .import-bd-split-sel{
+    font:inherit; font-size:11.5px; cursor:pointer;
+    padding:3px 10px; border-radius:999px;
+    border:1px dashed var(--rule); background:transparent; color:var(--text-soft);
+  }
+  .import-bd-split-sel:hover:not(:disabled){ border-color:var(--gold-bright); color:var(--gold-bright); }
+  .import-bd-split-sel:disabled{ opacity:.5; cursor:default; }
   .import-bd-tx-date{ flex-shrink:0; font-variant-numeric:tabular-nums; }
   .import-bd-tx-desc{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .import-bd-tx-amt{ flex-shrink:0; font-weight:600; }
@@ -1872,7 +1889,13 @@ const i18n = {
     importBasisdataModeNet: "saldo",
     importBasisdataTxCount: (n) => `${n} transactie${n===1?"":"s"}`,
     importBasisdataCatEmptyTip: "Tip: rijen samenvoegen tot één post doe je met een eigen categorie. Die maak je aan via Profiel → Categorieën; daarna kun je ze hier per rij kiezen.",
-    importBasisdataSplitBtn: "splitsen",
+    importBasisdataSplitBtn: "splitsen af/bij",
+    importBasisdataSplitSelBtn: (n) => `${n} transactie${n===1?"":"s"} afsplitsen naar een eigen rij`,
+    importBasisdataSplitSelHint: "Vink transacties aan om ze af te splitsen",
+    importBasisdataSplitTagDebet: "af",
+    importBasisdataSplitTagCredit: "bij",
+    importBasisdataSplitTagPart: (n) => `deel ${n}`,
+    importBasisdataSuccessNewCats: (namen) => `Nieuwe categorieën aangemaakt voor de samengevoegde regels: ${namen}. Je vindt ze terug onder Profiel → Categorieën.`,
     importBasisdataSplitHint: "Maak er twee losse rijen van: één voor het afgeschreven deel, één voor het bijgeschreven deel. Handig als die twee niet bij elkaar horen (bv. wegenbelasting eraf, belastingteruggave erbij).",
     importBasisdataRenameBadge: (catName) => `komt in Basisdata te staan als "${catName}" — nog geen andere rijen om mee samen te tellen`,
     importBasisdataPreviewTitle: "Voorbeeld: wat er in Basisdata terechtkomt",
@@ -2109,7 +2132,13 @@ const i18n = {
     importBasisdataModeNet: "net",
     importBasisdataTxCount: (n) => `${n} transaction${n===1?"":"s"}`,
     importBasisdataCatEmptyTip: "Tip: to merge rows into a single line, use a category of your own. Create one under Profile → Categories, then pick it per row here.",
-    importBasisdataSplitBtn: "split",
+    importBasisdataSplitBtn: "split debit/credit",
+    importBasisdataSplitSelBtn: (n) => `Split ${n} transaction${n===1?"":"s"} into their own row`,
+    importBasisdataSplitSelHint: "Tick transactions to split them off",
+    importBasisdataSplitTagDebet: "debit",
+    importBasisdataSplitTagCredit: "credit",
+    importBasisdataSplitTagPart: (n) => `part ${n}`,
+    importBasisdataSuccessNewCats: (namen) => `New categories created for the merged lines: ${namen}. You'll find them under Profile → Categories.`,
     importBasisdataSplitHint: "Turn this into two separate rows: one for the debited part, one for the credited part. Useful when those two aren't the same thing (e.g. road tax out, tax refund in).",
     importBasisdataRenameBadge: (catName) => `will appear in Basisdata simply renamed to "${catName}" — no other rows to sum it with yet`,
     importBasisdataPreviewTitle: "Preview: what lands in Basisdata",
@@ -4144,10 +4173,17 @@ function renderBucketCategoryList(bucket){
   listEl.innerHTML = cats.map(cat=>{
     const usage = categoryUsageEntries(cat.id);
     const count = usage.length;
+    // Voor de BADGE tellen Basisdata-regels mee, zodat "in gebruik" klopt met wat je ziet staan.
+    // Voor het SLOT op de prullenbak bewust niet: een Basisdata-regel verwijst niet naar deze
+    // categorie (hij draagt alleen dezelfde naam), dus verwijderen breekt daar niets — en er zou
+    // ook geen manier zijn om zo'n "koppeling" op te heffen, waardoor je de categorie nooit meer
+    // kwijt zou kunnen.
+    const bdCount = categoryBasisdataUsage(cat);
+    const totaalCount = count + bdCount;
     const isUsed = count > 0;
     const isExpanded = profileCategoryExpandedId === cat.id;
-    const badge = isUsed
-      ? `<span class="profile-cat-badge used">${t("profileCategoryUsedBadge")(count)}</span>`
+    const badge = totaalCount > 0
+      ? `<span class="profile-cat-badge used">${t("profileCategoryUsedBadge")(totaalCount)}</span>`
       : `<span class="profile-cat-badge unused">${t("profileCategoryUnusedBadge")}</span>`;
     const deleteBtn = isUsed
       ? `<button type="button" class="profile-cat-icon-btn locked">
@@ -4370,6 +4406,11 @@ function toggleBreakdown(key){
    Net als expandedBreakdowns puur tijdelijke UI-stand: niet opslaan, niet syncen. Er kan er maar
    één tegelijk openstaan — dat houdt de kaart rustig. */
 let offsetPickerOpenFor = null;
+/* Welke losse transacties in het importscherm zijn aangevinkt om af te splitsen. Sleutel is
+   "<rij-id>::<index>". Net als de andere UI-stand hierboven bewust NIET in `state`: het is een
+   keuze van dit moment, niet iets om te bewaren of te syncen. Wordt geleegd zodra er daadwerkelijk
+   gesplitst is, want daarna kloppen de indexen niet meer. */
+let importSplitSelection = new Set();
 /* Bouwt de uitklapbare, ingesprongen deellijst-HTML voor de individuele transacties achter één
    samengevoegde regel — gedeeld tussen renderCompareCard (budget-vs-werkelijk) en renderReviewCard
    ("Nog in te delen"), zodat bv. Geldmaat, Bouwmarkt of Online overal op dezelfde manier uitklapt. */
@@ -4829,6 +4870,25 @@ function categoryUsageEntries(catId){
   return out;
 }
 
+/* Hoeveel regels in Basisdata op dit moment onder de naam van deze categorie staan.
+
+   Categorie-gebruik werd tot nu toe alleen geteld in de maand-vergelijkingsflow (m.review[].catId).
+   Een categorie die je bij "Import basisdata" gebruikt om rijen samen te voegen, bleef daardoor
+   "Ongebruikt" heten terwijl er gewoon een Basisdata-regel met die naam stond — verwarrend, want
+   dat is precies waar je 'm voor gebruikt hebt.
+
+   Er wordt op naam gematcht en niet op een id: applyImportBasisdata() schrijft regels weg als
+   {label, bedrag}, zonder verwijzing naar de categorie. Dat is bewust — de gebruiker mag een
+   regelnaam daarna vrij aanpassen — en past bij hoe FinBo elders ook op naam koppelt (aftrek-
+   koppelingen, maand tegen budget). Hernoem je de regel, dan telt hij niet meer mee, en dat klopt. */
+function categoryBasisdataUsage(cat){
+  const bd = basisdataScenario();
+  const groep = bd && bd[cat.bucket];
+  if(!groep || !groep.items) return 0;
+  const naam = (cat.name||"").trim().toLowerCase();
+  return groep.items.filter(it => (it.l||"").trim().toLowerCase() === naam).length;
+}
+
 // Naam hoeft maar uniek te zijn BINNEN dezelfde groep -- "Boodschappen" onder Variabele lasten en
 // een heel andere "Boodschappen" onder Vaste lasten mogen prima naast elkaar bestaan.
 function createCategory(name, bucket){
@@ -5191,6 +5251,7 @@ let importBasisdataSuccessInfo = null; // pas gevuld ná bevestigen, voor het su
 function resetImportBasisdataUI(){
   importBasisdataStep = "upload";
   importBasisdataRows = [];
+  importSplitSelection.clear();
   importBasisdataSourceLabel = "";
   importBasisdataSuccessInfo = null;
 }
@@ -5213,6 +5274,29 @@ function resetImportBasisdataUI(){
    worden nog steeds vóór dit punt afgevangen door resolveStornos().
 
    Bedragconventie van dit scherm: negatief = kosten, positief = inkomen. */
+/* Sleutel waarmee transacties bij dezelfde tegenpartij worden samengenomen.
+
+   De bank schrijft dezelfde partij niet altijd hetzelfde op: een incasso komt binnen als
+   "Vodafone Libertel B.V." en een pinbetaling als "VODAFONE LIBERTEL BV". Op de kale naam
+   gegroepeerd leverde dat twee rijen voor één bedrijf op. Voor het VERGELIJKEN wordt daarom
+   genormaliseerd — kleine letters, leestekens eruit, dubbele spaties weg en de rechtsvorm aan het
+   eind eraf. De naam die je op het scherm ziet blijft gewoon die van het afschrift.
+
+   Bewust niet agressiever dan dit: twee namen die echt van elkaar verschillen blijven aparte rijen.
+   En zit er onder één tegenpartij tóch meer dan één kostenpost (twee abonnementen bij dezelfde
+   provider), dan haal je ze uit elkaar met splitsen per transactie. */
+function counterpartyKey(naam){
+  const basis = (naam||"")
+    .toLowerCase()
+    .replace(/[.,'`\u00b4"()]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const zonderRechtsvorm = basis.replace(/\s+(bv|nv|sa|sarl|ltd|gmbh|inc|plc|vof|cv)$/, "").trim();
+  // Een tegenpartij die alleen maar uit een rechtsvorm bestaat zou anders met alle andere
+  // samenvallen; dan liever de niet-gestripte vorm.
+  return zonderRechtsvorm || basis;
+}
+
 function buildImportBasisdataRows(rows){
   const { rows: filteredRows } = resolveStornos(rows);
   const perTegenpartij = new Map();
@@ -5223,7 +5307,7 @@ function buildImportBasisdataRows(rows){
     if(result.cat === "ignore") return; // terugboeking/herincasso, zie classifyTransaction
 
     const rawNaam = (result.naam || result.label || "Onbekend").trim();
-    const sleutel = rawNaam.toLowerCase();
+    const sleutel = counterpartyKey(rawNaam);
     const amt = result.amt;                    // rauw en getekend: - = af, + = bij
     const datum = r["Datum"] || "";
     const omschrijving = ((r["Omschrijving-1"]||"") + " " + (r["Omschrijving-2"]||"")).trim();
@@ -5257,6 +5341,16 @@ function buildImportBasisdataRows(rows){
     const debet = Math.round(rij.debet*100)/100;
     const credit = Math.round(rij.credit*100)/100;
     if(debet <= 0.001 && credit <= 0.001) return;
+    // Bestaat er al een eigen categorie met precies deze naam in dezelfde groep, koppel 'm dan
+    // meteen. Zonder dit bleven zelfgemaakte categorieën bij elke import ongebruikt staan en moest
+    // je ze rij voor rij opnieuw aanwijzen. Werkt vooral samen met geleerde regels: die geven een
+    // rij het nette label ("Water"), en dat label vindt hier zijn categorie terug.
+    const bucketVoorstel = rij.suggestion ? rij.suggestion.bucket : null;
+    const naamVoorstel = rij.suggestion ? rij.suggestion.label : rij.naam;
+    const passendeCat = bucketVoorstel
+      ? state.categories.find(c => c.bucket === bucketVoorstel
+          && c.name.trim().toLowerCase() === (naamVoorstel||"").trim().toLowerCase())
+      : null;
     rowsOut.push({
       id: "ibd"+(seq++),
       name: rij.naam,          // de tegenpartijnaam van het afschrift — de titel van de rij
@@ -5266,8 +5360,8 @@ function buildImportBasisdataRows(rows){
       // Standaardkeuze: staat er maar één kant op, dan die; staan er beide, dan het saldo.
       mode: (debet > 0.001 && credit > 0.001) ? "net" : (credit > 0.001 ? "credit" : "debet"),
       entries: rij.entries.sort((a,b)=> String(a.datum).localeCompare(String(b.datum))),
-      bucket: rij.suggestion ? rij.suggestion.bucket : null,
-      catId: null,
+      bucket: bucketVoorstel,
+      catId: passendeCat ? passendeCat.id : null,
     });
   });
   rowsOut.sort((a,b)=> Math.abs(importRowAmount(b)) - Math.abs(importRowAmount(a)));
@@ -5292,28 +5386,82 @@ function importRowAmount(r){
    Allebei de helften verliezen hun matchName: er valt voor deze tegenpartij geen enkelvoudige
    herkenregel meer te leren (dezelfde naam zou dan naar twee verschillende groepen moeten wijzen),
    en één regel die de andere overschrijft is erger dan geen regel. Zie rememberUserRule. */
+/* Bouwt een nieuwe importrij uit een deelverzameling transacties van een bestaande rij.
+   Debet/credit/bedrag worden opnieuw uit die transacties afgeleid, zodat een afgesplitste rij
+   altijd klopt met wat erin zit. */
+function makeImportRowFromEntries(basis, entries, tag){
+  let debet = 0, credit = 0;
+  entries.forEach(e => { if(e.amt < 0) debet += -e.amt; else credit += e.amt; });
+  debet = Math.round(debet*100)/100;
+  credit = Math.round(credit*100)/100;
+  // Alleen het voorstel van de herkenning meenemen als het nog ergens op slaat: bij een
+  // afgesplitste bijschrijvingen-rij zegt "Boodschappen" niets meer.
+  const houdVoorstel = basis.suggestion && debet > 0.001;
+  return {
+    id: basis.id + ":" + tag,
+    name: basis.name,
+    // Geen matchName: voor een tegenpartij die je zelf uit elkaar trekt valt geen enkelvoudige
+    // herkenregel te leren — dezelfde naam zou dan naar twee groepen moeten wijzen, en één regel
+    // die de andere overschrijft is erger dan geen regel. Zie rememberUserRule.
+    matchName: null,
+    splitFrom: basis.splitFrom || basis.name,
+    splitKind: tag,
+    suggestion: houdVoorstel ? basis.suggestion : null,
+    debet, credit,
+    mode: (debet > 0.001 && credit > 0.001) ? "net" : (credit > 0.001 ? "credit" : "debet"),
+    entries: entries.slice(),
+    bucket: houdVoorstel ? basis.suggestion.bucket : null,
+    catId: null,
+  };
+}
+
+/* Splitst een rij in een afschrijvingen- en een bijschrijvingen-helft. Snelknop voor het meest
+   voorkomende geval: één tegenpartij waar twee verschillende dingen doorheen lopen (wegenbelasting
+   eraf, belastingteruggave erbij). */
 function splitImportBasisdataRow(rowId){
   const idx = importBasisdataRows.findIndex(r => r.id === rowId);
   if(idx === -1) return false;
   const r = importBasisdataRows[idx];
   if(!(r.debet > 0.001 && r.credit > 0.001)) return false;
+  const af = r.entries.filter(e => e.amt < 0);
+  const bij = r.entries.filter(e => e.amt > 0);
+  if(!af.length || !bij.length) return false;
+  importBasisdataRows.splice(idx, 1,
+    makeImportRowFromEntries(r, af, "debet"),
+    makeImportRowFromEntries(r, bij, "credit"));
+  return true;
+}
 
-  const maak = (soort) => ({
-    id: r.id + ":" + soort,
-    name: r.name,
-    matchName: null,
-    splitFrom: r.name,
-    splitKind: soort,
-    suggestion: soort === "debet" ? r.suggestion : null,
-    debet: soort === "debet" ? r.debet : 0,
-    credit: soort === "credit" ? r.credit : 0,
-    mode: soort,
-    entries: r.entries.filter(e => soort === "debet" ? e.amt < 0 : e.amt > 0),
-    bucket: soort === "debet" ? (r.suggestion ? r.suggestion.bucket : null) : null,
-    catId: null,
-  });
+/* Splitst de aangevinkte transacties van een rij af naar een eigen rij, zodat ze in een andere
+   groep kunnen. Nodig omdat één tegenpartij lang niet altijd één kostenpost is: bij een tankstation
+   staan brandstof en sigaretten door elkaar, en bij een bouwmarkt een keukenverbouwing tussen het
+   klusgoed. De debet/credit-knop hierboven dekt maar één vorm daarvan; hiermee bepaal je het per
+   transactie.
 
-  importBasisdataRows.splice(idx, 1, maak("debet"), maak("credit"));
+   Vereist minstens één aangevinkte transactie en minstens één die blijft staan — anders verplaats
+   je de hele rij naar een nieuwe rij en is er niets gesplitst. */
+function splitImportBasisdataEntries(rowId, entryIndexes){
+  const idx = importBasisdataRows.findIndex(r => r.id === rowId);
+  if(idx === -1) return false;
+  const r = importBasisdataRows[idx];
+  const gekozen = new Set(entryIndexes);
+  const af = r.entries.filter((_, i) => gekozen.has(i));
+  const blijft = r.entries.filter((_, i) => !gekozen.has(i));
+  if(!af.length || !blijft.length) return false;
+
+  // Oplopend nummer, zodat herhaald splitsen unieke ids en herkenbare labels blijft opleveren.
+  const volgnr = (r.splitSeq || 0) + 1;
+  const rest = makeImportRowFromEntries(r, blijft, "rest" + volgnr);
+  const deel = makeImportRowFromEntries(r, af, "deel" + volgnr);
+  rest.id = r.id;                 // de oorspronkelijke rij houdt zijn id en plek
+  rest.splitKind = r.splitKind;   // en zijn eventuele eerdere markering
+  rest.splitSeq = volgnr;
+  rest.suggestion = r.suggestion;
+  rest.bucket = r.bucket;
+  rest.catId = r.catId;
+  deel.splitSeq = volgnr;
+
+  importBasisdataRows.splice(idx, 1, rest, deel);
   return true;
 }
 
@@ -5326,8 +5474,24 @@ function importRowDisplayLabel(r){
     const cat = findCategory(r.catId);
     if(cat) return cat.name;
   }
-  if(r.suggestion && r.suggestion.label) return r.suggestion.label;
-  return r.name;
+  const basis = (r.suggestion && r.suggestion.label) ? r.suggestion.label : r.name;
+  // Een afgesplitste rij krijgt er een woordje bij ("(af)", "(deel 1)"). Zonder dat zouden de
+  // helften van dezelfde tegenpartij dezelfde naam houden, en dan voegt
+  // computeImportBasisdataResultingLines ze in dezelfde groep gewoon weer samen — precies wat je
+  // met splitsen probeerde te voorkomen. Kies je een categorie, dan is die naam leidend en
+  // verdwijnt het woordje weer.
+  const tag = importRowSplitTag(r);
+  return tag ? `${basis} (${tag})` : basis;
+}
+
+/* Kort, leesbaar woord voor de herkomst van een afgesplitste rij. Leeg voor een gewone rij. */
+function importRowSplitTag(r){
+  if(!r || !r.splitKind) return "";
+  if(r.splitKind === "debet") return t("importBasisdataSplitTagDebet");
+  if(r.splitKind === "credit") return t("importBasisdataSplitTagCredit");
+  const m = /^deel(\d+)$/.exec(r.splitKind);
+  if(m) return t("importBasisdataSplitTagPart")(m[1]);
+  return r.splitKind;
 }
 
 /* Groepeert de rijen van één groep (bucket) op catId tot de uiteindelijke Basisdata-regels: rijen met
@@ -5501,20 +5665,35 @@ function renderImportBasisdataRowHtml(r){
       ${escapeHtml(t("importBasisdataTxCount")(aantal))}
     </button>` : "";
 
+  // Uitgeklapt zijn de losse transacties niet alleen te lezen maar ook aan te vinken: wat je
+  // aanvinkt kun je afsplitsen naar een eigen rij, en die rij kan een andere groep krijgen. Eén
+  // tegenpartij is namelijk lang niet altijd één kostenpost (tankstation: brandstof én sigaretten).
+  const kanSplitsen = aantal > 1;
+  const gekozen = r.entries.map((_, i) => importSplitSelection.has(`${r.id}::${i}`));
+  const aantalGekozen = gekozen.filter(Boolean).length;
+  const splitsbaar = kanSplitsen && aantalGekozen > 0 && aantalGekozen < aantal;
+
   const txHtml = (isOpen && aantal) ? `
     <div class="import-bd-tx-list">
-      ${r.entries.map(e=>`
-        <div class="import-bd-tx">
+      ${r.entries.map((e,i)=>`
+        <label class="import-bd-tx${gekozen[i]?" picked":""}">
+          ${kanSplitsen ? `<input type="checkbox" class="import-bd-tx-pick" data-row="${r.id}" data-entry="${i}" ${gekozen[i]?"checked":""} />` : ""}
           <span class="import-bd-tx-date">${escapeHtml(e.datum || "")}</span>
           <span class="import-bd-tx-desc" title="${escapeHtml(e.omschrijving || "")}">${escapeHtml(e.omschrijving || "—")}</span>
           <span class="import-bd-tx-amt ${e.amt<0?'neg':'pos'}">${e.amt<0?'−':'+'}€ ${fmt(Math.abs(e.amt))}</span>
-        </div>`).join("")}
+        </label>`).join("")}
+      ${kanSplitsen ? `
+        <div class="import-bd-tx-actions">
+          <button type="button" class="import-bd-split-sel" data-split-sel="${r.id}" ${splitsbaar?"":"disabled"}>
+            ${escapeHtml(aantalGekozen ? t("importBasisdataSplitSelBtn")(aantalGekozen) : t("importBasisdataSplitSelHint"))}
+          </button>
+        </div>` : ""}
     </div>` : "";
 
   return `
     <div class="import-bd-row${r.bucket?"":" needs-group"}">
       <div class="import-bd-row-main">
-        <span class="import-bd-row-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}${r.splitKind ? `<span class="import-bd-split-tag">${escapeHtml(r.splitKind === "debet" ? t("importBasisdataModeDebet") : t("importBasisdataModeCredit"))}</span>` : ""}</span>
+        <span class="import-bd-row-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}${r.splitKind ? `<span class="import-bd-split-tag">${escapeHtml(importRowSplitTag(r))}</span>` : ""}</span>
         ${bedragen}
       </div>
       ${suggestieBadge}
@@ -5577,7 +5756,36 @@ function wireImportBasisdataRowHandlers(container){
 
   container.querySelectorAll(".import-bd-mode-btn.split").forEach(btn=>{
     btn.onclick = () => {
-      if(splitImportBasisdataRow(btn.dataset.split)) renderImportBasisdataScreen();
+      if(splitImportBasisdataRow(btn.dataset.split)){
+        importSplitSelection.clear();
+        renderImportBasisdataScreen();
+      }
+    };
+  });
+
+  container.querySelectorAll(".import-bd-tx-pick").forEach(box=>{
+    box.onchange = () => {
+      const sleutel = `${box.dataset.row}::${box.dataset.entry}`;
+      if(box.checked) importSplitSelection.add(sleutel); else importSplitSelection.delete(sleutel);
+      renderImportBasisdataScreen();
+    };
+  });
+
+  container.querySelectorAll(".import-bd-split-sel").forEach(btn=>{
+    btn.onclick = () => {
+      const rowId = btn.dataset.splitSel;
+      const row = importBasisdataRows.find(r => r.id === rowId);
+      if(!row) return;
+      const indexen = row.entries
+        .map((_, i) => i)
+        .filter(i => importSplitSelection.has(`${rowId}::${i}`));
+      if(splitImportBasisdataEntries(rowId, indexen)){
+        // Indexen verschuiven door het splitsen, dus de selectie is daarna betekenisloos.
+        importSplitSelection.clear();
+        // De nieuwe rij meteen uitgeklapt laten: je wilt zien wat erin terecht is gekomen.
+        expandedBreakdowns.add(`importbd::${rowId}`);
+        renderImportBasisdataScreen();
+      }
     };
   });
 
@@ -5727,7 +5935,26 @@ function applyImportBasisdata(){
   bd.abonnementen.items = linesByBucket.abonnementen.map(l=>({ l: l.label, v: Math.round(Math.abs(l.amt)*100)/100 }));
   bd.variabeleLasten.items = linesByBucket.variabeleLasten.map(l=>({ l: l.label, v: Math.round(Math.abs(l.amt)*100)/100 }));
 
-  importBasisdataSuccessInfo = { sourceLabel: importBasisdataSourceLabel, linesByBucket };
+  // Voegde deze import meerdere tegenpartijen samen onder één naam (drie supermarkten die allemaal
+  // "Boodschappen" voorstelden), dan is die naam functioneel precies wat een categorie is. Hem niet
+  // aanmaken leverde een vreemde tussenstand op: in Basisdata stond een verzamelregel "Boodschappen",
+  // maar onder Profiel > Categorieën bestond die niet, en je kon hem dus ook nergens beheren.
+  // Alleen bij een échte samenvoeging (2 of meer rijen) — één rij onder zijn eigen naam is geen
+  // categorie. Bestaat de naam al in die groep, of past hij niet binnen de regels van
+  // createCategory (bv. langer dan 20 tekens), dan gebeurt er simpelweg niets.
+  const nieuweCategorieen = [];
+  CATEGORY_BUCKET_KEYS.forEach(bucket=>{
+    linesByBucket[bucket].forEach(l=>{
+      if(l.merged < 2) return;
+      const bestaat = state.categories.some(c => c.bucket === bucket
+        && c.name.trim().toLowerCase() === (l.label||"").trim().toLowerCase());
+      if(bestaat) return;
+      const res = createCategory(l.label, bucket);
+      if(res && res.category) nieuweCategorieen.push(res.category);
+    });
+  });
+
+  importBasisdataSuccessInfo = { sourceLabel: importBasisdataSourceLabel, linesByBucket, nieuweCategorieen };
   importBasisdataStep = "success";
   syncComputedLoons();
   renderAll();
@@ -5744,11 +5971,18 @@ function renderImportBasisdataSuccessStep(container){
     return `<li><b>${t(labelObj.titleKey)}:</b> ${items}</li>`;
   }).join("");
 
+  // Aangemaakte categorieën expliciet noemen: ze verschijnen anders zonder aankondiging in
+  // Profiel > Categorieën, en dan lijkt het alsof de app iets achter je rug om heeft gedaan.
+  const catsHtml = (info.nieuweCategorieen && info.nieuweCategorieen.length)
+    ? `<p class="import-bd-success-cats">${escapeHtml(t("importBasisdataSuccessNewCats")(info.nieuweCategorieen.map(c=>c.name).join(", ")))}</p>`
+    : "";
+
   container.innerHTML = `
     <div class="import-bd-success-card">
       <h3>${t("importBasisdataSuccessTitle")}</h3>
       <p>${t("importBasisdataSuccessNote")(escapeHtml(info.sourceLabel))}</p>
       <ul>${summaryHtml}</ul>
+      ${catsHtml}
       <button type="button" id="importBdDoneBtn" style="font-family:'Segoe UI',sans-serif; font-size:13px; font-weight:600; padding:9px 16px; border-radius:5px; cursor:pointer; background:var(--gold); border:1px solid var(--gold); color:#fff;">${t("importBasisdataDoneBtn")}</button>
     </div>
   `;
