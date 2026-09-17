@@ -6198,6 +6198,20 @@ function importRowAmount(r){
   return Math.round(((r.credit||0) - (r.debet||0)) * 100) / 100;
 }
 
+/* De transacties die daadwerkelijk meetellen in importRowAmount(r) hierboven, in de kale/getekende
+   vorm van het afschrift (negatief = af, positief = bij) — dus precies de deelverzameling waarvan
+   de som dat bedrag oplevert. Bij "net" is dat gewoon alles; bij "debet"/"credit" alleen de kant
+   die gekozen is. Nodig zodat de betaaldatums die straks in een samengevoegde Basisdata-regel te
+   zien zijn (zie computeImportBasisdataResultingLines/applyImportBasisdata) nooit een transactie
+   tonen die niet in het bedrag van die regel zit — anders klopt de uitgeklapte deellijst niet met
+   het totaal erboven. */
+function importRowContributingEntries(r){
+  if(!r || !r.entries) return [];
+  if(r.mode === "debet")  return r.entries.filter(e => e.amt < 0);
+  if(r.mode === "credit") return r.entries.filter(e => e.amt > 0);
+  return r.entries.slice();
+}
+
 /* Splitst één tegenpartij-rij in twee losse rijen: de afschrijvingen en de bijschrijvingen.
    Nodig omdat die twee kanten soms echt iets anders zijn. Een belastingdienst-rij kan tegelijk een
    wegenbelasting-afschrijving (vaste last) en een teruggave (inkomen) bevatten; met alleen
@@ -6335,10 +6349,15 @@ function computeImportBasisdataResultingLines(bucketKey){
   const byLabel = {};
   bucketRows.forEach(r=>{
     const amt = importRowAmount(r);
+    // De betaaldatums van deze rij, beperkt tot wat ook echt in `amt` meetelt (zie
+    // importRowContributingEntries) — zodat een uitgeklapte Basisdata-regel straks alleen
+    // transacties toont die ook echt in het bedrag erboven zitten.
+    const bijdragendeEntries = importRowContributingEntries(r);
     if(r.catId){
-      if(!byCat[r.catId]) byCat[r.catId] = { catId:r.catId, sum:0, sources:[], role:null };
+      if(!byCat[r.catId]) byCat[r.catId] = { catId:r.catId, sum:0, sources:[], entries:[], role:null };
       byCat[r.catId].sum += amt;
       byCat[r.catId].sources.push(r.name);
+      byCat[r.catId].entries.push(...bijdragendeEntries);
       if(r.suggestion && r.suggestion.role) byCat[r.catId].role = r.suggestion.role;
     } else {
       // Zonder categorie is de regelnaam het voorstel van de herkenning, en pas als dat er niet is
@@ -6352,18 +6371,19 @@ function computeImportBasisdataResultingLines(bucketKey){
       // rommelig maar ook stuk.
       const label = importRowDisplayLabel(r);
       const sleutel = label.trim().toLowerCase();
-      if(!byLabel[sleutel]) byLabel[sleutel] = { label, sum:0, sources:[], role:null };
+      if(!byLabel[sleutel]) byLabel[sleutel] = { label, sum:0, sources:[], entries:[], role:null };
       byLabel[sleutel].sum += amt;
       byLabel[sleutel].sources.push(r.name);
+      byLabel[sleutel].entries.push(...bijdragendeEntries);
       if(r.suggestion && r.suggestion.role) byLabel[sleutel].role = r.suggestion.role;
     }
   });
   Object.values(byLabel).forEach(g=>{
-    solo.push({ label: g.label, amt: g.sum, merged: g.sources.length, sources: g.sources, role: g.role });
+    solo.push({ label: g.label, amt: g.sum, merged: g.sources.length, sources: g.sources, entries: g.entries, role: g.role });
   });
   const merged = Object.values(byCat).map(g=>{
     const cat = findCategory(g.catId);
-    return { label: cat ? cat.name : "?", amt: g.sum, merged: g.sources.length, sources: g.sources, role: g.role };
+    return { label: cat ? cat.name : "?", amt: g.sum, merged: g.sources.length, sources: g.sources, entries: g.entries, role: g.role };
   });
 
   /* Laatste samenvoeging over de twee groeperingen heen.
@@ -6377,12 +6397,17 @@ function computeImportBasisdataResultingLines(bucketKey){
   [...merged, ...solo].forEach(r => {
     const k = (r.label||"").trim().toLowerCase();
     const best = perNaam.get(k);
-    if(!best){ perNaam.set(k, { ...r, sources: r.sources.slice() }); return; }
+    if(!best){ perNaam.set(k, { ...r, sources: r.sources.slice(), entries: r.entries.slice() }); return; }
     best.amt += r.amt;
     best.sources = best.sources.concat(r.sources);
+    best.entries = best.entries.concat(r.entries);
     best.merged = best.sources.length;
     best.role = best.role || r.role;
   });
+  // Op datum, zodat de uitgeklapte deellijst chronologisch leest i.p.v. in de willekeurige volgorde
+  // waarin de tegenpartij-rijen hierboven zijn samengevoegd.
+  const byDatum = (a,b) => String(a.datum||"").localeCompare(String(b.datum||""));
+  perNaam.forEach(r => r.entries.sort(byDatum));
   return [...perNaam.values()];
 }
 
@@ -6827,7 +6852,14 @@ function applyImportBasisdata(){
   const naarPost = (l, bucket) => {
     const v = bucket === "income" ? rond(l.amt) : rond(-l.amt);
     if(v < 0) tegendraads.push({ label: l.label, bucket, v });
-    return { l: l.label, v };
+    const post = { l: l.label, v };
+    // De losse betaaldatums overleven de samenvoeging tot Basisdata-regel: renderCard toont vanaf
+    // hier automatisch dezelfde uitklapbare deellijst als bij "Toepassen op budget"
+    // (applyMonthToBudget) — precies wat een samengevoegde regel na het indelen via categorieën
+    // nog steeds per-transactie inzichtelijk maakt. Net als daar: pas vanaf 2 transacties een
+    // eigen uitklapknopje, anders is er niets om uit te klappen.
+    if(l.entries && l.entries.length > 1) post.entries = l.entries.map(e => ({...e}));
+    return post;
   };
   bd.income.items = linesByBucket.income.map(l=>naarPost(l, "income"));
   bd.vasteLasten.items = linesByBucket.vasteLasten.map(l=>naarPost(l, "vasteLasten"));
