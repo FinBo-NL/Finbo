@@ -827,6 +827,7 @@
     .card-head{padding:9px 14px 7px;}
     .rows{padding:2px 14px 8px;}
     .row .value-input{width:78px;}
+    .row .row-datum{width:52px; font-size:10.5px;}
   }
 
   .card{
@@ -1031,6 +1032,19 @@
     padding:4px 2px;
   }
   .row .label-input:focus{outline:none; background:color-mix(in srgb, var(--gold) 8%, transparent);}
+  /* Datumkolom vóór het bedrag — zie renderCard(). Vaste breedte + rechts uitgelijnd, net als
+     .value-input, zodat alle rijen in een kaart (ongeacht hoe lang de naam is) precies onder
+     elkaar uitlijnen. Leeg voor een regel zonder bekende datum (bv. een handmatig toegevoegde
+     regel) i.p.v. een streepje — een kolom vol steepjes trekt meer aandacht dan een lege cel. */
+  .row .row-datum{
+    flex-shrink:0;
+    width:70px;
+    text-align:right;
+    font-size:12px;
+    color:var(--text-soft);
+    opacity:.85;
+    padding:4px 2px;
+  }
   .row .value-wrap{
     display:flex;
     align-items:center;
@@ -2447,6 +2461,7 @@ function cloneItems(items){
   return items.map(it => {
     const clone = { l: it.l, v: it.v };
     if(it.entries && it.entries.length) clone.entries = it.entries.map(e => ({...e}));
+    if(it.datum) clone.datum = it.datum;
     if(it.note) clone.note = (typeof it.note === "object") ? {...it.note} : it.note;
     // Markeringen op een regel horen bij die regel en moeten een kopie dus overleven: "role"
     // (welke inkomstenregel het salaris is, zie getLoonItem) en "offsetTarget" (van welke andere
@@ -2546,15 +2561,21 @@ function applyMonthToBudget(m, budget){
       // enkele-transactie-post krijgt bewust geen "entries" (net als in buildMonthFromCSV: alleen
       // > 1 entry verdient een uitklapknopje).
       const entries = (item.entries && item.entries.length > 1) ? item.entries.map(e => ({...e})) : null;
+      // Datumkolom (zie renderCard): los van de uitklaplijst hierboven, en dus ook bij een regel
+      // van precies 1 transactie — de meest recente, want item.entries ligt al oplopend gesorteerd
+      // (zie buildMonthFromCSV).
+      const datum = (item.entries && item.entries.length) ? item.entries[item.entries.length-1].datum || null : null;
       if(existing){
         existing.v = item.v;
         if(entries) existing.entries = entries; else delete existing.entries;
+        if(datum) existing.datum = datum; else delete existing.datum;
         // Heeft weer een echt bedrag deze maand — een eerdere "geen transactie gevonden"-toelichting
         // (zie hieronder) is dan niet meer van toepassing.
         delete existing.note;
       } else {
         const newItem = { l: item.l, v: item.v };
         if(entries) newItem.entries = entries;
+        if(datum) newItem.datum = datum;
         budget[cat].items.push(newItem);
       }
     });
@@ -2570,6 +2591,7 @@ function applyMonthToBudget(m, budget){
       if(matchedKeys.has(key)) return;
       it.v = 0;
       delete it.entries;
+      delete it.datum;
       it.note = { ...monthNote };
     });
   });
@@ -5761,6 +5783,15 @@ function renderCard(key, cat, opts={}){
     const breakdownKey = `budgetcard:${key}::${item.l}`;
     const isOpen = hasBreakdown && expandedBreakdowns.has(breakdownKey);
 
+    // Datumkolom vóór het bedrag. `item.datum` (gezet door applyImportBasisdata/applyMonthToBudget)
+    // is de meest recente transactiedatum achter deze regel — bij een samengevoegde regel dus niet
+    // "de" datum (die bestaan niet voor meerdere transacties), maar de laatste, net zoals je op een
+    // rekeningafschrift ook één datum per boeking ziet. Ontbreekt die (een handmatig toegevoegde
+    // regel, of data van vóór deze functie), dan blijft de cel leeg i.p.v. een gokdatum te tonen.
+    // Val terug op item.entries zelf voor het geval een regel wél entries maar (nog) geen los
+    // `datum`-veld heeft (bv. oudere, al opgeslagen Basisdata).
+    const rowDatum = item.datum || (item.entries && item.entries.length ? item.entries[item.entries.length-1].datum : "") || "";
+
     const rowWrap = document.createElement("div");
     rowWrap.className = "row-wrap";
 
@@ -5778,6 +5809,7 @@ function renderCard(key, cat, opts={}){
       ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${escapeHtml(breakdownKey)}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
       ${opts.salaryPicker ? `<button type="button" class="role-btn salary-btn ${isSalary?'active':''}" title="${escapeHtml(isSalary ? t('salaryRoleBtnUnset') : t('salaryRoleBtnSet'))}" aria-pressed="${isSalary}">${isSalary ? "★" : "☆"}</button>` : ""}
       <input class="label-input" value="${displayLabel}" ${labelEditable ? "" : "disabled"} />
+      <span class="row-datum mono">${escapeHtml(rowDatum)}</span>
       <div class="value-wrap">
         <span class="euro">€</span>
         <input class="value-input" type="number" step="0.01" value="${(Number(displayValue)||0).toFixed(2)}" ${editable ? "" : "disabled"} />
@@ -6859,6 +6891,11 @@ function applyImportBasisdata(){
     // nog steeds per-transactie inzichtelijk maakt. Net als daar: pas vanaf 2 transacties een
     // eigen uitklapknopje, anders is er niets om uit te klappen.
     if(l.entries && l.entries.length > 1) post.entries = l.entries.map(e => ({...e}));
+    // Los van de uitklaplijst hierboven: de datumkolom in de rij zelf (zie renderCard) wil ook bij
+    // een rij van precies 1 transactie een datum tonen, en bij meerdere de meest recente — entries
+    // ligt hier al oplopend gesorteerd (zie computeImportBasisdataResultingLines), dus het laatste
+    // element is de laatste (meest recente) transactie.
+    if(l.entries && l.entries.length) post.datum = l.entries[l.entries.length-1].datum || null;
     return post;
   };
   bd.income.items = linesByBucket.income.map(l=>naarPost(l, "income"));
