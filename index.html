@@ -827,7 +827,11 @@
     .card-head{padding:9px 14px 7px;}
     .rows{padding:2px 14px 8px;}
     .row .value-input{width:78px;}
-    .row .row-datum{width:52px; font-size:10.5px;}
+    .row .row-datum{width:68px; font-size:9.5px;}
+    .rows-head{padding:6px 14px 2px;}
+    .sort-btn-datum{width:68px;}
+    .sort-btn-bedrag{width:88px;}
+    .sort-btn{font-size:9.5px;}
   }
 
   .card{
@@ -1013,6 +1017,40 @@
   .review-btn:disabled{opacity:.5; cursor:default;}
   .review-btn:disabled:hover{background:transparent;}
   .rows{padding:2px 18px 10px;}
+  /* Kolomkoppen boven de rijen (zie renderCardSortHead) — zelfde flex-opbouw als .row hieronder
+     (spacer i.p.v. naamveld, dan de twee sorteerbare kolommen, dan onzichtbare plaatshouders voor
+     eventuele markeerknopjes/verwijderknop) zodat de pijltjes precies boven hun kolom staan. */
+  .rows-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:6px 18px 2px;
+  }
+  .rows-head-spacer{flex:1; min-width:0;}
+  .sort-btn{
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:3px;
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--text-soft);
+    font-size:10.5px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    padding:2px;
+    font-family:inherit;
+  }
+  .sort-btn:hover{color:var(--gold-bright);}
+  .sort-btn.active{color:var(--forest);}
+  .sort-btn-datum{width:82px;}
+  .sort-btn-bedrag{width:104px;}
+  .sort-arrow{width:11px; height:11px; flex-shrink:0; opacity:.5;}
+  .sort-arrow.active{opacity:1;}
+  .sort-btn:hover .sort-arrow{opacity:.9;}
   .row{
     display:flex;
     align-items:center;
@@ -1038,9 +1076,10 @@
      regel) i.p.v. een streepje — een kolom vol steepjes trekt meer aandacht dan een lege cel. */
   .row .row-datum{
     flex-shrink:0;
-    width:70px;
+    width:82px;
     text-align:right;
     font-size:12px;
+    white-space:nowrap;
     color:var(--text-soft);
     opacity:.85;
     padding:4px 2px;
@@ -2131,6 +2170,8 @@ const i18n = {
     jarenLabel: "Jaren",
     collapseGroupBtn: "In-/uitklappen",
     breakdownToggleBtn: "Toon/verberg de losse betalingen achter dit bedrag",
+    sortByDatum: "Datum",
+    sortByBedrag: "Bedrag",
     maandbudgetCardTitle: "Maandbudget",
     maandbudgetCardInfo: "Maakt een nieuwe, losse momentopname van de huidige Basisdata-waarden (inkomsten + alle kosten). Verandert daarna niet meer mee met latere wijzigingen in Basisdata.",
     nieuwBudgetBtn: "+ Nieuw maandbudget",
@@ -2409,6 +2450,8 @@ const i18n = {
     jarenLabel: "Years",
     collapseGroupBtn: "Collapse/expand",
     breakdownToggleBtn: "Show/hide the individual payments behind this amount",
+    sortByDatum: "Date",
+    sortByBedrag: "Amount",
     maandbudgetCardTitle: "Monthly budget",
     maandbudgetCardInfo: "Creates a fresh, standalone snapshot of the current Basisdata values (income + all costs). Won't change again with later edits to Basisdata.",
     nieuwBudgetBtn: "+ New monthly budget",
@@ -5168,6 +5211,65 @@ let offsetPickerOpenFor = null;
    keuze van dit moment, niet iets om te bewaren of te syncen. Wordt geleegd zodra er daadwerkelijk
    gesplitst is, want daarna kloppen de indexen niet meer. */
 let importSplitSelection = new Set();
+/* Sorteerstand per kaart (zie renderCard/renderCardSortHead): welke kolom er actief op gesorteerd
+   is (bedrag of datum) en in welke richting. Sleutel is opts.sortScope (bv. "basisdata",
+   "budget:<id>", "scenario:<jaar>") + "::" + de kaart-sleutel ("income"/"vasteLasten"/...), zodat
+   de Inkomsten-kaart van Basisdata en die van een maandbudget niet dezelfde sortering delen.
+   Net als expandedBreakdowns bewust NIET in `state`: dit is schermvoorkeur, geen data — en de
+   volgorde van `cat.items` zelf verandert wél echt (zie sortCardItems), dus dat is waar de
+   sortering blijvend zichtbaar is, ook ná een herlaad; deze Map onthoudt alleen de PIJLSTAND
+   (welke kolom/richting je nu actief hebt staan) zodat een volgende klik weet te togglen. */
+let cardSortState = new Map();
+function cardSortKey(scope, cardKey){ return `${scope||cardKey}::${cardKey}`; }
+
+/* Sorteert cat.items ZELF (in place, dus ook de opgeslagen volgorde) op bedrag of datum.
+   - col "v": numeriek op `getValue(item)` (de eventueel berekende/weergegeven waarde — zie
+     opts.valueFor in renderCard — niet altijd hetzelfde als de rauwe item.v).
+   - col "datum": op de datumkolom (zie renderCard). Regels zonder datum (handmatig toegevoegd, of
+     data van vóór dit veld) blijven ALTIJD onderaan, in beide richtingen — een regel zonder datum
+     "hoog" of "laag" noemen heeft geen betekenis, en zo verdwijnt hij niet ergens middenin de lijst. */
+function sortCardItems(items, col, dir, getValue){
+  const factor = dir === "asc" ? 1 : -1;
+  if(col === "v"){
+    items.sort((a,b) => (getValue(a) - getValue(b)) * factor);
+    return;
+  }
+  if(col === "datum"){
+    const metDatum = items.filter(it => it.datum);
+    const zonderDatum = items.filter(it => !it.datum);
+    metDatum.sort((a,b) => String(a.datum).localeCompare(String(b.datum)) * factor);
+    items.length = 0;
+    items.push(...metDatum, ...zonderDatum);
+  }
+}
+/* Bouwt de kolomkoppen boven de rijen: twee klikbare pijltjes, "Datum" en "Bedrag", die de rijen
+   ECHT herordenen (zie sortCardItems) — geen aparte weergave-volgorde, dus de volgorde blijft ook
+   staan buiten deze sessie om. Alleen zinvol vanaf 2 regels; bij 0 of 1 regel is er niets te
+   sorteren en zou de kop alleen maar ruis zijn.
+   De onzichtbare "spacer-role-btn"/"spacer-del-btn" hieronder gebruiken bewust dezelfde classes als
+   de knopjes in renderCard() zelf (zie .role-btn/.del-btn), in plaats van losse pixelbreedtes te
+   gokken: zo blijft de "Bedrag"-kop altijd precies boven de bedragkolom staan, ook als die CSS
+   later verandert. */
+function renderCardSortHead(scopeKey, opts){
+  const sort = cardSortState.get(scopeKey) || null;
+  const arrow = (col) => {
+    if(!sort || sort.col !== col){
+      return `<svg class="sort-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>`;
+    }
+    const rotated = sort.dir === "asc" ? "" : " style=\"transform:rotate(180deg)\"";
+    return `<svg class="sort-arrow active"${rotated} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>`;
+  };
+  const head = document.createElement("div");
+  head.className = "rows-head";
+  head.innerHTML = `
+    <span class="rows-head-spacer"></span>
+    <button type="button" class="sort-btn sort-btn-datum${sort && sort.col==="datum" ? " active":""}" data-sort-col="datum">${escapeHtml(t("sortByDatum"))}${arrow("datum")}</button>
+    <button type="button" class="sort-btn sort-btn-bedrag${sort && sort.col==="v" ? " active":""}" data-sort-col="v">${escapeHtml(t("sortByBedrag"))}${arrow("v")}</button>
+    ${opts.offsetPicker ? `<button type="button" class="role-btn" style="visibility:hidden" tabindex="-1">⇥</button>` : ""}
+    <button type="button" class="del-btn" style="visibility:hidden" tabindex="-1">×</button>
+  `;
+  return head;
+}
 /* Bouwt de uitklapbare, ingesprongen deellijst-HTML voor de individuele transacties achter één
    samengevoegde regel — gedeeld tussen renderCompareCard (budget-vs-werkelijk) en renderReviewCard
    ("Nog in te delen"), zodat bv. Geldmaat, Bouwmarkt of Online overal op dezelfde manier uitklapt. */
@@ -5752,6 +5854,20 @@ function renderCard(key, cat, opts={}){
     wrap.classList.add("card-bucket");
     wrap.style.setProperty("--bucket-color", bucketColorVar(key));
   }
+  // Actieve sortering (zie renderCardSortHead) ECHT toepassen op cat.items, vóórdat de rijen
+  // hieronder gebouwd worden — dus geen aparte weergave-volgorde, de eigenlijke lijst (en dus ook
+  // wat er straks weer wordt opgeslagen) verandert mee. Op de weergegeven waarde sorteren, niet
+  // per se de rauwe item.v: bij een aftrekkoppeling of berekend loon (zie opts.valueFor) is dat wat
+  // je op het scherm ziet staan.
+  const sortScopeKey = cardSortKey(opts.sortScope, key);
+  const activeSort = cardSortState.get(sortScopeKey);
+  if(activeSort && cat.items.length > 1){
+    const getValue = (item) => {
+      const override = opts.valueFor ? opts.valueFor(item) : null;
+      return override ? (Number(override.value)||0) : (Number(item.v)||0);
+    };
+    sortCardItems(cat.items, activeSort.col, activeSort.dir, getValue);
+  }
   const total = (opts.totalOverride !== undefined) ? opts.totalOverride : sum(cat.items);
   wrap.innerHTML = `
     <div class="card-head">
@@ -5760,6 +5876,19 @@ function renderCard(key, cat, opts={}){
     </div>
     <div class="rows"></div>
   `;
+  if(cat.items.length > 1){
+    const sortHead = renderCardSortHead(sortScopeKey, opts);
+    wrap.querySelector(".card-head").insertAdjacentElement("afterend", sortHead);
+    sortHead.querySelectorAll(".sort-btn").forEach(btn=>{
+      btn.onclick = () => {
+        const col = btn.dataset.sortCol;
+        const current = cardSortState.get(sortScopeKey);
+        const dir = (current && current.col === col) ? (current.dir === "asc" ? "desc" : "asc") : "desc";
+        cardSortState.set(sortScopeKey, { col, dir });
+        renderAll();
+      };
+    });
+  }
   const rows = wrap.querySelector(".rows");
   cat.items.forEach((item, idx)=>{
     const override = opts.valueFor ? opts.valueFor(item, idx) : null;
@@ -5939,6 +6068,7 @@ function renderIncomeCard(s){
   // sterretje suggereren dat je er daar iets aan kunt veranderen.
   opts.salaryPicker = isBasisdata;
   opts.salaryScenario = s;
+  opts.sortScope = isBasisdata ? "basisdata" : "scenario:" + s.jaar;
   const card = renderCard("income", { title: t("income"), items: s.income.items }, opts);
   card.id = "income-card";
   return card;
@@ -6002,6 +6132,7 @@ function renderVasteLastenCard(){
   const bd = basisdataScenario();
   const opts = offsetCardOpts(bd.vasteLasten.items, state.offsetsEnabled, vasteLastenTotal());
   opts.offsetPicker = "basisdata";
+  opts.sortScope = "basisdata";
   const card = renderCard("vasteLasten", { title: t("vasteLasten"), items: bd.vasteLasten.items }, opts);
   card.id = "vaste-lasten-card";
   return card;
@@ -6054,6 +6185,7 @@ function renderOffsetToggle(){
 function renderVasteLastenCardForBudget(b){
   const opts = offsetCardOpts(b.vasteLasten.items, b.offsetsEnabled, vasteLastenTotalForBudget(b));
   opts.offsetPicker = "budget:" + b.id;
+  opts.sortScope = "budget:" + b.id;
   const card = renderCard("vasteLasten", { title: t("vasteLasten"), items: b.vasteLasten.items }, opts);
   card.id = "vaste-lasten-card";
   return card;
@@ -7049,8 +7181,8 @@ function renderScenarioCategories(){
   if(isBasisdata){
     el.appendChild(renderVasteLastenCard());
     el.appendChild(renderOffsetToggle());
-    el.appendChild(renderCard("abonnementen", { title: t("abonnementen"), items: s.abonnementen.items }));
-    el.appendChild(renderCard("variabeleLasten", { title: t("variabeleLasten"), items: s.variabeleLasten.items }));
+    el.appendChild(renderCard("abonnementen", { title: t("abonnementen"), items: s.abonnementen.items }, { sortScope: "basisdata" }));
+    el.appendChild(renderCard("variabeleLasten", { title: t("variabeleLasten"), items: s.variabeleLasten.items }, { sortScope: "basisdata" }));
   } else {
     el.appendChild(renderKostenUitBasisdataCard());
   }
@@ -7076,13 +7208,13 @@ function renderBudgetCategories(){
   titleInput.onchange = () => renderAll();
   el.appendChild(titleWrap);
 
-  el.appendChild(renderCard("income", { title: t("income"), items: b.income.items }));
+  el.appendChild(renderCard("income", { title: t("income"), items: b.income.items }, { sortScope: "budget:" + b.id }));
   el.appendChild(renderVasteLastenCardForBudget(b));
   el.appendChild(renderOffsetToggleForBudget(b));
-  el.appendChild(renderCard("abonnementen", { title: t("abonnementen"), items: b.abonnementen.items }));
-  el.appendChild(renderCard("variabeleLasten", { title: t("variabeleLasten"), items: b.variabeleLasten.items }));
+  el.appendChild(renderCard("abonnementen", { title: t("abonnementen"), items: b.abonnementen.items }, { sortScope: "budget:" + b.id }));
+  el.appendChild(renderCard("variabeleLasten", { title: t("variabeleLasten"), items: b.variabeleLasten.items }, { sortScope: "budget:" + b.id }));
   if(b.outstanding && b.outstanding.items.length){
-    el.appendChild(renderCard("outstanding", { title: t("outstandingTitle"), items: b.outstanding.items }));
+    el.appendChild(renderCard("outstanding", { title: t("outstandingTitle"), items: b.outstanding.items }, { sortScope: "budget:" + b.id }));
   }
 }
 
