@@ -1659,6 +1659,15 @@
   .breakdown-amt{ flex-shrink:0; width:76px; text-align:right; }
   .breakdown-amt.pos{color:var(--credit);}
   .breakdown-amt.neg{color:var(--debit);}
+  /* Losse betaling uit een Basisdata-regel halen (zie removeBasisdataEntry). Zelfde onopvallende
+     ×-stijl als .del-btn in de hoofdrij, en even breed, zodat de bedragen van hoofdregel en
+     deelregels onder elkaar blijven staan. */
+  .breakdown-del-btn{
+    background:none; border:none; cursor:pointer; flex-shrink:0;
+    color:var(--rule); font-size:15px; line-height:1; padding:2px 6px; opacity:.4;
+  }
+  .breakdown-row:hover .breakdown-del-btn, .breakdown-del-btn:focus-visible{opacity:1; color:var(--debit);}
+  @media (hover:none){ .breakdown-del-btn{opacity:.7;} }
 
   /* ---- "Import basisdata" (zie renderImportBasisdataScreen): losstaande flow die een schone
      PDF/CSV-import direct classificeert tot een nieuwe Basisdata, i.p.v. 'm te vergelijken met een
@@ -2210,6 +2219,7 @@ const i18n = {
     collapseGroupBtn: "In-/uitklappen",
     breakdownToggleBtn: "Toon/verberg de losse betalingen achter dit bedrag",
     dragHandleTitle: "Sleep om deze regel te verplaatsen, ook naar een andere groep",
+    breakdownDelTitle: "Deze betaling uit de regel halen (het bedrag gaat mee omlaag)",
     sortByDatum: "Datum",
     sortByBedrag: "Bedrag",
     maandbudgetCardTitle: "Maandbudget",
@@ -2491,6 +2501,7 @@ const i18n = {
     collapseGroupBtn: "Collapse/expand",
     breakdownToggleBtn: "Show/hide the individual payments behind this amount",
     dragHandleTitle: "Drag to move this line, also to another group",
+    breakdownDelTitle: "Remove this payment from the line (the amount is reduced accordingly)",
     sortByDatum: "Date",
     sortByBedrag: "Amount",
     maandbudgetCardTitle: "Monthly budget",
@@ -5314,14 +5325,17 @@ function renderCardSortHead(scopeKey, opts){
 /* Bouwt de uitklapbare, ingesprongen deellijst-HTML voor de individuele transacties achter één
    samengevoegde regel — gedeeld tussen renderCompareCard (budget-vs-werkelijk) en renderReviewCard
    ("Nog in te delen"), zodat bv. Geldmaat, Bouwmarkt of Online overal op dezelfde manier uitklapt. */
-function renderBreakdownRows(entries){
+/* opts.deletable: elke deelregel krijgt een ×-knopje met data-entry-idx (alleen op Basisdata, zie
+   renderCard); de aanroeper koppelt de klik zelf. */
+function renderBreakdownRows(entries, opts={}){
   return `
     <div class="breakdown-rows">
-      ${entries.map(e => `
+      ${entries.map((e, i) => `
         <div class="breakdown-row">
           <span class="breakdown-datum mono">${e.datum || "—"}</span>
           <span class="breakdown-naam" title="${(e.naam||"") + (e.omschrijving ? " — " + e.omschrijving : "")}">${e.naam || ""}${e.omschrijving ? ` — ${e.omschrijving}` : ""}</span>
           <span class="breakdown-amt mono ${e.amt>=0?'pos':'neg'}">${e.amt>=0?'+':'−'} € ${fmt(Math.abs(e.amt))}</span>
+          ${opts.deletable ? `<button type="button" class="breakdown-del-btn" data-entry-idx="${i}" title="${escapeHtml(t('breakdownDelTitle'))}" aria-label="${escapeHtml(t('breakdownDelTitle'))}">×</button>` : ""}
         </div>
       `).join("")}
     </div>
@@ -6121,6 +6135,27 @@ function startRowDrag(e, ctx){
   document.addEventListener("keydown", onKey, true);
 }
 
+/* Haalt één losse betaling (item.entries[idx]) uit een Basisdata-regel, zonder de regel zelf weg
+   te gooien. Het bedrag van de regel gaat er evenveel omlaag: entries dragen het BANKbedrag
+   (+ bijgeschreven, − afgeschreven), een kostengroep slaat dat omgekeerd op (zie naarPost), dus
+   voor kosten telt −amt en voor inkomsten amt. Zo blijven de overgebleven deelregels altijd optellen
+   tot het bedrag erboven.
+   Blijft er één betaling over, dan verdwijnt de uitklaplijst (zelfde drempel van >1 als overal) maar
+   houdt de rij wel de datum van die ene betaling. De datumkolom wordt opnieuw bepaald uit wat er
+   overblijft — de verwijderde betaling kan juist de meest recente zijn geweest.
+   Geeft de verwijderde entry terug, of null bij een ongeldige index. */
+function removeBasisdataEntry(item, key, idx){
+  if(!item || !Array.isArray(item.entries) || idx < 0 || idx >= item.entries.length) return null;
+  const [weg] = item.entries.splice(idx, 1);
+  const amt = parseFloat(weg.amt) || 0;
+  const postAmt = key === "income" ? amt : -amt;
+  item.v = Math.round(((parseFloat(item.v)||0) - postAmt) * 100) / 100;
+  const datums = item.entries.map(e => e.datum).filter(Boolean).sort();
+  if(datums.length) item.datum = datums[datums.length-1]; else delete item.datum;
+  if(item.entries.length <= 1) delete item.entries;
+  return weg;
+}
+
 function renderCard(key, cat, opts={}){
   const wrap = document.createElement("div");
   wrap.className = "card";
@@ -6317,7 +6352,17 @@ function renderCard(key, cat, opts={}){
       rowWrap.appendChild(picker);
     }
     if(hasBreakdown && isOpen){
-      rowWrap.insertAdjacentHTML("beforeend", renderBreakdownRows(item.entries));
+      // Op Basisdata (dezelfde kaarten die ook versleepbaar zijn) mag je een losse betaling uit de
+      // regel halen zonder de hele regel te verwijderen — zie removeBasisdataEntry.
+      rowWrap.insertAdjacentHTML("beforeend", renderBreakdownRows(item.entries, { deletable: draggable }));
+      if(draggable){
+        rowWrap.querySelectorAll(".breakdown-del-btn").forEach(btn => {
+          btn.onclick = () => {
+            removeBasisdataEntry(item, key, Number(btn.dataset.entryIdx));
+            renderAll();
+          };
+        });
+      }
     }
     rows.appendChild(rowWrap);
 
