@@ -351,7 +351,12 @@
     padding:14px 20px 0;
     flex-shrink:0;
     border-bottom:1px solid var(--rule);
+    /* Vier tabbladen passen op een smal paneel niet naast elkaar met de gewone tussenruimte: dan
+       zijwaarts scrollbaar in plaats van buiten het paneel te vallen. */
+    overflow-x:auto;
+    scrollbar-width:none;
   }
+  .profile-panel-tabs::-webkit-scrollbar{display:none;}
   .profile-tab-btn{
     background:transparent;
     border:none;
@@ -366,6 +371,26 @@
   .profile-tab-btn:hover{ color:var(--text); }
   .profile-tab-btn.active{ color:var(--gold); border-bottom-color:var(--gold); font-weight:600; }
   .profile-tab-btn:disabled{ color:var(--text-soft); opacity:.55; cursor:default; }
+  .profile-tab-btn{ white-space:nowrap; flex-shrink:0; }
+  @media (max-width:520px){
+    .profile-panel-tabs{ padding:12px 14px 0; }
+    .profile-tab-btn{ margin-right:10px; font-size:12.5px; }
+  }
+  /* Profiel > Gegevens */
+  .data-section{ display:flex; flex-direction:column; }
+  .data-row{ display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--rule); }
+  .data-row:last-of-type{ border-bottom:none; }
+  .data-row-text{ flex:1; min-width:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 6px; font-size:12.5px; }
+  .data-row-title{ font-weight:600; color:var(--text); overflow-wrap:anywhere; }
+  .data-row-meta{ flex-basis:100%; font-size:11px; color:var(--text-soft); }
+  .data-tag{ font-size:10px; padding:1px 6px; border-radius:9px; border:1px solid var(--rule); color:var(--text-soft); white-space:nowrap; }
+  .data-tag.warn{ border-color:color-mix(in srgb, var(--debit) 45%, var(--rule)); color:var(--debit); }
+  .data-open{ background:none; border:1px solid var(--rule); border-radius:5px; color:var(--text); font-size:11.5px; padding:4px 8px; cursor:pointer; flex-shrink:0; }
+  .data-open:hover, .data-open:focus-visible{ border-color:var(--gold); color:var(--gold); }
+  .profile-rule-del.data-del{ color:var(--text-soft); width:28px; height:28px; padding:5px; border-radius:5px; display:inline-flex; align-items:center; justify-content:center; }
+  .profile-rule-del.data-del svg{ width:16px; height:16px; }
+  .profile-rule-del.data-del:hover, .profile-rule-del.data-del:focus-visible{ color:var(--debit); background:color-mix(in srgb, var(--debit) 10%, transparent); }
+  .data-bulk{ align-self:flex-start; margin-top:10px; }
   .profile-panel-body{
     flex:1 1 auto;
     overflow-y:auto;
@@ -2002,6 +2027,21 @@
   .recalc-table tr.remove td{color:var(--text-soft);}
   .recalc-table tr.remove .naam, .recalc-table tr.remove td.mono:nth-child(3){text-decoration:line-through;}
   .recalc-table .status.removed{color:var(--debit);}
+  .recalc-table .recalc-note{display:block; font-size:10.5px; color:var(--gold); margin-top:1px;}
+  .recalc-pick{background:none; border:1px solid var(--rule); border-radius:5px; padding:2px 4px 2px 6px; font:inherit; color:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;}
+  .recalc-pick svg{width:12px; height:12px; flex:none; transition:transform .15s;}
+  .recalc-pick.open svg{transform:rotate(180deg);}
+  .recalc-pick:hover, .recalc-pick:focus-visible, .recalc-pick.open{border-color:var(--gold);}
+  .recalc-table tr.recalc-detail td{border-top:none; text-align:left; white-space:normal; padding-top:0; padding-bottom:10px;}
+  .recalc-methods{border:1px solid var(--rule); border-radius:8px; padding:8px 10px 6px; margin:0; display:flex; flex-direction:column; gap:2px; background:color-mix(in srgb, var(--gold) 5%, transparent);}
+  .recalc-methods legend{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-soft); padding:0 4px; font-weight:600;}
+  .recalc-method{display:grid; grid-template-columns:auto 1fr auto; column-gap:8px; align-items:baseline; padding:3px 2px; cursor:pointer; border-radius:4px;}
+  .recalc-method input{grid-row:span 2; align-self:center; margin:0;}
+  .recalc-method .m-naam{font-weight:600;}
+  .recalc-method .m-bedrag{text-align:right; font-family:"Courier New",Consolas,monospace;}
+  .recalc-method .m-uitleg{grid-column:2 / 4; font-size:10.5px; color:var(--text-soft);}
+  .recalc-method.active .m-naam, .recalc-method.active .m-bedrag{color:var(--gold);}
+  .recalc-detail-note{font-size:11px; color:var(--text-soft); margin:6px 2px 0;}
   .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
   @media (max-width:640px){
     .modal-overlay{padding:12px 8px;}
@@ -2037,7 +2077,7 @@
      pointer-events:none op de melding zelf en alleen aan op de knoppen: de melding mag nooit een
      klik onderscheppen die voor de pagina eronder bedoeld was. */
   .undo-toast{
-    position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:95;
+    position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:990;
     display:flex; align-items:center; gap:12px; max-width:min(440px, calc(100vw - 24px));
     padding:9px 10px 9px 16px; border-radius:8px;
     background:var(--text); color:var(--paper); font-size:12.5px;
@@ -2269,6 +2309,31 @@ const i18n = {
     profileBtnTitle: "Profiel & instellingen",
     profilePanelTitle: "Profiel & instellingen",
     profileTabAccount: "Account",
+    profileTabData: "Gegevens",
+    dataIntro: "Alles wat FinBo voor je bewaart, ook onderdelen die door eerdere versies nergens anders meer goed in beeld zijn. Verwijderen kan per onderdeel; direct daarna kun je het nog ongedaan maken.",
+    dataBudgetsTitle: (n) => `Maandbudgetten (${n})`,
+    dataBudgetsEmpty: "Geen maandbudgetten.",
+    dataNoMonth: "zonder maand",
+    dataNoTitle: "(zonder naam)",
+    dataSourceImport: "ingelezen",
+    dataSourcePlan: "zelf gemaakt",
+    dataLines: (n) => `${n} ${n === 1 ? "regel" : "regels"}`,
+    dataTagNoMonth: "geen maand",
+    dataTagDuplicate: "dubbel",
+    dataTagDuplicateIgnored: "dubbel — telt niet mee",
+    dataOpen: "Openen",
+    dataDelete: "Verwijderen",
+    dataLegacyTitle: (n) => `Oude maandimports (${n})`,
+    dataLegacyHint: "Uit de vroegere vergelijkfunctie, van vóór ‘Importeren’. Ze tellen bij herberekenen alleen mee als die maand geen ingelezen maandbudget heeft.",
+    dataLegacyMeta: (n) => `${n} ${n === 1 ? "regel" : "regels"} · oude import`,
+    dataTagLegacyShadowed: "telt niet mee",
+    dataLegacyDeleteAll: "Alle oude maandimports verwijderen",
+    dataLegacyDeletedToast: (n) => `${n} oude ${n === 1 ? "maandimport" : "maandimports"} verwijderd`,
+    dataHistoryTitle: (n) => `Vorige versies van Basisdata (${n})`,
+    dataHistoryHint: "Kopieën van Basisdata van vlak vóór een import, herberekening of terugzetting (zie ‘Vorige versies’ op de Basisdata-pagina).",
+    dataHistoryDeleteAll: "Vorige versies wissen",
+    dataHistoryDeletedToast: "Vorige versies gewist",
+    dataNone: "Niets opgeslagen.",
     profileTabCategories: "Categorieën",
     profileTabRules: "Importregels",
     profileRulesHint: "Regels die FinBo heeft onthouden doordat je een rij bij een import zelf hebt ingedeeld. Een volgende import zet die tegenpartij meteen goed.",
@@ -2453,6 +2518,7 @@ const i18n = {
     budgetNoMonthOption: "— geen maand —",
     budgetYearOther: "Zonder maand",
     monthExistsSuffix: " (bestaat al)",
+    monthTakenSuffix: " — heeft al een maandbudget",
     budgetSourceImport: (file, datum) => `Ingelezen uit ${file} op ${datum} — dit zijn de werkelijke bedragen van die maand.`,
     budgetSourceBadgeTitle: "Ingelezen maand (werkelijke bedragen)",
     budgetViewCompare: "Vergelijk met Basisdata",
@@ -2508,7 +2574,19 @@ const i18n = {
     recalcBtnHint: (n) => `uit ${n} ingelezen ${n === 1 ? "maand" : "maanden"}`,
     recalcNoMonths: "Lees eerst één of meer maanden in via Importeren, dan kan Basisdata zichzelf herberekenen.",
     recalcTitle: "Basisdata herberekenen",
-    recalcIntro: "Per regel neemt FinBo het gemiddelde over de maanden die je aanvinkt. Een maand waarin een regel niet voorkomt telt als € 0, zodat kosten die maar af en toe vallen netjes over de maanden worden verdeeld. Vink per regel aan wat je wilt overnemen; nieuwe regels die in minder dan de helft van de maanden voorkomen (meestal eenmalige uitgaven) staan standaard uit.",
+    recalcIntro: "Per regel neemt FinBo het gemiddelde over de maanden die je aanvinkt. Een maand waarin een regel niet voorkomt telt als € 0, zodat kosten die maar af en toe vallen netjes over de maanden worden verdeeld. Wijkt bij een inkomstenregel één maand flink af (zoals vakantiegeld bij je salaris), dan neemt FinBo het gebruikelijke bedrag; bij kosten wordt zo'n uitschieter alleen gemarkeerd. Klik op een bedrag met ▾ om zelf te kiezen. Vink per regel aan wat je wilt overnemen; nieuwe regels die in minder dan de helft van de maanden voorkomen (meestal eenmalige uitgaven) staan standaard uit.",
+    recalcMethodLegend: "Welk bedrag wil je overnemen?",
+    recalcMethodAvg: "Gemiddeld",
+    recalcMethodTypical: "Gebruikelijk bedrag",
+    recalcMethodLast: "Laatste maand",
+    recalcMethodAvgHint: (n) => `alles opgeteld ÷ ${n} ${n === 1 ? "maand" : "maanden"}`,
+    recalcMethodTypicalHint: "het middelste bedrag — een uitschieter telt niet mee",
+    recalcOutlier: (lijst, n) => n === 1 ? `${lijst} wijkt af` : `${lijst} wijken af`,
+    recalcOutlierCount: (n) => `${n} maanden wijken af`,
+    recalcOutlierList: (lijst) => `Wijken af: ${lijst}.`,
+    recalcOutlierExplain: "Een uitschieter, zoals vakantiegeld of een jaarlijkse betaling, trekt het gemiddelde omhoog. Het gebruikelijke bedrag laat die buiten beschouwing.",
+    recalcMethodRemembered: "Je keuze wordt bij het overnemen onthouden voor de volgende keer.",
+    recalcPickTitle: "Kies hoe dit bedrag berekend wordt",
     recalcJarenNote: "Let op: elk jaar rekent met de kosten uit Basisdata, en Loon werkt door naar latere jaren. Een vorige versie van Basisdata kun je altijd terugzetten.",
     recalcMonthsTitle: "Welke maanden tellen mee?",
     recalcSourceImport: "ingelezen",
@@ -2671,6 +2749,31 @@ const i18n = {
     profileBtnTitle: "Profile & settings",
     profilePanelTitle: "Profile & settings",
     profileTabAccount: "Account",
+    profileTabData: "Data",
+    dataIntro: "Everything FinBo stores for you, including parts that earlier versions no longer show properly anywhere else. You can delete per item, and undo it right afterwards.",
+    dataBudgetsTitle: (n) => `Month budgets (${n})`,
+    dataBudgetsEmpty: "No month budgets.",
+    dataNoMonth: "no month",
+    dataNoTitle: "(no name)",
+    dataSourceImport: "imported",
+    dataSourcePlan: "made yourself",
+    dataLines: (n) => `${n} ${n === 1 ? "line" : "lines"}`,
+    dataTagNoMonth: "no month",
+    dataTagDuplicate: "duplicate",
+    dataTagDuplicateIgnored: "duplicate — not counted",
+    dataOpen: "Open",
+    dataDelete: "Delete",
+    dataLegacyTitle: (n) => `Old month imports (${n})`,
+    dataLegacyHint: "From the earlier comparison feature, from before ‘Import’. When recalculating they only count if that month has no imported month budget.",
+    dataLegacyMeta: (n) => `${n} ${n === 1 ? "line" : "lines"} · old import`,
+    dataTagLegacyShadowed: "not counted",
+    dataLegacyDeleteAll: "Delete all old month imports",
+    dataLegacyDeletedToast: (n) => `${n} old month ${n === 1 ? "import" : "imports"} deleted`,
+    dataHistoryTitle: (n) => `Previous versions of Basisdata (${n})`,
+    dataHistoryHint: "Copies of Basisdata from just before an import, recalculation or restore (see ‘Previous versions’ on the Basisdata page).",
+    dataHistoryDeleteAll: "Clear previous versions",
+    dataHistoryDeletedToast: "Previous versions cleared",
+    dataNone: "Nothing stored.",
     profileTabCategories: "Categories",
     profileTabRules: "Import rules",
     profileRulesHint: "Rules FinBo remembered because you categorised a row yourself during an import. The next import will place that counterparty straight away.",
@@ -2855,6 +2958,7 @@ const i18n = {
     budgetNoMonthOption: "— no month —",
     budgetYearOther: "No month",
     monthExistsSuffix: " (exists)",
+    monthTakenSuffix: " — already has a budget",
     budgetSourceImport: (file, datum) => `Read in from ${file} on ${datum} — these are that month's actual amounts.`,
     budgetSourceBadgeTitle: "Imported month (actual amounts)",
     budgetViewCompare: "Compare with Basisdata",
@@ -2910,7 +3014,19 @@ const i18n = {
     recalcBtnHint: (n) => `from ${n} imported ${n === 1 ? "month" : "months"}`,
     recalcNoMonths: "First read in one or more months via Import, then Basisdata can recalculate itself.",
     recalcTitle: "Recalculate Basisdata",
-    recalcIntro: "For each line FinBo takes the average over the months you tick. A month in which a line does not occur counts as € 0, so costs that only come up now and then are spread over the months. Tick per line what you want to apply; new lines that occur in fewer than half of the months (usually one-off spending) are unticked by default.",
+    recalcIntro: "For each line FinBo takes the average over the months you tick. A month in which a line does not occur counts as € 0, so costs that only come up now and then are spread over the months. If one month of an income line is far off (like holiday pay on your salary), FinBo takes the usual amount instead; for costs such an outlier is only marked. Click an amount with ▾ to choose yourself. Tick per line what you want to apply; new lines that occur in fewer than half of the months (usually one-off spending) are unticked by default.",
+    recalcMethodLegend: "Which amount do you want to apply?",
+    recalcMethodAvg: "Average",
+    recalcMethodTypical: "Usual amount",
+    recalcMethodLast: "Last month",
+    recalcMethodAvgHint: (n) => `everything added up ÷ ${n} ${n === 1 ? "month" : "months"}`,
+    recalcMethodTypicalHint: "the middle amount — an outlier does not count",
+    recalcOutlier: (lijst, n) => n === 1 ? `${lijst} is an outlier` : `${lijst} are outliers`,
+    recalcOutlierCount: (n) => `${n} months are outliers`,
+    recalcOutlierList: (lijst) => `Outliers: ${lijst}.`,
+    recalcOutlierExplain: "An outlier, such as holiday pay or a yearly payment, pulls the average up. The usual amount leaves it out.",
+    recalcMethodRemembered: "When you apply, your choice is remembered for next time.",
+    recalcPickTitle: "Choose how this amount is calculated",
     recalcJarenNote: "Note: every year uses the costs from Basisdata, and Salary carries forward to later years. You can always restore a previous version of Basisdata.",
     recalcMonthsTitle: "Which months count?",
     recalcSourceImport: "imported",
@@ -3389,6 +3505,7 @@ function migrateState(){
     if(b.source !== "import") b.source = "basisdata";
   });
   if(state.basisdataHistory !== undefined && !Array.isArray(state.basisdataHistory)) delete state.basisdataHistory;
+  if(state.recalcMethods !== undefined && (typeof state.recalcMethods !== "object" || state.recalcMethods === null || Array.isArray(state.recalcMethods))) delete state.recalcMethods;
   // Onthouden splitsingen (zie learnSplitRules): alleen goedgevormde regels houden.
   if(state.splitRules !== undefined){
     if(!Array.isArray(state.splitRules)) delete state.splitRules;
@@ -5271,6 +5388,7 @@ function renderProfilePanel(){
   tabsEl.innerHTML = `
     <button class="profile-tab-btn ${profilePanelTab==="categories"?"active":""}" data-tab="categories">${t("profileTabCategories")}</button>
     <button class="profile-tab-btn ${profilePanelTab==="rules"?"active":""}" data-tab="rules">${t("profileTabRules")}</button>
+    <button class="profile-tab-btn ${profilePanelTab==="data"?"active":""}" data-tab="data">${t("profileTabData")}</button>
     <button class="profile-tab-btn ${profilePanelTab==="account"?"active":""}" data-tab="account">${t("profileTabAccount")}</button>
   `;
   tabsEl.querySelectorAll(".profile-tab-btn").forEach(b=>{
@@ -5287,7 +5405,148 @@ function renderProfilePanel(){
     renderProfileRulesTab(body);
     return;
   }
+  if(profilePanelTab === "data"){
+    renderProfileDataTab(body);
+    return;
+  }
   renderProfileAccountTab(body);
+}
+
+/* Profiel > Gegevens: alles wat FinBo opslaat, ook wat door eerdere versies nergens anders meer goed
+   in beeld is — oude maandimports uit de vroegere vergelijkfunctie, maandbudgetten zonder maand of
+   twee op dezelfde maand, en de bewaarde vorige versies van Basisdata. Alles per onderdeel te
+   verwijderen, met "Ongedaan maken" erachteraan. */
+function deleteBudgetWithUndo(b){
+  const snap = JSON.stringify(state);
+  detachMonthsFromBudget(b.id);
+  state.budgets = state.budgets.filter(x => x !== b);
+  if(state.activeView.type === "budget" && state.activeView.id === b.id){
+    state.activeScenario = 0;
+    state.activeView = { type:"scenario", index:0 };
+  }
+  renderAll();
+  offerUndo(t("undoDeleted")(b.title || t("dataNoTitle")), snap);
+}
+function renderProfileDataTab(body){
+  const bronnen = recalcSources();
+  const telt = new Map(bronnen.map(x => [x.ym, x]));
+  const regelsVan = (o) => CATEGORY_BUCKET_KEYS.reduce((n, k) => n + (((o[k] || {}).items) || []).length, 0);
+  const budgets = state.budgets.slice().sort((a, b) => {
+    const av = ymValid(a.ym), bv = ymValid(b.ym);
+    if(av !== bv) return av ? 1 : -1;            // zonder maand bovenaan: die zie je het minst snel
+    if(av && a.ym !== b.ym) return b.ym.localeCompare(a.ym);
+    return (b.createdAt || 0) - (a.createdAt || 0);
+  });
+  const perYm = new Map();
+  state.budgets.forEach(b => { if(ymValid(b.ym)) perYm.set(b.ym, (perYm.get(b.ym) || 0) + 1); });
+  const maanden = (state.months || []).slice().sort((a, b) => String(b.key).localeCompare(String(a.key)));
+  const versies = state.basisdataHistory || [];
+  const trash = TRASH_ICON;
+
+  const budgetRij = (b) => {
+    const dubbel = ymValid(b.ym) && perYm.get(b.ym) > 1;
+    // Bij twee budgetten op één maand telt bij herberekenen alleen het ingelezen (of het eerste) mee.
+    const winnaar = ymValid(b.ym) ? telt.get(b.ym) : null;
+    const teltNiet = dubbel && winnaar && winnaar.budgetId !== b.id;
+    // De maand alleen noemen als de titel hem niet al zegt.
+    const titelIsMaand = ymValid(b.ym) && [ymTitle(b.ym, "nl"), ymTitle(b.ym, "en")].includes((b.title || "").trim());
+    const meta = [
+      ymValid(b.ym) ? (titelIsMaand ? "" : ymTitle(b.ym)) : t("dataNoMonth"),
+      b.source === "import" ? t("dataSourceImport") : t("dataSourcePlan"),
+      t("dataLines")(regelsVan(b)),
+    ];
+    const tags = [
+      !ymValid(b.ym) ? `<span class="data-tag warn">${escapeHtml(t("dataTagNoMonth"))}</span>` : "",
+      dubbel ? `<span class="data-tag warn">${escapeHtml(teltNiet ? t("dataTagDuplicateIgnored") : t("dataTagDuplicate"))}</span>` : "",
+    ].join("");
+    return `<div class="data-row">
+      <div class="data-row-text">
+        <span class="data-row-title">${escapeHtml(b.title || t("dataNoTitle"))}</span>${tags}
+        <span class="data-row-meta">${escapeHtml(meta.filter(Boolean).join(" · "))}</span>
+      </div>
+      <button type="button" class="data-open" data-open-budget="${escapeHtml(b.id)}">${escapeHtml(t("dataOpen"))}</button>
+      <button type="button" class="profile-rule-del data-del" data-del-budget="${escapeHtml(b.id)}" title="${escapeHtml(t("dataDelete"))}" aria-label="${escapeHtml(t("dataDelete") + ": " + (b.title || ""))}">${trash}</button>
+    </div>`;
+  };
+  const maandRij = (m) => {
+    const n = regelsVan(m);
+    const overschaduwd = ymValid(m.key) && telt.get(m.key) && telt.get(m.key).kind !== "legacy";
+    return `<div class="data-row">
+      <div class="data-row-text">
+        <span class="data-row-title">${escapeHtml(monthLabel(m))}</span>${overschaduwd ? `<span class="data-tag">${escapeHtml(t("dataTagLegacyShadowed"))}</span>` : ""}
+        <span class="data-row-meta">${escapeHtml(t("dataLegacyMeta")(n))}</span>
+      </div>
+      <button type="button" class="profile-rule-del data-del" data-del-month="${escapeHtml(m.key)}" title="${escapeHtml(t("dataDelete"))}" aria-label="${escapeHtml(t("dataDelete") + ": " + monthLabel(m))}">${trash}</button>
+    </div>`;
+  };
+  body.innerHTML = `
+    <div><p class="profile-hint">${escapeHtml(t("dataIntro"))}</p></div>
+    <div class="data-section">
+      <p class="profile-section-title">${escapeHtml(t("dataBudgetsTitle")(budgets.length))}</p>
+      ${budgets.length ? budgets.map(budgetRij).join("") : `<p class="profile-cat-empty">${escapeHtml(t("dataBudgetsEmpty"))}</p>`}
+    </div>
+    <hr class="profile-divider">
+    <div class="data-section">
+      <p class="profile-section-title">${escapeHtml(t("dataLegacyTitle")(maanden.length))}</p>
+      <p class="profile-hint">${escapeHtml(t("dataLegacyHint"))}</p>
+      ${maanden.length ? maanden.map(maandRij).join("") + `<button type="button" class="danger-outline data-bulk" id="dataDelLegacyAll">${escapeHtml(t("dataLegacyDeleteAll"))}</button>` : `<p class="profile-cat-empty">${escapeHtml(t("dataNone"))}</p>`}
+    </div>
+    <hr class="profile-divider">
+    <div class="data-section">
+      <p class="profile-section-title">${escapeHtml(t("dataHistoryTitle")(versies.length))}</p>
+      <p class="profile-hint">${escapeHtml(t("dataHistoryHint"))}</p>
+      ${versies.length ? `<button type="button" class="danger-outline data-bulk" id="dataDelHistory">${escapeHtml(t("dataHistoryDeleteAll"))}</button>` : `<p class="profile-cat-empty">${escapeHtml(t("dataNone"))}</p>`}
+    </div>
+  `;
+  const herteken = () => { if(profilePanelOpen && profilePanelTab === "data") renderProfileDataTab(body); };
+  body.querySelectorAll("[data-open-budget]").forEach(btn => {
+    btn.onclick = () => {
+      const b = state.budgets.find(x => x.id === btn.dataset.openBudget);
+      if(!b) return;
+      if(ymValid(b.ym)) budgetYearOpen.set(b.ym.slice(0,4), true); else budgetYearOpen.set("none", true);
+      state.activeView = { type:"budget", id:b.id };
+      closeProfilePanel();
+      renderAll();
+    };
+  });
+  body.querySelectorAll("[data-del-budget]").forEach(btn => {
+    btn.onclick = () => {
+      const b = state.budgets.find(x => x.id === btn.dataset.delBudget);
+      if(!b) return;
+      deleteBudgetWithUndo(b);
+      herteken();
+    };
+  });
+  body.querySelectorAll("[data-del-month]").forEach(btn => {
+    btn.onclick = () => {
+      const m = (state.months || []).find(x => x.key === btn.dataset.delMonth);
+      if(!m) return;
+      const snap = JSON.stringify(state);
+      state.months = state.months.filter(x => x !== m);
+      if(state.activeView.type === "month" && state.activeView.key === m.key) state.activeView = { type:"scenario", index: state.activeScenario };
+      renderAll();
+      offerUndo(t("undoDeleted")(monthLabel(m)), snap);
+      herteken();
+    };
+  });
+  const alles = body.querySelector("#dataDelLegacyAll");
+  if(alles) alles.onclick = () => {
+    const snap = JSON.stringify(state);
+    const n = state.months.length;
+    state.months = [];
+    if(state.activeView.type === "month") state.activeView = { type:"scenario", index: state.activeScenario };
+    renderAll();
+    offerUndo(t("dataLegacyDeletedToast")(n), snap);
+    herteken();
+  };
+  const hist = body.querySelector("#dataDelHistory");
+  if(hist) hist.onclick = () => {
+    const snap = JSON.stringify(state);
+    state.basisdataHistory = [];
+    renderAll();
+    offerUndo(t("dataHistoryDeletedToast"), snap);
+    herteken();
+  };
 }
 
 /* Profiel > Importregels: de regels die FinBo heeft onthouden doordat de gebruiker tijdens een
@@ -9046,7 +9305,7 @@ function recalcSources(){
   state.budgets.forEach(b => {
     if(!ymValid(b.ym)) return;
     const imp = b.source === "import";
-    zet({ ym: b.ym, kind: imp ? "import" : "plan", prio: imp ? 3 : 1, label: b.title || ymTitle(b.ym),
+    zet({ ym: b.ym, kind: imp ? "import" : "plan", prio: imp ? 3 : 1, label: b.title || ymTitle(b.ym), budgetId: b.id,
           items: { income: b.income.items, vasteLasten: b.vasteLasten.items, abonnementen: b.abonnementen.items, variabeleLasten: b.variabeleLasten.items } });
   });
   (state.months||[]).forEach(m => {
@@ -9062,7 +9321,7 @@ function measuredMonthCount(){ return recalcSources().filter(s => s.kind !== "pl
    als 0. Regels worden op naam herkend (hoofdletterongevoelig), net als overal in FinBo. Staat een
    regel in Basisdata in een andere KOSTENgroep dan in de maand, dan telt hij mee bij de groep van
    Basisdata (zelfde tekenconventie); tussen inkomsten en kosten wordt nooit geschoven. */
-function computeRecalcProposal(bronnen){
+function computeRecalcProposal(bronnen, keuzes){
   const N = bronnen.length;
   const rond = n => Math.round(n*100)/100;
   const bd = basisdataScenario();
@@ -9086,14 +9345,24 @@ function computeRecalcProposal(bronnen){
       if(b && !inBdGroep.has(k + "::" + key) && b.bucket !== k && b.bucket !== "income" && k !== "income") bucket = b.bucket;
       const id = bucket + "::" + key;
       const bdItem = bd[bucket].items.find(i => (i.l||"").trim().toLowerCase() === key);
-      if(!acc.has(id)) acc.set(id, { bucket, key, label: bdItem ? bdItem.l : it.l, total:0, seen:new Set(), datum:"" });
+      if(!acc.has(id)) acc.set(id, { bucket, key, label: bdItem ? bdItem.l : it.l, total:0, seen:new Set(), datum:"", perYm:new Map() });
       const a = acc.get(id);
-      a.total += parseFloat(it.v)||0;
+      const v = parseFloat(it.v)||0;
+      a.total += v;
       a.seen.add(bron.ym);
+      a.perYm.set(bron.ym, (a.perYm.get(bron.ym) || 0) + v);
       const d = it.datum || (it.entries && it.entries.length ? it.entries[it.entries.length-1].datum : "") || "";
       if(d && d > a.datum) a.datum = d;
     }));
   });
+  // Welke rekenwijze per regel: de keuze in dit venster, anders wat je eerder koos (onthouden bij
+  // het overnemen), anders de standaard van recalcLineStats.
+  const opgeslagen = state.recalcMethods || {};
+  const kies = (id, stats) => {
+    const k1 = keuzes && keuzes.get ? keuzes.get(id) : null;
+    const m = k1 || opgeslagen[id] || stats.defaultMethod;
+    return RECALC_METHODS.includes(m) ? m : "avg";
+  };
   const regels = [];
   CATEGORY_BUCKET_KEYS.forEach(k => bd[k].items.forEach(it => {
     const key = (it.l||"").trim().toLowerCase();
@@ -9101,8 +9370,11 @@ function computeRecalcProposal(bronnen){
     const a = acc.get(id);
     const oud = rond(parseFloat(it.v)||0);
     if(a && N){
-      const nieuw = rond(a.total / N);
+      const stats = recalcLineStats(a, bronnen);
+      const method = kies(id, stats);
+      const nieuw = stats.methods[method];
       regels.push({ id, bucket:k, key, label: it.l, oud, nieuw, seen: a.seen.size, datum: a.datum,
+                    methods: stats.methods, method, defaultMethod: stats.defaultMethod, outliers: stats.outliers, lastYm: stats.lastYm,
                     status: Math.abs(nieuw - oud) < 0.005 ? "same" : "changed" });
       acc.delete(id);
     } else {
@@ -9111,16 +9383,84 @@ function computeRecalcProposal(bronnen){
   }));
   acc.forEach(a => {
     if(!N) return;
-    const nieuw = rond(a.total / N);
-    if(Math.abs(nieuw) < 0.005) return;
-    regels.push({ id: a.bucket + "::" + a.key, bucket: a.bucket, key: a.key, label: a.label, oud: null, nieuw, seen: a.seen.size, datum: a.datum, status: "new" });
+    const stats = recalcLineStats(a, bronnen);
+    if(Math.abs(stats.methods.avg) < 0.005) return;
+    const id = a.bucket + "::" + a.key;
+    const method = kies(id, stats);
+    regels.push({ id, bucket: a.bucket, key: a.key, label: a.label, oud: null, nieuw: stats.methods[method], seen: a.seen.size, datum: a.datum,
+                  methods: stats.methods, method, defaultMethod: stats.defaultMethod, outliers: stats.outliers, lastYm: stats.lastYm, status: "new" });
   });
   return regels;
 }
 
-function applyRecalcProposal(regels, verwijder){
+/* ---------- Rekenwijze per regel ----------
+   Het gemiddelde is goed voor kosten die wisselen of maar af en toe vallen, maar niet voor een regel
+   die elke maand hetzelfde is op één uitschieter na. Het salaris is het schoolvoorbeeld: in mei
+   komt het vakantiegeld mee, en dan zegt het gemiddelde dat je elke maand ruim € 300 meer verdient.
+   Daarom per regel drie bedragen:
+     avg      gemiddelde over de gekozen maanden (een maand zonder de regel telt als 0);
+     typical  het "gebruikelijke" bedrag: het middelste (mediaan). Bij een even aantal maanden van de
+              twee middelste het bedrag uit de recentste maand — zo komt er een bedrag uit dat echt
+              op je afschrift stond, en het nieuwste als ze verschillen;
+     last     het bedrag van de laatste gekozen maand.
+   Een maand (waarin de regel voorkomt) is een UITSCHIETER als hij verder van het gebruikelijke bedrag
+   af ligt dan max(3 × de mediane afwijking, 15 %, € 10). Zo valt een normaal wisselende
+   boodschappenpost er niet onder, maar vakantiegeld of een jaarpremie wel. Standaard wordt "typical"
+   gekozen voor een INKOMSTENregel die in álle gekozen maanden voorkomt en een uitschieter heeft;
+   anders het gemiddelde (bij kosten wordt de uitschieter alleen gemarkeerd). */
+const RECALC_METHODS = ["avg", "typical", "last"];
+function recalcLineStats(a, bronnen){
+  const rond = n => Math.round(n*100)/100;
+  const N = bronnen.length;
+  const waarden = bronnen.map(b => ({ ym: b.ym, v: rond(a.perYm ? (a.perYm.get(b.ym) || 0) : 0) }));
+  const gesorteerd = waarden.slice().sort((x, y) => (x.v - y.v) || x.ym.localeCompare(y.ym));
+  let typical = 0;
+  if(N){
+    if(N % 2) typical = gesorteerd[(N - 1) / 2].v;
+    else {
+      const lo = gesorteerd[N/2 - 1], hi = gesorteerd[N/2];
+      typical = (hi.ym > lo.ym ? hi : lo).v;
+    }
+  }
+  const laatste = waarden.slice().sort((x, y) => y.ym.localeCompare(x.ym))[0] || { ym: "", v: 0 };
+  const mediaan = lijst => {
+    const z = lijst.slice().sort((x, y) => x - y);
+    if(!z.length) return 0;
+    return z.length % 2 ? z[(z.length - 1) / 2] : (z[z.length/2 - 1] + z[z.length/2]) / 2;
+  };
+  // Alleen maanden waarin de regel echt voorkomt kunnen een uitschieter zijn: een maand zonder is
+  // juist waar het gemiddelde voor bedoeld is (kosten die af en toe vallen).
+  const aanwezig = waarden.filter(w => a.perYm && a.perYm.has(w.ym));
+  const mad = mediaan(aanwezig.map(w => Math.abs(w.v - typical)));
+  const grens = Math.max(3 * mad, 0.15 * Math.abs(typical), 10);
+  const outliers = N >= 3 ? aanwezig.filter(w => Math.abs(w.v - typical) > grens).sort((x, y) => x.ym.localeCompare(y.ym)) : [];
+  const seen = a.seen ? a.seen.size : 0;
+  // Alleen bij INKOMSTEN standaard het gebruikelijke bedrag: vakantiegeld of een bonus hoort niet in
+  // je maandloon (en Loon werkt door naar latere jaren). Bij kosten is een uitschieter vaak juist iets
+  // waarvoor je moet reserveren — een jaarafrekening, een premie per jaar, gemeentebelasting in
+  // termijnen — dan blijft het gemiddelde staan en zie je de uitschieter gemarkeerd.
+  const defaultMethod = (a.bucket === "income" && N >= 3 && seen === N && outliers.length) ? "typical" : "avg";
+  return {
+    methods: { avg: N ? rond(a.total / N) : 0, typical: rond(typical), last: rond(laatste.v) },
+    lastYm: laatste.ym,
+    outliers,
+    defaultMethod,
+  };
+}
+function recalcMethodsDiffer(r){
+  if(!r || !r.methods) return false;
+  const w = RECALC_METHODS.map(m => r.methods[m]);
+  return Math.max(...w) - Math.min(...w) >= 0.005;
+}
+
+function applyRecalcProposal(regels, verwijder, voorkeuren){
   const snap = JSON.stringify(state);
   pushBasisdataHistory("recalc");
+  // De rekenwijze die je zelf per regel koos, voor de volgende keer onthouden (zie recalcLineStats).
+  if(voorkeuren && voorkeuren.size){
+    if(!state.recalcMethods || typeof state.recalcMethods !== "object" || Array.isArray(state.recalcMethods)) state.recalcMethods = {};
+    voorkeuren.forEach((m, id) => { if(RECALC_METHODS.includes(m)) state.recalcMethods[id] = m; });
+  }
   const bd = basisdataScenario();
   let n = 0;
   // Eerst weghalen wat de gebruiker in het voorstel heeft doorgestreept — ook regels die "gelijk"
@@ -9163,6 +9503,8 @@ let recalcSelectedYms = null;   // Set — transiënt, alleen zolang het venster
 let recalcExcluded = new Set();  // regel-id's die (door de gebruiker of standaard) uitgevinkt zijn
 let recalcTouched = new Set();   // regel-id's waar de gebruiker zelf aan heeft gezeten
 let recalcRemove = new Set();    // id's van bestaande Basisdata-regels die bij "overnemen" weg moeten
+let recalcMethodChoice = new Map(); // regel-id → "avg" | "typical" | "last", door de gebruiker gekozen
+let recalcPickOpen = new Set();     // regel-id's waarvan de keuze voor de rekenwijze is uitgeklapt
 /* Een NIEUWE regel die in minder dan de helft van de maanden voorkomt is meestal een incidentele
    uitgave (één keer een cadeau, een reparatie). Die staat wel in het voorstel, maar standaard
    uitgevinkt: Basisdata hoort vooral wat steeds terugkomt te bevatten. Zelf aanvinken kan altijd. */
@@ -9176,6 +9518,8 @@ function showRecalcModal(){
   recalcExcluded = new Set();
   recalcTouched = new Set();
   recalcRemove = new Set();
+  recalcMethodChoice = new Map();
+  recalcPickOpen = new Set();
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
   overlay.id = "recalcOverlay";
@@ -9187,7 +9531,7 @@ function showRecalcModal(){
 
   const teken = () => {
     const gekozen = bronnen.filter(b => recalcSelectedYms.has(b.ym));
-    const regels = computeRecalcProposal(gekozen);
+    const regels = computeRecalcProposal(gekozen, recalcMethodChoice);
     regels.forEach(r => {
       if(recalcTouched.has(r.id)) return;
       if(recalcDefaultExcluded(r, gekozen.length)) recalcExcluded.add(r.id); else recalcExcluded.delete(r.id);
@@ -9211,18 +9555,45 @@ function showRecalcModal(){
             : r.status === "same" ? `<span class="status">${escapeHtml(t("recalcStatusSame"))}</span>`
             : r.status === "notMeasured" ? `<span class="status">${escapeHtml(t("recalcStatusNotMeasured"))}</span>` : "";
           const statusTxt = weg ? `<span class="status removed">${escapeHtml(t("recalcStatusRemove"))}</span>` : status;
+          const metKeuze = !weg && recalcMethodsDiffer(r);
+          const open = metKeuze && recalcPickOpen.has(r.id);
+          const detailId = "recalcPick-" + r.id.replace(/[^a-z0-9]+/gi, "-");
+          const uitschieters = (r.outliers || []).map(o => `${ymTitle(o.ym)} (€ ${fmt(o.v)})`);
+          const uitschieterTxt = !uitschieters.length ? "" : (uitschieters.length > 2
+            ? t("recalcOutlierCount")(uitschieters.length)
+            : t("recalcOutlier")(uitschieters.join(", "), uitschieters.length));
+          const uitschieterLijst = uitschieters.length > 2 ? t("recalcOutlierList")(uitschieters.join(", ")) : "";
+          const notitie = (!weg && r.methods && (r.method !== "avg" || uitschieterTxt))
+            ? `<span class="recalc-note">${escapeHtml([r.method !== "avg" ? t(r.method === "typical" ? "recalcMethodTypical" : "recalcMethodLast").toLowerCase() : "", uitschieterTxt].filter(Boolean).join(" · "))}</span>` : "";
+          const nieuwTxt = r.nieuw === null ? "—" : `<span class="eur">€ </span>${fmt(r.nieuw)}`;
+          const nieuwCel = weg ? "—" : (metKeuze
+            ? `<button type="button" class="recalc-pick ${open ? "open" : ""}" data-pick="${escapeHtml(r.id)}" aria-expanded="${open}" aria-controls="${detailId}" title="${escapeHtml(t("recalcPickTitle"))}">${nieuwTxt}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
+            : nieuwTxt);
+          const keuzeRij = open ? `<tr class="recalc-detail" id="${detailId}"><td></td><td colspan="5">
+              <fieldset class="recalc-methods"><legend>${escapeHtml(t("recalcMethodLegend"))}</legend>
+                ${RECALC_METHODS.map(m => `<label class="recalc-method${r.method === m ? " active" : ""}">
+                  <input type="radio" name="${detailId}" value="${m}" data-method="${escapeHtml(r.id)}" ${r.method === m ? "checked" : ""} />
+                  <span class="m-naam">${escapeHtml(t(m === "avg" ? "recalcMethodAvg" : m === "typical" ? "recalcMethodTypical" : "recalcMethodLast"))}</span>
+                  <span class="m-bedrag mono">€ ${fmt(r.methods[m])}</span>
+                  <span class="m-uitleg">${escapeHtml(m === "avg" ? t("recalcMethodAvgHint")(gekozen.length) : m === "typical" ? t("recalcMethodTypicalHint") : ymTitle(r.lastYm))}</span>
+                </label>`).join("")}
+              </fieldset>
+              ${uitschieterLijst ? `<p class="recalc-detail-note">${escapeHtml(uitschieterLijst)}</p>` : ""}
+              ${uitschieterTxt ? `<p class="recalc-detail-note">${escapeHtml(t("recalcOutlierExplain"))}</p>` : ""}
+              <p class="recalc-detail-note">${escapeHtml(t("recalcMethodRemembered"))}</p>
+            </td></tr>` : "";
           const delKnop = bestaand(r)
             ? `<button type="button" class="recalc-del ${weg ? "active" : ""}" data-del="${escapeHtml(r.id)}" aria-pressed="${weg}"
                  title="${escapeHtml(weg ? t("recalcKeepLine") : t("recalcRemoveLine"))}" aria-label="${escapeHtml((weg ? t("recalcKeepLine") : t("recalcRemoveLine")) + ": " + r.label)}">${weg ? RECALC_KEEP_ICON : TRASH_ICON}</button>`
             : "";
           return `<tr class="${weg ? "remove" : (kiesbaar ? "" : "muted")}">
             <td>${kiesbaar ? `<input type="checkbox" data-regel="${escapeHtml(r.id)}" ${recalcExcluded.has(r.id) ? "" : "checked"} />` : ""}</td>
-            <td class="lbl"><span class="naam">${escapeHtml(r.label)}</span> ${statusTxt}${r.status === "notMeasured" ? "" : `<span class="seen-inline">${escapeHtml(t("recalcColSeen"))} ${escapeHtml(t("recalcSeenIn")(r.seen, gekozen.length))}</span>`}</td>
+            <td class="lbl"><span class="naam">${escapeHtml(r.label)}</span> ${statusTxt}${notitie}${r.status === "notMeasured" ? "" : `<span class="seen-inline">${escapeHtml(t("recalcColSeen"))} ${escapeHtml(t("recalcSeenIn")(r.seen, gekozen.length))}</span>`}</td>
             <td class="mono">${r.oud === null ? "—" : `<span class="eur">€ </span>${fmt(r.oud)}`}</td>
-            <td class="mono ${weg ? "" : richting}">${weg ? "—" : (r.nieuw === null ? "—" : `<span class="eur">€ </span>${fmt(r.nieuw)}`)}</td>
+            <td class="mono ${weg ? "" : richting}">${nieuwCel}</td>
             <td class="seen-col">${r.status === "notMeasured" ? "" : escapeHtml(t("recalcSeenIn")(r.seen, gekozen.length))}</td>
             <td class="del-col">${delKnop}</td>
-          </tr>`;
+          </tr>${keuzeRij}`;
         }).join("");
     }).join("");
     overlay.innerHTML = `
@@ -9256,6 +9627,24 @@ function showRecalcModal(){
         teken();
       };
     });
+    overlay.querySelectorAll("[data-pick]").forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.pick;
+        if(recalcPickOpen.has(id)) recalcPickOpen.delete(id); else recalcPickOpen.add(id);
+        teken();
+        const terug = [...overlay.querySelectorAll("[data-pick]")].find(b => b.dataset.pick === id);
+        if(terug) terug.focus();
+      };
+    });
+    overlay.querySelectorAll("input[data-method]").forEach(radio => {
+      radio.onchange = () => {
+        const id = radio.dataset.method;
+        recalcMethodChoice.set(id, radio.value);
+        teken();
+        const terug = [...overlay.querySelectorAll("input[data-method]")].find(x => x.dataset.method === id && x.value === radio.value);
+        if(terug) terug.focus();
+      };
+    });
     overlay.querySelectorAll("[data-del]").forEach(btn => {
       btn.onclick = () => {
         const id = btn.dataset.del;
@@ -9271,7 +9660,7 @@ function showRecalcModal(){
     overlay.querySelector("#recalcApplyBtn").onclick = () => {
       if(!aantalActies) return;
       sluit();
-      applyRecalcProposal(toepasbaar, teVerwijderen);
+      applyRecalcProposal(toepasbaar, teVerwijderen, recalcMethodChoice);
     };
   };
   teken();
@@ -9372,8 +9761,10 @@ function renderBudgetCategories(){
         <select id="budgetMonthSelect">
           <option value="" ${ymValid(b.ym) ? "" : "selected"}>${escapeHtml(t("budgetNoMonthOption"))}</option>
           ${opties.map(ym => {
+            // Een maand met al een ander maandbudget kun je niet kiezen: twee budgetten op één maand
+            // zou betekenen dat er bij herberekenen stilletjes maar één meetelt.
             const anders = state.budgets.some(x => x !== b && x.ym === ym);
-            return `<option value="${ym}" ${b.ym === ym ? "selected" : ""}>${escapeHtml(ymTitle(ym) + (anders ? t("monthExistsSuffix") : ""))}</option>`;
+            return `<option value="${ym}" ${b.ym === ym ? "selected" : ""} ${anders && b.ym !== ym ? "disabled" : ""}>${escapeHtml(ymTitle(ym) + (anders ? t("monthTakenSuffix") : ""))}</option>`;
           }).join("")}
         </select>
       </label>
