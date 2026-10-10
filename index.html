@@ -764,17 +764,6 @@
     justify-content:center;
   }
   .tab-upload:hover{background:color-mix(in srgb, var(--gold) 8%, transparent); border-color:var(--gold);}
-  /* Herordenbare tabs (zie enableLongPressReorder): "grab"-cursor als signaal dat ingedrukt houden
-     iets doet, en een duidelijk "opgetild"-effect zodra het slepen daadwerkelijk is gestart. */
-  .tab-draggable{cursor:grab;}
-  .tab-dragging{
-    cursor:grabbing;
-    opacity:.6;
-    background:color-mix(in srgb, var(--gold) 14%, transparent);
-    box-shadow:0 3px 10px rgba(0,0,0,.3);
-    position:relative;
-    z-index:5;
-  }
   /* Regels verslepen tussen de groepen op Basisdata (zie startRowDrag/moveBasisdataItem). Het
      greepje staat vooraan in de rij, onopvallend zoals .del-btn, en wordt pas duidelijk bij hover.
      touch-action:none alleen op het greepje zelf: daar begint een sleep, overal elders in de rij
@@ -1830,6 +1819,9 @@
   .import-bd-btn-secondary{ border:1px solid var(--rule); background:transparent; color:var(--text); }
   .import-bd-btn-danger{ border:1px solid var(--debit); background:var(--debit); color:#fff; }
   .import-bd-btn-danger:disabled{ background:var(--text-soft); border-color:var(--text-soft); opacity:.5; cursor:default; }
+  /* Opslaan als maand is niet destructief: gewone (groene) knop i.p.v. de rode van "Basisdata vervangen". */
+  .import-bd-btn-danger.import-bd-btn-save{ border-color:var(--gold); background:var(--gold); }
+  .import-bd-btn-danger.import-bd-btn-save:disabled{ background:var(--text-soft); border-color:var(--text-soft); }
   .import-bd-success-card{
     border:1px solid color-mix(in srgb, var(--gold) 40%, transparent); background:color-mix(in srgb, var(--gold) 6%, var(--paper));
     border-radius:10px; padding:22px 24px; max-width:600px;
@@ -1844,6 +1836,207 @@
   .import-bd-confirm-card h3{ font-family:Georgia,serif; font-size:17px; margin:0 0 10px; }
   .import-bd-confirm-card p{ font-size:13px; color:var(--text-soft); line-height:1.6; margin:0 0 18px; }
   .import-bd-confirm-actions{ display:flex; justify-content:flex-end; gap:10px; }
+
+  /* ---- v27: smalle schermen — de mobiele kolombreedtes moeten ná de basisregels staan ----
+     De @media-regels voor .row-datum/.value-input staan hoger in dit bestand dan de basisregels
+     (.row .row-datum{width:82px}, .row .value-input{width:92px}). Bij gelijke specificiteit wint de
+     laatste, dus de mobiele breedtes deden niets: op 320px liep elke Basisdata-rij 3px het scherm uit
+     (test_v24_sidebar_layout) en bleef er voor de naam bijna niets over. Hier staan ze nog een keer,
+     ná de basisregels, zodat ze ook echt gelden. */
+  @media (max-width:640px){
+    .row{gap:7px;}
+    .row .value-input{width:78px;}
+    .row .row-datum{width:64px; font-size:9.5px;}
+    .sort-btn-datum{width:64px;}
+    .row .category-btn, .rows-head .category-btn{display:none;}
+  }
+
+  /* ---- Categorieknop + keuzelijst op Basisdata-regels (zie renderCard/opts.categoryPicker) ---- */
+  .row .category-btn svg{width:13px; height:13px; display:block;}
+  .row .drag-handle.has-category{color:var(--gold-bright); opacity:.9;}
+  .category-picker{
+    padding:6px 0 10px 26px;
+    font-size:11.5px;
+    color:var(--text-soft);
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .category-picker label{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .category-picker select, .category-picker input[type="text"]{
+    font:inherit; color:var(--text); background:var(--paper);
+    border:1px solid var(--rule); border-radius:5px; padding:3px 6px; max-width:100%;
+  }
+  .category-picker .category-new{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .category-picker .category-new[hidden]{display:none;}
+  .category-picker button{
+    font:inherit; cursor:pointer; padding:3px 10px; border-radius:5px;
+    border:1px solid var(--gold); background:var(--gold); color:#fff;
+  }
+  .category-picker .category-remember{font-size:11px;}
+  .category-picker-hint{font-size:10.5px; opacity:.85;}
+
+  /* ---- Maandbudgetten per jaar in het menu ---- */
+  .budget-year{display:flex; flex-direction:column; gap:2px; margin-left:10px;}
+  .budget-year + .budget-year{margin-top:4px;}
+  .budget-year-head{margin-bottom:0; padding:2px 14px 2px 4px;}
+  .budget-year-head .tab-group-label{font-size:11px; letter-spacing:.06em;}
+  .budget-year-count{
+    font-size:10px; color:var(--text-onink-soft); opacity:.8;
+    font-family:"Segoe UI",sans-serif;
+  }
+  .tab .tab-import-mark{
+    display:inline-flex; width:12px; height:12px; margin-left:6px; opacity:.7; flex-shrink:0;
+  }
+  .tab .tab-import-mark svg{width:12px; height:12px;}
+
+  /* ---- Maandpagina: maand kiezen, herkomst, weergave wisselen ---- */
+  .budget-meta{display:flex; flex-direction:column; gap:8px; padding:10px 18px 14px;}
+  .budget-meta-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12.5px; color:var(--text-soft);}
+  .budget-meta-row select{
+    font:inherit; color:var(--text); background:var(--paper);
+    border:1px solid var(--rule); border-radius:5px; padding:4px 8px;
+  }
+  .budget-source{font-size:12px; color:var(--text-soft); display:flex; align-items:center; gap:6px;}
+  .budget-source svg{width:13px; height:13px;}
+  .view-switch{display:inline-flex; border:1px solid var(--rule); border-radius:999px; overflow:hidden;}
+  .view-switch button{
+    font:inherit; font-size:12px; padding:5px 14px; border:none; cursor:pointer;
+    background:transparent; color:var(--text-soft);
+  }
+  .view-switch button.active{background:var(--gold); color:#fff; font-weight:600;}
+
+  /* ---- Importeren: bestemming kiezen (maand of Basisdata) ---- */
+  .import-dest{
+    border:1px solid var(--rule); border-radius:8px; padding:14px 16px; max-width:760px;
+    background:var(--paper); margin-bottom:14px;
+  }
+  .import-dest h3{font-family:Georgia,serif; font-size:15px; margin:0 0 10px;}
+  .import-dest-option{display:flex; align-items:flex-start; gap:8px; padding:6px 0; font-size:13px; cursor:pointer;}
+  .import-dest-option input[type="radio"]{margin-top:2px; accent-color:var(--gold);}
+  .import-dest-body{margin:4px 0 6px 24px; display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-soft);}
+  .import-dest-body select{
+    font:inherit; font-size:12.5px; color:var(--text); background:var(--paper);
+    border:1px solid var(--rule); border-radius:5px; padding:4px 8px; max-width:260px;
+  }
+  .import-dest-note{font-size:11.5px; color:var(--text-soft);}
+  .import-dest-note.replace{color:var(--debit);}
+  .import-dest-months{display:grid; grid-template-columns:repeat(auto-fill, minmax(170px,1fr)); gap:4px 12px;}
+  .import-dest-month{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text);}
+  .import-dest-month input{accent-color:var(--gold);}
+  .import-dest-month .tag{font-size:10px; color:var(--text-soft);}
+  .import-dest-month .tag.replace{color:var(--debit);}
+  .import-dest .import-bd-warn{margin:6px 0 0 24px;}
+  .import-bd-multi-note{
+    margin:0 0 10px; padding:8px 10px; font-size:11.5px; color:var(--text-soft);
+    background:var(--paper-2); border:1px solid var(--rule); border-radius:6px; max-width:760px;
+  }
+  .import-bd-rejoin{
+    margin-left:6px; font:inherit; font-size:10.5px; cursor:pointer;
+    padding:1px 8px; border-radius:999px; border:1px dashed var(--rule);
+    background:transparent; color:var(--text-soft);
+  }
+  .import-bd-rejoin:hover{border-color:var(--gold-bright); color:var(--gold-bright);}
+  .import-bd-success-actions{display:flex; gap:10px; flex-wrap:wrap;}
+  .import-bd-success-actions button{
+    font-family:"Segoe UI",sans-serif; font-size:13px; font-weight:600; padding:9px 16px; border-radius:5px; cursor:pointer;
+    border:1px solid var(--gold); background:var(--gold); color:#fff;
+  }
+  .import-bd-success-actions button.secondary{background:transparent; color:var(--gold);}
+
+  /* ---- Basisdata: herberekenen + vorige versies ---- */
+  .bd-tools{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 14px;}
+  .bd-tools button{
+    font-family:"Segoe UI",sans-serif; font-size:12.5px; font-weight:600; cursor:pointer;
+    padding:7px 14px; border-radius:999px; border:1px solid var(--gold); background:transparent; color:var(--gold);
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .bd-tools button:hover:not(:disabled){background:color-mix(in srgb, var(--gold) 10%, transparent);}
+  .bd-tools button:disabled{opacity:.5; cursor:default;}
+  .bd-tools button svg{width:14px; height:14px;}
+  .bd-tools-hint{font-size:11.5px; color:var(--text-soft);}
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:85;
+    display:flex; align-items:flex-start; justify-content:center; padding:24px 16px; overflow-y:auto;
+  }
+  .modal-card{
+    background:var(--paper); color:var(--text); border-radius:10px; padding:22px 24px;
+    width:100%; max-width:720px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+  }
+  .modal-card h3{font-family:Georgia,serif; font-size:18px; margin:0 0 8px;}
+  .modal-card p{font-size:12.5px; color:var(--text-soft); line-height:1.55; margin:0 0 10px;}
+  .modal-card h4{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-soft); margin:16px 0 6px;}
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:16px; flex-wrap:wrap;}
+  .modal-actions button{
+    font-family:"Segoe UI",sans-serif; font-size:13px; font-weight:600; padding:9px 16px; border-radius:5px; cursor:pointer;
+    border:1px solid var(--gold); background:var(--gold); color:#fff;
+  }
+  .modal-actions button.secondary{background:transparent; color:var(--text); border-color:var(--rule);}
+  .modal-actions button:disabled{opacity:.5; cursor:default;}
+  .recalc-months{display:flex; flex-direction:column; gap:4px;}
+  .recalc-month{display:flex; align-items:center; gap:8px; font-size:12.5px;}
+  .recalc-month input{accent-color:var(--gold);}
+  .recalc-month .tag{font-size:10.5px; color:var(--text-soft); padding:1px 7px; border-radius:999px; background:var(--paper-2); border:1px solid var(--rule);}
+  .recalc-table-wrap{overflow-x:auto;}
+  .recalc-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .recalc-table th{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-soft); text-align:right; padding:4px 6px; font-weight:600;}
+  .recalc-table th:nth-child(2){text-align:left;}
+  .recalc-table td{padding:4px 6px; border-top:1px solid var(--rule); text-align:right; white-space:nowrap;}
+  .recalc-table td.lbl{text-align:left; white-space:normal;}
+  .recalc-table td.mono{font-family:"Courier New",Consolas,monospace;}
+  .recalc-table tr.bucket td{border-top:none; padding-top:12px; text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--bucket-color, var(--gold));}
+  .recalc-table tr.muted td{color:var(--text-soft);}
+  .recalc-table .status{font-size:10.5px; color:var(--text-soft);}
+  .recalc-table .status.new{color:var(--credit);}
+  .recalc-table .up{color:var(--debit);}
+  .recalc-table .down{color:var(--credit);}
+  .recalc-table input{accent-color:var(--gold);}
+  .recalc-table .seen-inline{display:none;}
+  @media (max-width:640px){
+    .modal-overlay{padding:12px 8px;}
+    .modal-card{padding:18px 14px;}
+    .recalc-table{font-size:11.5px;}
+    .recalc-table td, .recalc-table th{padding:4px 3px;}
+    .recalc-table td.mono{font-size:11px;}
+    .recalc-table .seen-col{display:none;}
+    .recalc-table .seen-inline{display:block; font-size:10px; color:var(--text-soft);}
+  }
+  .history-list{display:flex; flex-direction:column; gap:8px;}
+  .history-item{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 10px; border:1px solid var(--rule); border-radius:6px; font-size:12.5px;}
+  .history-item .when{font-weight:600;}
+  .history-item .why{color:var(--text-soft); font-size:11.5px;}
+  .history-item .sums{color:var(--text-soft); font-size:11.5px; margin-left:auto;}
+  .history-item button{
+    font:inherit; font-size:12px; cursor:pointer; padding:4px 12px; border-radius:5px;
+    border:1px solid var(--gold); background:transparent; color:var(--gold);
+  }
+
+  /* ---- "Ongedaan maken"-melding ----
+     pointer-events:none op de melding zelf en alleen aan op de knoppen: de melding mag nooit een
+     klik onderscheppen die voor de pagina eronder bedoeld was. */
+  .undo-toast{
+    position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:95;
+    display:flex; align-items:center; gap:12px; max-width:min(440px, calc(100vw - 24px));
+    padding:9px 10px 9px 16px; border-radius:8px;
+    background:var(--text); color:var(--paper); font-size:12.5px;
+    box-shadow:0 6px 18px rgba(0,0,0,.3); pointer-events:none;
+  }
+  body:has(.import-bd-footer) .undo-toast{bottom:84px;}
+  .undo-toast-text{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis;}
+  .undo-toast-btn{white-space:nowrap;}
+
+  /* Vergelijkingskaarten op een telefoon: naam op een eigen regel, de drie bedragen eronder over de
+     volle breedte. Naast elkaar bleef er voor de naam maar een paar letters over ("Hypo…"), en een
+     ingelezen maand opent juist op deze vergelijking. */
+  @media (max-width:640px){
+    .compare-head-row{padding:4px 14px 6px;}
+    .compare-head-row .compare-name{display:none;}
+    .compare-rows{padding:2px 14px 10px;}
+    .compare-row{flex-wrap:wrap; row-gap:2px;}
+    .compare-row .compare-name{flex:1 1 100%;}
+    .compare-head-row .compare-col, .compare-row .compare-col{width:auto; flex:1 1 0; min-width:0; font-size:12px;}
+  }
+  .undo-toast button{pointer-events:auto; font:inherit; cursor:pointer; border:none; background:transparent; color:inherit;}
+  .undo-toast-btn{font-weight:700; text-decoration:underline; text-underline-offset:3px; padding:3px 6px;}
+  .undo-toast-close{opacity:.7; font-size:16px; padding:0 4px;}
 
 </style>
 </head>
@@ -2162,12 +2355,11 @@ const i18n = {
     loonstijgingSyncedRowTitle: "Dit jaar is gekoppeld aan een tabblad en wordt live bijgewerkt. Klik op het jaartal om er direct naartoe te gaan.",
     kostenUitBasisdata: "Kosten (uit Basisdata)",
     kostenUitBasisdataNote: "Vaste lasten, abonnementen en variabele lasten volgen altijd Basisdata. Wijzig ze daar — dat werkt hier direct door.",
-    importBasisdataTabLabel: "Import basisdata",
-    importBasisdataPageTitle: "Import basisdata",
-    importBasisdataIntro: "Importeer een bankafschrift (PDF of CSV) en zet 'm direct om in je Basisdata — het basisjaar waar elk scenario en elke vergelijking op verder bouwt. Handig als je net met FinBo begint, of als je Basisdata liever opnieuw opbouwt vanuit echte transacties dan hem met de hand in te typen.",
+    importBasisdataTabLabel: "Importeren",
+    importBasisdataPageTitle: "Importeren",
     importBasisdataWarning: "Dit <b>vervangt</b> je huidige Basisdata volledig — Inkomsten, Vaste lasten, Abonnementen en Variabele lasten worden allemaal opnieuw opgebouwd vanuit deze import. <b>Dit verandert ook meteen elk jaar dat je al hebt aangemaakt</b>: vaste lasten, abonnementen en variabele lasten tonen altijd de actuele cijfers van Basisdata (die staan niet los per jaar opgeslagen), en Loon werkt jaar-op-jaar door, dus een nieuw Loon in Basisdata bereikt ook elk later jaar. Al aangemaakte maandbudgetten zijn bevroren momentopnamen en worden <b>niet</b> geraakt. Dit staat los van het vergelijken van een maand-import met een bestaand maandbudget.",
     importBasisdataUploadTitle: "Upload een bankafschrift",
-    importBasisdataUploadHint: "Eén schone maand is genoeg — elke regel wordt hieronder ingedeeld. Let op: de inlezer is gebouwd op de export van Rabobank (CSV of PDF). Een bestand van een andere bank wordt waarschijnlijk niet herkend; komt alles leeg of bij \"Nog in te delen\" terecht, dan is dat de reden.",
+    importBasisdataUploadHint: "Eén maand, of meerdere maanden in één bestand — elke tegenpartij deel je hieronder één keer in, FinBo splitst daarna zelf per maand. Let op: de inlezer is gebouwd op de export van Rabobank (CSV of PDF). Een bestand van een andere bank wordt waarschijnlijk niet herkend; komt alles leeg of bij \"Nog in te delen\" terecht, dan is dat de reden.",
     importBasisdataUploadPdfBtn: "+ Upload PDF",
     importBasisdataUploadCsvBtn: "+ Upload CSV",
     importBasisdataCatLabel: "Categorie (optioneel — telt gelijke categorieën samen tot één regel, of hernoemt een losse rij):",
@@ -2219,6 +2411,108 @@ const i18n = {
     collapseGroupBtn: "In-/uitklappen",
     breakdownToggleBtn: "Toon/verberg de losse betalingen achter dit bedrag",
     dragHandleTitle: "Sleep om deze regel te verplaatsen, ook naar een andere groep",
+    importBasisdataIntro: "Lees een bankafschrift in en deel elke tegenpartij één keer in. Daarna sla je het op als maand onder Maandbudgetten — of gebruik je het als nieuwe Basisdata. Met een paar ingelezen maanden kan Basisdata zichzelf herberekenen uit wat je werkelijk uitgaf.",
+    groupShortIncome: "Inkomsten",
+    groupShortVasteLasten: "Vaste lasten",
+    groupShortAbonnementen: "Abonnementen",
+    groupShortVariabeleLasten: "Variabele lasten",
+    categoryBtnTitle: "Categorie kiezen voor deze regel",
+    categoryPickLabel: "Categorie:",
+    categoryPickNone: "— kies een categorie —",
+    categoryPickNew: "＋ Nieuwe categorie…",
+    categoryNewNamePlaceholder: "Naam van de categorie",
+    categoryNewGroupLabel: "in groep",
+    categoryNewBtn: "Aanmaken en toepassen",
+    categoryRememberLabel: "Onthouden voor volgende imports",
+    categoryPickHint: "De regel krijgt de naam van de categorie en verhuist naar de groep daarvan. Staat die regel er al, dan worden ze samengevoegd; de oude naam blijft zichtbaar in de uitklaplijst.",
+    budgetMonthLabel: "Maand:",
+    budgetNoMonthOption: "— geen maand —",
+    budgetYearOther: "Zonder maand",
+    monthExistsSuffix: " (bestaat al)",
+    budgetSourceImport: (file, datum) => `Ingelezen uit ${file} op ${datum} — dit zijn de werkelijke bedragen van die maand.`,
+    budgetSourceBadgeTitle: "Ingelezen maand (werkelijke bedragen)",
+    budgetViewCompare: "Vergelijk met Basisdata",
+    budgetViewEdit: "Regels bewerken",
+    compareBasisdataCol: "Basisdata",
+    compareThisMonthCol: "Deze maand",
+    summaryBasisdataSaldo: "Saldo volgens Basisdata",
+    summaryDiffBasisdata: "Verschil met Basisdata",
+    importDestTitle: "Waar moet deze import naartoe?",
+    importDestMonth: "Opslaan als maand",
+    importDestMonths: "Opslaan als maanden",
+    importDestBasisdata: "Gebruiken als nieuwe Basisdata (vervangt alles)",
+    importDetectedHint: (label) => `Herkend uit het bestand: ${label}.`,
+    importDetectOutOfRange: (label) => `De maand uit het bestand (${label}) valt buiten de keuzelijst — kies zelf een maand.`,
+    importMonthReplaceNote: (label) => `${label} bestaat al en wordt vervangen door deze import.`,
+    importMultiHint: (n, van, tot) => `Dit bestand bevat ${n} maanden (${van} – ${tot}). Vink aan welke je wilt gebruiken.`,
+    importMultiPartial: "onvolledig",
+    importStrayNote: (n, label) => `${n} ${n === 1 ? "transactie heeft" : "transacties hebben"} een datum in een andere maand; ${n === 1 ? "die telt" : "die tellen"} mee in ${label}, omdat ze op dit afschrift staan.`,
+    importMultiTxCount: (n) => `${n} transacties`,
+    importMultiSkipped: (n) => `${n} transacties van vóór januari 2025 worden overgeslagen.`,
+    importMultiBasisdataNote: (n) => `Basisdata wordt het gemiddelde per maand over de ${n} aangevinkte maanden.`,
+    importMultiTotalsNote: (n) => `Let op: de bedragen hieronder zijn totalen over het hele bestand (${n} maanden). FinBo verdeelt ze bij het opslaan per maand.`,
+    importSaveMonthBtn: (label) => `Opslaan als ${label}`,
+    importSaveMonthsBtn: (n) => `${n} maanden opslaan`,
+    importPickMonthFirst: "Kies eerst een maand",
+    importReplaceMonthTitle: "Bestaande maand vervangen?",
+    importReplaceMonthText: (labels) => `${labels} bestaat al. De regels daarvan worden vervangen door deze import. Je kunt dit meteen daarna nog ongedaan maken.`,
+    importReplaceMonthYes: "Ja, vervangen",
+    importMonthSuccessTitle: (label) => `${label} opgeslagen`,
+    importMonthsSuccessTitle: (n) => `${n} maanden opgeslagen`,
+    importMonthSuccessNote: (file) => `Ingelezen uit ${file}. Je vindt het onder Maandbudgetten, met Basisdata ernaast ter vergelijking.`,
+    importMonthReplacedTag: "vervangen",
+    importGoToMonthBtn: (label) => `Naar ${label}`,
+    importAnotherBtn: "Nog een maand inlezen",
+    importGoRecalcBtn: "Basisdata herberekenen",
+    importPreviewTitleMonth: (label) => `Voorbeeld: wat er in ${label} terechtkomt`,
+    importPreviewTitleAvg: (n) => `Voorbeeld: gemiddeld per maand (${n} maanden)`,
+    importRejoinBtn: "↩ Terugvoegen",
+    importRejoinTitle: "Deze afgesplitste transacties weer bij de oorspronkelijke rij zetten",
+    recalcBtn: "Basisdata herberekenen",
+    recalcBtnHint: (n) => `uit ${n} ingelezen ${n === 1 ? "maand" : "maanden"}`,
+    recalcNoMonths: "Lees eerst één of meer maanden in via Importeren, dan kan Basisdata zichzelf herberekenen.",
+    recalcTitle: "Basisdata herberekenen",
+    recalcIntro: "Per regel neemt FinBo het gemiddelde over de maanden die je aanvinkt. Een maand waarin een regel niet voorkomt telt als € 0, zodat kosten die maar af en toe vallen netjes over de maanden worden verdeeld. Vink per regel aan wat je wilt overnemen; nieuwe regels die in minder dan de helft van de maanden voorkomen (meestal eenmalige uitgaven) staan standaard uit.",
+    recalcJarenNote: "Let op: elk jaar rekent met de kosten uit Basisdata, en Loon werkt door naar latere jaren. Een vorige versie van Basisdata kun je altijd terugzetten.",
+    recalcMonthsTitle: "Welke maanden tellen mee?",
+    recalcSourceImport: "ingelezen",
+    recalcSourceLegacy: "oude maandimport",
+    recalcSourcePlan: "plan uit Basisdata",
+    recalcProposalTitle: "Voorstel",
+    recalcColLine: "Regel",
+    recalcColOld: "Nu",
+    recalcColNew: "Nieuw",
+    recalcColSeen: "Komt voor in",
+    recalcSeenIn: (k, n) => `${k} van ${n}`,
+    recalcStatusNew: "nieuw",
+    recalcStatusSame: "gelijk",
+    recalcStatusNotMeasured: "niet gemeten — blijft staan",
+    recalcApplyBtn: (n) => `${n} ${n === 1 ? "regel" : "regels"} overnemen`,
+    recalcCancelBtn: "Annuleren",
+    recalcNoneSelected: "Vink minstens één maand aan.",
+    recalcDoneToast: "Basisdata herberekend",
+    historyBtn: (n) => `Vorige versies (${n})`,
+    historyTitle: "Vorige versies van Basisdata",
+    historyIntro: "FinBo bewaart de laatste vijf versies van Basisdata: telkens vlak vóór een import, een herberekening of een terugzetting. Terugzetten bewaart eerst de huidige versie, dus ook dat kun je weer terugdraaien.",
+    historyEmpty: "Nog geen vorige versies.",
+    historyReasonImport: "vóór import",
+    historyReasonRecalc: "vóór herberekenen",
+    historyReasonRestore: "vóór terugzetten",
+    historyRestoreBtn: "Terugzetten",
+    historyRestoreConfirm: (datum) => `Basisdata terugzetten naar de versie van ${datum}?`,
+    historySums: (inkomen, kosten) => `inkomsten € ${inkomen} · kosten € ${kosten}`,
+    historyCloseBtn: "Sluiten",
+    undoBtn: "Ongedaan maken",
+    undoCloseTitle: "Melding sluiten",
+    undoRowDeleted: (l) => `‘${l}’ verwijderd`,
+    undoEntryDeleted: "Betaling uit de regel gehaald",
+    undoBasisdataReplaced: "Basisdata vervangen door de import",
+    undoMonthReplaced: (label) => `${label} vervangen`,
+    undoMonthsSaved: (label) => `${label} opgeslagen`,
+    undoMoved: (l) => `‘${l}’ verplaatst`,
+    undoCategoryAssigned: (l, c) => `‘${l}’ → ${c}`,
+    undoDeleted: (label) => `${label} verwijderd`,
+    undoRestored: "Basisdata teruggezet",
     breakdownDelTitle: "Deze betaling uit de regel halen (het bedrag gaat mee omlaag)",
     sortByDatum: "Datum",
     sortByBedrag: "Bedrag",
@@ -2444,12 +2738,11 @@ const i18n = {
     loonstijgingSyncedRowTitle: "This year is linked to a tab and updates live. Click the year to jump straight there.",
     kostenUitBasisdata: "Costs (from Basisdata)",
     kostenUitBasisdataNote: "Fixed costs, subscriptions and variable costs always follow Basisdata. Edit them there — it updates here immediately.",
-    importBasisdataTabLabel: "Import basisdata",
-    importBasisdataPageTitle: "Import basisdata",
-    importBasisdataIntro: "Import a bank statement (PDF or CSV) and turn it straight into your Basisdata — the base year every scenario and comparison starts from. Useful the first time you set up FinBo, or whenever you'd rather rebuild Basisdata from real transactions instead of typing it in by hand.",
+    importBasisdataTabLabel: "Import",
+    importBasisdataPageTitle: "Import",
     importBasisdataWarning: "This <b>replaces</b> your current Basisdata entirely — Income, Fixed costs, Subscriptions and Variable costs will all be rebuilt from this import. <b>This also immediately changes every Jaar you've already created</b>: Fixed costs, Subscriptions and Variable costs always show Basisdata's current numbers (they're not stored separately per year), and Loon carries forward year to year, so a new Basisdata Loon reaches every later Jaar too. Already-created Maandbudgetten are frozen snapshots and are <b>not</b> affected. This is separate from comparing a monthly import against an existing budget.",
     importBasisdataUploadTitle: "Upload a bank statement",
-    importBasisdataUploadHint: "One clean month is enough — every row gets classified below. Note: the reader is built for Rabobank's export (CSV or PDF). A file from another bank will most likely not be recognised; if everything comes out empty or lands in \"Not yet classified\", that is why.",
+    importBasisdataUploadHint: "One month, or several months in one file — you classify each counterparty once below, and FinBo splits it per month afterwards. Note: the reader is built for Rabobank's export (CSV or PDF). A file from another bank will most likely not be recognised; if everything comes out empty or lands in \"Not yet classified\", that is why.",
     importBasisdataUploadPdfBtn: "+ Upload PDF",
     importBasisdataUploadCsvBtn: "+ Upload CSV",
     importBasisdataCatLabel: "Category (optional — sums matching rows into one line, or just renames a single row):",
@@ -2501,6 +2794,108 @@ const i18n = {
     collapseGroupBtn: "Collapse/expand",
     breakdownToggleBtn: "Show/hide the individual payments behind this amount",
     dragHandleTitle: "Drag to move this line, also to another group",
+    importBasisdataIntro: "Read in a bank statement and classify each counterparty once. Then save it as a month under Monthly budgets — or use it as your new Basisdata. With a few months read in, Basisdata can recalculate itself from what you actually spent.",
+    groupShortIncome: "Income",
+    groupShortVasteLasten: "Fixed costs",
+    groupShortAbonnementen: "Subscriptions",
+    groupShortVariabeleLasten: "Variable costs",
+    categoryBtnTitle: "Choose a category for this line",
+    categoryPickLabel: "Category:",
+    categoryPickNone: "— choose a category —",
+    categoryPickNew: "＋ New category…",
+    categoryNewNamePlaceholder: "Category name",
+    categoryNewGroupLabel: "in group",
+    categoryNewBtn: "Create and apply",
+    categoryRememberLabel: "Remember for future imports",
+    categoryPickHint: "The line takes the category's name and moves to its group. If that line already exists, they are merged; the old name stays visible in the expandable list.",
+    budgetMonthLabel: "Month:",
+    budgetNoMonthOption: "— no month —",
+    budgetYearOther: "No month",
+    monthExistsSuffix: " (exists)",
+    budgetSourceImport: (file, datum) => `Read in from ${file} on ${datum} — these are that month's actual amounts.`,
+    budgetSourceBadgeTitle: "Imported month (actual amounts)",
+    budgetViewCompare: "Compare with Basisdata",
+    budgetViewEdit: "Edit lines",
+    compareBasisdataCol: "Basisdata",
+    compareThisMonthCol: "This month",
+    summaryBasisdataSaldo: "Balance according to Basisdata",
+    summaryDiffBasisdata: "Difference vs Basisdata",
+    importDestTitle: "Where should this import go?",
+    importDestMonth: "Save as month",
+    importDestMonths: "Save as months",
+    importDestBasisdata: "Use as new Basisdata (replaces everything)",
+    importDetectedHint: (label) => `Detected from the file: ${label}.`,
+    importDetectOutOfRange: (label) => `The month in the file (${label}) is outside the list — pick a month yourself.`,
+    importMonthReplaceNote: (label) => `${label} already exists and will be replaced by this import.`,
+    importMultiHint: (n, van, tot) => `This file contains ${n} months (${van} – ${tot}). Tick the ones you want to use.`,
+    importMultiPartial: "incomplete",
+    importStrayNote: (n, label) => `${n} ${n === 1 ? "transaction has" : "transactions have"} a date in another month; ${n === 1 ? "it counts" : "they count"} towards ${label} because ${n === 1 ? "it is" : "they are"} on this statement.`,
+    importMultiTxCount: (n) => `${n} transactions`,
+    importMultiSkipped: (n) => `${n} transactions from before January 2025 are skipped.`,
+    importMultiBasisdataNote: (n) => `Basisdata becomes the average per month over the ${n} ticked months.`,
+    importMultiTotalsNote: (n) => `Note: the amounts below are totals over the whole file (${n} months). FinBo splits them per month when saving.`,
+    importSaveMonthBtn: (label) => `Save as ${label}`,
+    importSaveMonthsBtn: (n) => `Save ${n} months`,
+    importPickMonthFirst: "Choose a month first",
+    importReplaceMonthTitle: "Replace existing month?",
+    importReplaceMonthText: (labels) => `${labels} already exists. Its lines will be replaced by this import. You can undo this right afterwards.`,
+    importReplaceMonthYes: "Yes, replace",
+    importMonthSuccessTitle: (label) => `${label} saved`,
+    importMonthsSuccessTitle: (n) => `${n} months saved`,
+    importMonthSuccessNote: (file) => `Read in from ${file}. You'll find it under Monthly budgets, with Basisdata alongside for comparison.`,
+    importMonthReplacedTag: "replaced",
+    importGoToMonthBtn: (label) => `Go to ${label}`,
+    importAnotherBtn: "Import another month",
+    importGoRecalcBtn: "Recalculate Basisdata",
+    importPreviewTitleMonth: (label) => `Preview: what lands in ${label}`,
+    importPreviewTitleAvg: (n) => `Preview: average per month (${n} months)`,
+    importRejoinBtn: "↩ Rejoin",
+    importRejoinTitle: "Put these split-off transactions back with the original row",
+    recalcBtn: "Recalculate Basisdata",
+    recalcBtnHint: (n) => `from ${n} imported ${n === 1 ? "month" : "months"}`,
+    recalcNoMonths: "First read in one or more months via Import, then Basisdata can recalculate itself.",
+    recalcTitle: "Recalculate Basisdata",
+    recalcIntro: "For each line FinBo takes the average over the months you tick. A month in which a line does not occur counts as € 0, so costs that only come up now and then are spread over the months. Tick per line what you want to apply; new lines that occur in fewer than half of the months (usually one-off spending) are unticked by default.",
+    recalcJarenNote: "Note: every year uses the costs from Basisdata, and Salary carries forward to later years. You can always restore a previous version of Basisdata.",
+    recalcMonthsTitle: "Which months count?",
+    recalcSourceImport: "imported",
+    recalcSourceLegacy: "old month import",
+    recalcSourcePlan: "plan from Basisdata",
+    recalcProposalTitle: "Proposal",
+    recalcColLine: "Line",
+    recalcColOld: "Now",
+    recalcColNew: "New",
+    recalcColSeen: "Occurs in",
+    recalcSeenIn: (k, n) => `${k} of ${n}`,
+    recalcStatusNew: "new",
+    recalcStatusSame: "same",
+    recalcStatusNotMeasured: "not measured — stays",
+    recalcApplyBtn: (n) => `Apply ${n} ${n === 1 ? "line" : "lines"}`,
+    recalcCancelBtn: "Cancel",
+    recalcNoneSelected: "Tick at least one month.",
+    recalcDoneToast: "Basisdata recalculated",
+    historyBtn: (n) => `Previous versions (${n})`,
+    historyTitle: "Previous versions of Basisdata",
+    historyIntro: "FinBo keeps the last five versions of Basisdata: each one taken just before an import, a recalculation or a restore. Restoring saves the current version first, so you can undo that too.",
+    historyEmpty: "No previous versions yet.",
+    historyReasonImport: "before import",
+    historyReasonRecalc: "before recalculating",
+    historyReasonRestore: "before restoring",
+    historyRestoreBtn: "Restore",
+    historyRestoreConfirm: (datum) => `Restore Basisdata to the version of ${datum}?`,
+    historySums: (inkomen, kosten) => `income € ${inkomen} · costs € ${kosten}`,
+    historyCloseBtn: "Close",
+    undoBtn: "Undo",
+    undoCloseTitle: "Close message",
+    undoRowDeleted: (l) => `‘${l}’ deleted`,
+    undoEntryDeleted: "Payment removed from the line",
+    undoBasisdataReplaced: "Basisdata replaced by the import",
+    undoMonthReplaced: (label) => `${label} replaced`,
+    undoMonthsSaved: (label) => `${label} saved`,
+    undoMoved: (l) => `‘${l}’ moved`,
+    undoCategoryAssigned: (l, c) => `‘${l}’ → ${c}`,
+    undoDeleted: (label) => `${label} deleted`,
+    undoRestored: "Basisdata restored",
     breakdownDelTitle: "Remove this payment from the line (the amount is reduced accordingly)",
     sortByDatum: "Date",
     sortByBedrag: "Amount",
@@ -2585,10 +2980,17 @@ function makeScenario(label, jaar, locked, incomeItems, vasteLastenItems, abonne
    Basisdata-waarden (inkomsten + alle kosten, per regel). Eenmaal aangemaakt verandert hij niet
    meer mee met latere wijzigingen in Basisdata — een volgende momentopname pakt wél weer de dan
    actuele waarden. Wordt gebruikt om een geüploade maand-CSV tegen te vergelijken (zie 3.3). */
-function makeBudget(title, source){
+function makeBudget(title, source, ym){
   return {
     id: "b" + Date.now() + "_" + Math.floor(Math.random()*10000),
     title,
+    // Bij welke kalendermaand dit budget hoort ("2026-08"). Bepaalt de plek in het menu (per jaar,
+    // nieuwste bovenaan) en welke maanden Basisdata kan herberekenen. Mag ontbreken (oude
+    // budgetten met een vrije titel staan dan onder "Zonder maand").
+    ym: ymValid(ym) ? ym : undefined,
+    // "basisdata": een momentopname van Basisdata (plan). "import": de werkelijke bedragen van
+    // een ingelezen maand (zie applyImportToMonths).
+    source: "basisdata",
     createdAt: Date.now(),
     income: { items: cloneItems(source.income.items) },
     vasteLasten: { items: cloneItems(source.vasteLasten.items) },
@@ -2605,12 +3007,75 @@ function makeBudget(title, source){
 }
 function createBudget(){
   const bd = basisdataScenario();
-  const now = new Date();
-  const defaultTitle = `${t("months")[now.getMonth()]} ${now.getFullYear()}`;
-  const budget = makeBudget(defaultTitle, bd);
-  state.budgets.unshift(budget); // nieuwste bovenaan
+  // De eerstvolgende maand die nog geen budget heeft: deze maand, anders volgende maand (dus in
+  // december ook al januari van het jaar erna). Bestaan ze allebei al, dan toch deze maand — op de
+  // budgetpagina zet je hem met de maandkeuze waar je wilt.
+  const nu = ymNow();
+  const kandidaten = [nu, ymAdd(nu, 1)];
+  const ym = kandidaten.find(k => !state.budgets.some(b => b.ym === k)) || nu;
+  const budget = makeBudget(ymTitle(ym), bd, ym);
+  state.budgets.unshift(budget);
   state.activeView = { type:"budget", id: budget.id };
   renderAll();
+}
+
+/* ---------- MAANDEN (jaar-maand, "2026-08") ----------
+   De keuzelijsten tonen januari 2025 t/m volgende maand: zo kun je in december al januari van het
+   jaar erna aanmaken, en verder terug dan 2025 hoeft niet. */
+const MONTH_MIN_YM = "2025-01";
+function ymValid(ym){ return typeof ym === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(ym); }
+function ymNow(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+}
+function ymAdd(ym, n){
+  const [y, m] = ym.split("-").map(Number);
+  const i = y*12 + (m-1) + n;
+  return `${Math.floor(i/12)}-${String(i%12 + 1).padStart(2,"0")}`;
+}
+function ymFromParts(year, month){ return `${year}-${String(month).padStart(2,"0")}`; }
+/* "augustus 2026" / "August 2026" — zelfde vorm die createBudget altijd al als titel gebruikte. */
+function ymTitle(ym, lang){
+  if(!ymValid(ym)) return "";
+  const [y, m] = ym.split("-").map(Number);
+  const namen = ((lang || state.lang) === "en") ? MONTHS_EN : MONTHS_NL;
+  return `${namen[m-1]} ${y}`;
+}
+function monthPickerOptions(){
+  const out = [];
+  let ym = ymAdd(ymNow(), 1);
+  while(ym >= MONTH_MIN_YM){ out.push(ym); ym = ymAdd(ym, -1); }
+  return out;
+}
+function ymInPickerRange(ym){ return ymValid(ym) && ym >= MONTH_MIN_YM && ym <= ymAdd(ymNow(), 1); }
+/* Leest de maand uit een vrije budgettitel ("Augustus 2026", "juni 2026 (vakantie)", "June 2026").
+   Alleen gebruikt door de migratie: oude budgetten hadden nog geen ym-veld. */
+function parseYmFromTitle(title){
+  const t0 = (title||"").toLowerCase();
+  for(const namen of [MONTHS_NL, MONTHS_EN]){
+    for(let i = 0; i < 12; i++){
+      const re = new RegExp("(^|[^a-z])" + namen[i].toLowerCase() + "\\s+(\\d{4})(?!\\d)");
+      const m = re.exec(t0);
+      if(m) return ymFromParts(Number(m[2]), i+1);
+    }
+  }
+  return null;
+}
+/* Maandbudgetten gegroepeerd per jaar, nieuwste jaar en nieuwste maand bovenaan. Budgetten zonder
+   maand komen onder sleutel "none". */
+function budgetsByYear(){
+  const per = new Map();
+  state.budgets.forEach(b => {
+    const jaar = ymValid(b.ym) ? b.ym.slice(0,4) : "none";
+    if(!per.has(jaar)) per.set(jaar, []);
+    per.get(jaar).push(b);
+  });
+  per.forEach(lijst => lijst.sort((a,b) => {
+    if(ymValid(a.ym) && ymValid(b.ym) && a.ym !== b.ym) return b.ym.localeCompare(a.ym);
+    return (b.createdAt||0) - (a.createdAt||0);
+  }));
+  const jaren = [...per.keys()].sort((a,b) => (a === "none") - (b === "none") || b.localeCompare(a));
+  return jaren.map(j => ({ jaar: j, budgets: per.get(j) }));
 }
 function budgetObjFromView(){
   if(state.activeView.type !== "budget") return null;
@@ -2848,7 +3313,20 @@ function migrateState(){
     // Nieuw blok voor terugboekingen die de gebruiker bewust als kostenpost aan dít maandbudget
     // toevoegt (zie renderStornoReviewCard) — oudere maandbudgetten krijgen 'm hier alsnog bij.
     if(!b.outstanding) b.outstanding = { items: [] };
+    // v27: elk budget hoort bij een kalendermaand. Oude budgetten hadden alleen een vrije titel;
+    // lukt het die te lezen ("augustus 2026"), dan krijgt het budget die maand, anders blijft het
+    // onder "Zonder maand" staan.
+    // Alleen voor bestanden van vóór v27 (schemaVersion < 26): daarna is "geen maand" een bewuste
+    // keuze op de budgetpagina en mag een herlaadbeurt die niet terugdraaien.
+    if(!(state.schemaVersion >= 26)){
+      if(!ymValid(b.ym)){
+        const ym = parseYmFromTitle(b.title);
+        if(ym) b.ym = ym; else delete b.ym;
+      }
+    }
+    if(b.source !== "import") b.source = "basisdata";
   });
+  if(state.basisdataHistory !== undefined && !Array.isArray(state.basisdataHistory)) delete state.basisdataHistory;
 
   /* ---- v24 → v25: van vaste namen naar markeringen in de data ---- */
   // Tot v24 zaten twee functies vast aan letterlijke postnamen: de loonsverhoging zocht een regel
@@ -2888,7 +3366,7 @@ function migrateState(){
   syncComputedLoons();
   // Vanaf hier is de staat naar v25-vorm gebracht. Migraties die alleen over oudere bestanden gaan,
   // kunnen hierop afgaan en zichzelf overslaan.
-  state.schemaVersion = 25;
+  state.schemaVersion = 26;
 }
 
 /* De taal bepaalt de opmaak, niet een vaste "nl-NL". Stond dat er wél, dan schreef de Engelse
@@ -3655,6 +4133,20 @@ function buildMonthFromCSV(rows, filename){
     review,
     openTerugboekingen,
   };
+}
+
+/* "Toegevoegd"-verwijzingen (entry.addedItem) wijzen naar een object in een lijst. Na een
+   herlaadbeurt of "Ongedaan maken" is dat object een losse kopie geworden en vindt indexOf niets —
+   ongedaan maken deed dan stilzwijgend niets, en opnieuw toevoegen telde dubbel. Dan zoeken op naam
+   (en bij voorkeur ook bedrag). */
+function findAddedIdx(items, added){
+  if(!items || !added) return -1;
+  let i = items.indexOf(added);
+  if(i >= 0) return i;
+  const k = (added.l||"").trim().toLowerCase();
+  i = items.findIndex(it => (it.l||"").trim().toLowerCase() === k && Math.abs((parseFloat(it.v)||0) - (parseFloat(added.v)||0)) < 0.005);
+  if(i >= 0) return i;
+  return items.findIndex(it => (it.l||"").trim().toLowerCase() === k);
 }
 
 function upsertMonth(monthObj){
@@ -5244,6 +5736,9 @@ function renderProfileAccountTab(body){
 // probleem, en zo oogt het menu meteen rustiger bij het inloggen.
 function defaultCollapsedGroups(){ return { budgets: true, years: true, growth: true }; }
 let collapsedGroups = defaultCollapsedGroups();
+/* Welke jaren binnen Maandbudgetten de gebruiker zelf open/dicht heeft gezet (jaar → bool). Leeg =
+   standaardstand (zie renderTabs). Schermstand, net als collapsedGroups — niet in `state`. */
+let budgetYearOpen = new Map();
 
 /* Welke samengevoegde regels (bv. "Geldmaat", "Online") op dit moment uitgeklapt staan om hun
    onderliggende, individuele transacties te tonen — zie renderBreakdownRows(). Bewust NIET
@@ -5318,6 +5813,7 @@ function renderCardSortHead(scopeKey, opts){
     <button type="button" class="sort-btn sort-btn-datum${sort && sort.col==="datum" ? " active":""}" data-sort-col="datum">${escapeHtml(t("sortByDatum"))}${arrow("datum")}</button>
     <button type="button" class="sort-btn sort-btn-bedrag${sort && sort.col==="v" ? " active":""}" data-sort-col="v">${escapeHtml(t("sortByBedrag"))}${arrow("v")}</button>
     ${opts.offsetPicker ? `<button type="button" class="role-btn" style="visibility:hidden" tabindex="-1">⇥</button>` : ""}
+    ${(opts.dragGroup === "basisdata") ? `<button type="button" class="role-btn category-btn" style="visibility:hidden" tabindex="-1">${CATEGORY_ICON}</button>` : ""}
     <button type="button" class="del-btn" style="visibility:hidden" tabindex="-1">×</button>
   `;
   return head;
@@ -5353,100 +5849,8 @@ function wireGroupHeadCollapse(headEl, toggle){
   });
 }
 
-/* Herordenen van een lijstje tab-knoppen door ze ingedrukt te houden (muis) of vast te houden
-   (touch) en dan te slepen — gebruikt voor de Maandbudgetten-lijst, zodat bv. een later toegevoegde
-   "Juni" niet perse onderaan/bovenaan hoeft te blijven staan. Werkt via Pointer Events, zodat
-   muis en touch dezelfde code delen. Een gewone korte klik/tap navigeert nog altijd normaal —
-   pas na LONG_PRESS_MS stilzitten wordt het een sleep-actie; beweegt de vinger/muis te veel vóór
-   die tijd is verstreken, dan wordt de sleep-poging geannuleerd en blijft het gewoon een klik/scroll.
-   `container` moet de directe ouder zijn van de te herordenen knoppen, elk met de class
-   "tab-draggable" en een "data-drag-id". Bij loslaten na een geslaagde sleep roept dit `onReorder`
-   aan met de nieuwe volgorde van die id's, zodat de aanroeper de onderliggende array kan bijwerken. */
-function enableLongPressReorder(container, onReorder){
-  const LONG_PRESS_MS = 380;
-  const MOVE_CANCEL_PX = 10;
-  let pressTimer = null;
-  let dragBtn = null;
-  let suppressNextClick = false;
-
-  const clearPressTimer = () => { if(pressTimer){ clearTimeout(pressTimer); pressTimer = null; } };
-  const draggableSiblings = () => Array.from(container.querySelectorAll(":scope > .tab-draggable"));
-
-  // Eén click-listener op de container (capture-fase) volstaat om de synthetische klik die na een
-  // sleep-actie loskomt te onderscheppen — ongeacht op welke knop die precies terechtkomt.
-  container.addEventListener("click", (e) => {
-    if(suppressNextClick){
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      suppressNextClick = false;
-    }
-  }, true);
-
-  // Sleep-beweging en loslaten worden op `document` afgeluisterd (i.p.v. op de knop zelf met
-  // setPointerCapture) — betrouwbaarder zodra de knop tijdens het slepen zelf in de DOM verplaatst
-  // wordt (insertBefore/appendChild hieronder), wat bij element-gebonden pointer capture in sommige
-  // browsers de capture voortijdig laat verlopen.
-  const onDragMove = (e) => {
-    if(!dragBtn) return;
-    e.preventDefault();
-    const y = e.clientY;
-    const others = draggableSiblings().filter(sib => sib !== dragBtn);
-    const afterEl = others.find(sib=>{
-      const rect = sib.getBoundingClientRect();
-      return y < rect.top + rect.height/2;
-    });
-    if(afterEl) container.insertBefore(dragBtn, afterEl);
-    else container.appendChild(dragBtn);
-  };
-  const endDrag = () => {
-    clearPressTimer();
-    document.removeEventListener("pointermove", onDragMove);
-    document.removeEventListener("pointerup", endDrag);
-    document.removeEventListener("pointercancel", endDrag);
-    if(dragBtn){
-      dragBtn.classList.remove("tab-dragging");
-      dragBtn.style.touchAction = "";
-      dragBtn = null;
-      suppressNextClick = true;
-      onReorder(draggableSiblings().map(sib => sib.dataset.dragId));
-    }
-  };
-
-  draggableSiblings().forEach(btn=>{
-    btn.addEventListener("pointerdown", (e)=>{
-      if(e.pointerType === "mouse" && e.button !== 0) return;
-      const startX = e.clientX, startY = e.clientY;
-      clearPressTimer();
-
-      const onEarlyMove = (ev) => {
-        if(Math.abs(ev.clientX-startX) > MOVE_CANCEL_PX || Math.abs(ev.clientY-startY) > MOVE_CANCEL_PX){
-          cleanupEarly();
-        }
-      };
-      const cleanupEarly = () => {
-        clearPressTimer();
-        document.removeEventListener("pointermove", onEarlyMove);
-        document.removeEventListener("pointerup", cleanupEarly);
-        document.removeEventListener("pointercancel", cleanupEarly);
-      };
-      document.addEventListener("pointermove", onEarlyMove);
-      document.addEventListener("pointerup", cleanupEarly);
-      document.addEventListener("pointercancel", cleanupEarly);
-
-      pressTimer = setTimeout(()=>{
-        document.removeEventListener("pointermove", onEarlyMove);
-        document.removeEventListener("pointerup", cleanupEarly);
-        document.removeEventListener("pointercancel", cleanupEarly);
-        dragBtn = btn;
-        btn.classList.add("tab-dragging");
-        btn.style.touchAction = "none";
-        document.addEventListener("pointermove", onDragMove);
-        document.addEventListener("pointerup", endDrag);
-        document.addEventListener("pointercancel", endDrag);
-      }, LONG_PRESS_MS);
-    });
-  });
-}
+/* (Tot v26 stond hier enableLongPressReorder: maandbudgetten herordenen door ingedrukt houden en
+   slepen. Sinds v27 zet het menu ze zelf in kalendervolgorde per jaar, zie renderTabs.) */
 
 function renderTabs(){
   const el = document.getElementById("tabs");
@@ -5498,56 +5902,74 @@ function renderTabs(){
   budgetGroup.querySelector("#addBudgetBtn").onclick = () => createBudget();
   wireGroupHeadCollapse(budgetGroup.querySelector(".tab-group-head"), () => { collapsedGroups.budgets = !collapsedGroups.budgets; renderTabs(); });
   if(!collapsedGroups.budgets){
-    state.budgets.forEach(b=>{
-      // Rij-wrapper i.p.v. een kale knop, zodat er een prullenbak naast past — net als bij de
-      // geïmporteerde maanden. De wrapper draagt nu de sleep-markering (was de knop zelf), zodat
-      // slepen om te herordenen de hele rij pakt en niet alleen het label.
-      const row = document.createElement("div");
-      row.className = "tab-row tab-draggable";
-      row.dataset.dragId = b.id;
+    /* Per jaar een eigen in-/uitklapbaar groepje, nieuwste jaar bovenaan en binnen een jaar de
+       nieuwste maand bovenaan. De volgorde volgt dus de kalender (b.ym) en niet meer de volgorde van
+       aanmaken — handmatig herordenen is daarmee overbodig geworden. Standaard staat alleen het
+       nieuwste jaar open (plus "Zonder maand" en het jaar van het budget waar je nu op staat). */
+    const groepen = budgetsByYear();
+    const nieuwsteJaar = (groepen.find(g => g.jaar !== "none") || {}).jaar;
+    const actiefBudget = state.activeView.type === "budget" ? state.budgets.find(b => b.id === state.activeView.id) : null;
+    const actiefJaar = actiefBudget ? (ymValid(actiefBudget.ym) ? actiefBudget.ym.slice(0,4) : "none") : null;
+    groepen.forEach(({ jaar, budgets }) => {
+      const standaardOpen = jaar === nieuwsteJaar || jaar === "none" || jaar === actiefJaar;
+      const open = budgetYearOpen.has(jaar) ? budgetYearOpen.get(jaar) : standaardOpen;
+      const yearWrap = document.createElement("div");
+      yearWrap.className = "budget-year";
+      yearWrap.dataset.year = jaar;
+      yearWrap.innerHTML = `
+        <div class="tab-group-head budget-year-head">
+          <button class="group-collapse-btn budget-year-toggle${open ? "" : " collapsed"}" title="${t("collapseGroupBtn")}" aria-label="${t("collapseGroupBtn")}" aria-expanded="${open}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <span class="tab-group-label">${escapeHtml(jaar === "none" ? t("budgetYearOther") : jaar)}</span>
+          <span class="budget-year-count">${budgets.length}</span>
+        </div>`;
+      wireGroupHeadCollapse(yearWrap.querySelector(".tab-group-head"), () => { budgetYearOpen.set(jaar, !open); renderTabs(); });
+      if(open){
+        budgets.forEach(b => {
+          const row = document.createElement("div");
+          row.className = "tab-row";
+          row.dataset.budgetId = b.id;
 
-      const btn = document.createElement("button");
-      btn.className = "tab" + (state.activeView.type==="budget" && state.activeView.id===b.id ? " active":"");
-      btn.textContent = b.title;
-      btn.onclick = ()=>{ state.activeView = {type:"budget", id:b.id}; renderAll(); };
-      row.appendChild(btn);
-
-      const delBtn = document.createElement("button");
-      delBtn.className = "tab-delete-btn";
-      delBtn.type = "button";
-      delBtn.title = t("deleteBudgetBtn");
-      delBtn.setAttribute("aria-label", t("deleteBudgetBtn"));
-      delBtn.innerHTML = TRASH_ICON;
-      delBtn.onclick = (e) => {
-        e.stopPropagation();
-        if(confirm(t("deleteBudgetConfirm"))){
-          detachMonthsFromBudget(b.id);
-          state.budgets = state.budgets.filter(x=>x!==b);
-          if(state.activeView.type==="budget" && state.activeView.id===b.id){
-            state.activeScenario = 0;
-            state.activeView = {type:"scenario", index:0};
+          const btn = document.createElement("button");
+          btn.className = "tab" + (state.activeView.type==="budget" && state.activeView.id===b.id ? " active":"");
+          btn.textContent = b.title;
+          if(b.source === "import"){
+            const mark = document.createElement("span");
+            mark.className = "tab-import-mark";
+            mark.title = t("budgetSourceBadgeTitle");
+            mark.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>`;
+            btn.appendChild(mark);
           }
-          renderAll();
-        }
-      };
-      row.appendChild(delBtn);
-      budgetGroup.appendChild(row);
+          btn.onclick = ()=>{ state.activeView = {type:"budget", id:b.id}; renderAll(); };
+          row.appendChild(btn);
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "tab-delete-btn";
+          delBtn.type = "button";
+          delBtn.title = t("deleteBudgetBtn");
+          delBtn.setAttribute("aria-label", t("deleteBudgetBtn"));
+          delBtn.innerHTML = TRASH_ICON;
+          delBtn.onclick = (e) => {
+            e.stopPropagation();
+            if(confirm(t("deleteBudgetConfirm"))){
+              const snap = JSON.stringify(state);
+              detachMonthsFromBudget(b.id);
+              state.budgets = state.budgets.filter(x=>x!==b);
+              if(state.activeView.type==="budget" && state.activeView.id===b.id){
+                state.activeScenario = 0;
+                state.activeView = {type:"scenario", index:0};
+              }
+              renderAll();
+              offerUndo(t("undoDeleted")(b.title), snap);
+            }
+          };
+          row.appendChild(delBtn);
+          yearWrap.appendChild(row);
+        });
+      }
+      budgetGroup.appendChild(yearWrap);
     });
-    // Klikken en (op muis) ingedrukt houden, of (op touch) vasthouden, laat je een maandbudget
-    // naar een andere plek in het lijstje slepen — handig omdat nieuwe maandbudgetten anders altijd
-    // bovenaan verschijnen (zie createBudget()), ook als het bv. om een terugwerkend toegevoegde
-    // "Juni" gaat die er eigenlijk qua tijdlijn middenin hoort.
-    if(state.budgets.length > 1){
-      enableLongPressReorder(budgetGroup, (newOrderIds)=>{
-        const byId = {};
-        state.budgets.forEach(b => { byId[b.id] = b; });
-        const reordered = newOrderIds.map(id => byId[id]).filter(Boolean);
-        // Defensief: als er ooit een id in newOrderIds ontbreekt in byId (zou niet moeten gebeuren),
-        // val terug op de oude volgorde in plaats van budgetten kwijt te raken.
-        state.budgets = (reordered.length === state.budgets.length) ? reordered : state.budgets;
-        renderAll();
-      });
-    }
   }
   groupPair.appendChild(budgetGroup);
 
@@ -5590,6 +6012,7 @@ function renderTabs(){
         delBtn.onclick = (e) => {
           e.stopPropagation();
           if(confirm(t("deleteScenarioConfirm"))){
+            const snap = JSON.stringify(state);
             /* Het jaar waar je NU op staat vasthouden, niet het jaar dat je verwijdert.
                Tot v25 werd het nieuwe actieve jaar berekend uit de index van het verwijderde jaar
                (`idx-1`), waardoor je bij het wissen van 2027 terwijl je op 2029 stond opeens op
@@ -5607,6 +6030,7 @@ function renderTabs(){
             state.activeScenario = nieuweIndex;
             state.activeView = {type:"scenario", index: nieuweIndex};
             renderAll();
+            offerUndo(t("undoDeleted")(labelText), snap);
           }
         };
         row.appendChild(delBtn);
@@ -5644,11 +6068,13 @@ function renderTabs(){
       delBtn.onclick = (e) => {
         e.stopPropagation();
         if(confirm(t("deleteMonthConfirm"))){
+          const snap = JSON.stringify(state);
           state.months = state.months.filter(x=>x.key!==m.key);
           if(state.activeView.type==="month" && state.activeView.key===m.key){
             state.activeView = {type:"scenario", index: state.activeScenario};
           }
           renderAll();
+          offerUndo(t("undoDeleted")(monthLabel(m)), snap);
         }
       };
       row.appendChild(delBtn);
@@ -5681,22 +6107,9 @@ function renderTabs(){
   }
   el.appendChild(extraGroup);
 
-  const uploadRow = document.createElement("div");
-  uploadRow.className = "upload-row";
-
-  const uploadBtn = document.createElement("button");
-  uploadBtn.className = "tab tab-upload";
-  uploadBtn.textContent = t("uploadBtn");
-  uploadBtn.onclick = () => document.getElementById("csvUploadInput").click();
-  uploadRow.appendChild(uploadBtn);
-
-  const uploadPdfBtn = document.createElement("button");
-  uploadPdfBtn.className = "tab tab-upload";
-  uploadPdfBtn.textContent = t("uploadPdfBtn");
-  uploadPdfBtn.onclick = () => document.getElementById("pdfUploadInput").click();
-  uploadRow.appendChild(uploadPdfBtn);
-
-  el.appendChild(uploadRow);
+  /* De twee losse "+ Upload maand-CSV/PDF"-knoppen stonden hier tot v26. Een maand inlezen gaat nu
+     via Importeren (opslaan als maand), zodat er één importscherm is en elke ingelezen maand met
+     dezelfde indeling en herkenregels werkt. Oude geïmporteerde maanden blijven gewoon leesbaar. */
 }
 
 /* ---------- RENDER: LOONSVERHOGING-BLOK PER JAAR ---------- */
@@ -5812,6 +6225,8 @@ function createNewYear(){
 /* Vuilnisbak-icoontje voor verwijder-knopjes (bv. .tab-delete-btn) — vervangt een kaal "×" zodat in
    één oogopslag duidelijk is dat het om verwijderen gaat, in dezelfde lijn-icoonstijl (currentColor,
    dunne stroke) als CARD_ICONS/group-collapse-btn hieronder. */
+/* Labeltje: knop "categorie kiezen" op een Basisdata-regel (zie renderCard). */
+const CATEGORY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2"/><path d="M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/><path d="M10 11v6M14 11v6"/></svg>`;
 
 /* Slotje voor de "verwijderen geblokkeerd"-knop op een categorie die nog aan rijen gekoppeld is
@@ -5926,15 +6341,48 @@ const CARD_ICONS = {
      compleet gehouden — een kant zonder eigen transactielijst doet mee als één regel, zodat de
      losse betalingen altijd optellen tot het bedrag erboven.
    Geeft terug: { moved, merged, flipped } of null als er niets te verplaatsen viel. */
-function moveBasisdataItem(s, fromKey, fromIdx, toKey, toIdx){
+function moveBasisdataItem(s, fromKey, fromIdx, toKey, toIdx, opts={}){
   if(!s || !CATEGORY_BUCKET_KEYS.includes(fromKey) || !CATEGORY_BUCKET_KEYS.includes(toKey)) return null;
   const from = s[fromKey] && s[fromKey].items;
   const to = s[toKey] && s[toKey].items;
   if(!from || !to || fromIdx < 0 || fromIdx >= from.length) return null;
   const clampIdx = (i, len) => Math.max(0, Math.min(Number.isFinite(i) ? i : len, len));
 
-  const [item] = from.splice(fromIdx, 1);
+  /* opts.rename (zie assignBasisdataCategory): de regel krijgt onderweg een nieuwe naam. De oude
+     naam mag daarbij niet spoorloos verdwijnen — een regel zonder transactielijst krijgt er eerst
+     één deelregel bij onder zijn oude naam (als BANKbedrag, dus vóór een eventuele tekenomkering),
+     zodat je na het hernoemen of samenvoegen in de uitklaplijst nog ziet waar het bedrag vandaan
+     komt. Aftrekkoppelingen die naar de oude naam wezen verhuizen mee naar de nieuwe naam. */
+  const item = from[fromIdx];
+  const rename = (typeof opts.rename === "string" && opts.rename.trim()) ? opts.rename.trim() : null;
+  if(rename){
+    const oudeNaam = (item.l||"").trim();
+    const oudeSleutel = oudeNaam.toLowerCase();
+    if(rename.toLowerCase() !== oudeSleutel){
+      if(!(item.entries && item.entries.length)){
+        const v = parseFloat(item.v)||0;
+        item.entries = [{ datum: item.datum || "", naam: oudeNaam, amt: Math.round((fromKey === "income" ? v : -v) * 100) / 100 }];
+      }
+      if(fromKey === "vasteLasten" && oudeSleutel){
+        from.forEach(o => {
+          if(o !== item && (o.offsetTarget||"").trim().toLowerCase() === oudeSleutel) o.offsetTarget = rename;
+        });
+      }
+    }
+    item.l = rename;
+  }
+
+  from.splice(fromIdx, 1);
   if(fromKey === toKey){
+    // Alleen bij een hernoeming kan er binnen dezelfde groep een naamgenoot ontstaan.
+    if(rename){
+      const naam = rename.toLowerCase();
+      const bestaand = to.find(it => (it.l||"").trim().toLowerCase() === naam);
+      if(bestaand){
+        mergeBasisdataItems(bestaand, item, toKey);
+        return { moved: item, merged: true, flipped: false };
+      }
+    }
     to.splice(clampIdx(toIdx, to.length), 0, item);
     return { moved: item, merged: false, flipped: false };
   }
@@ -5958,13 +6406,23 @@ function moveBasisdataItem(s, fromKey, fromIdx, toKey, toIdx){
     to.splice(clampIdx(toIdx, to.length), 0, item);
     return { moved: item, merged: false, flipped };
   }
+  mergeBasisdataItems(bestaand, item, toKey);
+  return { moved: item, merged: true, flipped };
+}
 
-  // Samenvoegen. Bankbedrag van een regel in groep `key`: inkomsten zoals opgeslagen, kosten omgekeerd.
+/* Voegt `item` samen in `bestaand` (beide in groep `key`, item al in die groep omgerekend).
+   Bankbedrag van een regel: inkomsten zoals opgeslagen, kosten omgekeerd. Een kant met een eigen
+   transactielijst (ook van één regel — die ontstaat bij hernoemen, zie hierboven) doet mee met die
+   lijst; een kant zonder lijst doet mee als één regel onder zijn eigen naam. Zo tellen de losse
+   betalingen altijd op tot het bedrag erboven. Een salarismarkering of aftrekkoppeling van de
+   regel die opgaat, gaat over op de regel die blijft (anders zou een samenvoeging die stilzwijgend
+   wissen). */
+function mergeBasisdataItems(bestaand, item, key){
   const bankAmt = (it) => {
     const v = parseFloat(it.v)||0;
-    return Math.round((toKey === "income" ? v : -v) * 100) / 100;
+    return Math.round((key === "income" ? v : -v) * 100) / 100;
   };
-  const alsEntries = (it) => (it.entries && it.entries.length > 1)
+  const alsEntries = (it) => (it.entries && it.entries.length)
     ? it.entries.map(e => ({...e}))
     : [{ datum: it.datum || "", naam: it.l, amt: bankAmt(it) }];
   const entries = [...alsEntries(bestaand), ...alsEntries(item)];
@@ -5975,7 +6433,169 @@ function moveBasisdataItem(s, fromKey, fromIdx, toKey, toIdx){
   bestaand.entries = entries;
   const datums = entries.map(e => e.datum).filter(Boolean);
   if(datums.length) bestaand.datum = datums[datums.length-1];
-  return { moved: item, merged: true, flipped };
+  if(key === "income" && item.role === "salary") bestaand.role = "salary";
+  if(key === "vasteLasten" && item.offsetTarget && !bestaand.offsetTarget
+     && item.offsetTarget.trim().toLowerCase() !== (bestaand.l||"").trim().toLowerCase()){
+    bestaand.offsetTarget = item.offsetTarget;
+  }
+}
+
+/* ---------- ACHTERAF EEN CATEGORIE KIEZEN VOOR EEN BASISDATA-REGEL ----------
+   Een Basisdata-regel is `{l, v, …}` zonder categorieveld: een categorie ÍS daar de regelnaam
+   (zie categoryBasisdataUsage). "Een categorie kiezen" betekent dus: de regel krijgt de naam van
+   de categorie en verhuist naar de groep daarvan; staat daar al een regel met die naam, dan worden
+   ze samengevoegd. Al het rekenwerk (tekenomkering, koppelingen, salaris, uitklaplijst) loopt via
+   moveBasisdataItem met de rename-optie.
+   opts.remember: herkenregels bijwerken zodat een volgende import dezelfde tegenpartijen meteen
+   in deze categorie zet (zie learnCategoryRules).
+   Geeft terug: { changed, merged, flipped }. */
+function assignBasisdataCategory(s, fromKey, idx, cat, opts={}){
+  const niets = { changed:false, merged:false, flipped:false };
+  if(!s || !cat || !CATEGORY_BUCKET_KEYS.includes(fromKey) || !CATEGORY_BUCKET_KEYS.includes(cat.bucket)) return niets;
+  const items = s[fromKey] && s[fromKey].items;
+  const item = items && items[idx];
+  if(!item) return niets;
+  const oudeNaam = (item.l||"").trim();
+  const catNaam = (cat.name||"").trim();
+  if(!catNaam) return niets;
+  if(cat.bucket === fromKey && oudeNaam.toLowerCase() === catNaam.toLowerCase()) return niets;
+  // Tegenpartijen vóór het verplaatsen vastleggen: na een samenvoeging zitten ze tussen die van de
+  // andere regel. Alleen ECHTE tegenpartijen uit de transactielijst — niet de regelnaam zelf: een
+  // herkenregel matcht op een stukje van de naam, dus een regel "Huur" zou ook "Huurtoeslag" (inkomen)
+  // bij de vaste lasten zetten. Herkenregels die deze regelnaam als label gaven, gaan wél mee (zie
+  // learnCategoryRules), en die dekken een regel uit een eerdere import al af.
+  const tegenpartijen = (item.entries && item.entries.length)
+    ? item.entries.map(e => (e.naam||"").trim()).filter(Boolean)
+    : [];
+  const res = moveBasisdataItem(s, fromKey, idx, cat.bucket, cat.bucket === fromKey ? idx : undefined, { rename: catNaam });
+  if(!res) return niets;
+  if(opts.remember) learnCategoryRules(oudeNaam, fromKey, cat, tegenpartijen);
+  return { changed:true, merged: res.merged, flipped: res.flipped };
+}
+
+/* Herkenregels laten meegaan met een gekozen categorie:
+   - bestaande regels die de oude regelnaam als label gaven (in dezelfde groep) wijzen voortaan naar
+     de categorie — bol.com en paypal die "Online" maakten, maken nu "Mobiel";
+   - elke tegenpartij uit de transactielijst wordt een eigen regel (rememberUserRule);
+   - behalve de oude naam als die zelf al zo'n label was: dat is een postnaam, geen tegenpartij,
+     en een losse regel "hypotheek" zou nergens op matchen. */
+function learnCategoryRules(oudeNaam, fromKey, cat, tegenpartijen){
+  if(!state.userRules) state.userRules = [];
+  const oud = (oudeNaam||"").trim().toLowerCase();
+  let oudeNaamWasLabel = false;
+  state.userRules.forEach(r => {
+    if(r.bucket === fromKey && (r.label||"").trim().toLowerCase() === oud && oud){
+      r.label = cat.name;
+      r.bucket = cat.bucket;
+      oudeNaamWasLabel = true;
+    }
+  });
+  const gezien = new Set();
+  (tegenpartijen||[]).forEach(naam => {
+    const k = (naam||"").trim().toLowerCase();
+    if(!k || gezien.has(k)) return;
+    gezien.add(k);
+    if(oudeNaamWasLabel && k === oud) return;
+    rememberUserRule(naam, cat.bucket, cat.name);
+  });
+}
+
+/* Regels slepen naar een andere groep (punt 2): herkenregels en een categorie met dezelfde naam
+   gaan mee, anders zet de volgende import dezelfde tegenpartij gewoon weer in de oude groep. */
+function followRulesOnMove(label, fromKey, toKey){
+  if(fromKey === toKey) return;
+  const k = (label||"").trim().toLowerCase();
+  if(!k) return;
+  (state.userRules||[]).forEach(r => {
+    if(r.bucket === fromKey && (r.label||"").trim().toLowerCase() === k) r.bucket = toKey;
+  });
+  const cat = state.categories.find(c => c.bucket === fromKey && c.name.trim().toLowerCase() === k);
+  const alInDoel = state.categories.some(c => c.bucket === toKey && c.name.trim().toLowerCase() === k);
+  if(cat && !alInDoel) cat.bucket = toKey;
+}
+
+function bucketShortLabel(k){
+  return t({ income:"groupShortIncome", vasteLasten:"groupShortVasteLasten",
+             abonnementen:"groupShortAbonnementen", variabeleLasten:"groupShortVariabeleLasten" }[k]) || k;
+}
+
+/* Staat er een categorie met precies deze naam in deze groep? Dan "heeft de regel een categorie". */
+function itemHasCategory(item, bucket){
+  const k = (item && item.l || "").trim().toLowerCase();
+  return !!k && state.categories.some(c => c.bucket === bucket && c.name.trim().toLowerCase() === k);
+}
+
+/* Keuzelijst onder een Basisdata-regel (zie renderCard/opts.categoryPicker). Transiënte stand. */
+let categoryPickerOpenFor = null;     // "<key>::<idx>"
+let categoryPickerRemember = true;    // vinkje "onthouden", blijft staan zolang de sessie loopt
+let rowDragJustEnded = false;         // de click ná een echte sleep mag de keuzelijst niet openen
+
+function renderCategoryPicker(item, key, idx, rowWrap){
+  const picker = document.createElement("div");
+  picker.className = "category-picker";
+  const perGroep = CATEGORY_BUCKET_KEYS
+    .map(k => ({ k, cats: state.categories.filter(c => c.bucket === k) }))
+    .filter(g => g.cats.length);
+  const huidig = (item.l||"").trim().toLowerCase();
+  const optgroups = perGroep.map(g => `<optgroup label="${escapeHtml(bucketShortLabel(g.k))}">${
+    g.cats.map(c => `<option value="${escapeHtml(c.id)}" ${(g.k === key && c.name.trim().toLowerCase() === huidig) ? "selected" : ""}>${escapeHtml(c.name)}</option>`).join("")
+  }</optgroup>`).join("");
+  picker.innerHTML = `
+    <label>${escapeHtml(t("categoryPickLabel"))}
+      <select class="category-select">
+        <option value="">${escapeHtml(t("categoryPickNone"))}</option>
+        ${optgroups}
+        <option value="__new__">${escapeHtml(t("categoryPickNew"))}</option>
+      </select>
+    </label>
+    <div class="category-new" hidden>
+      <input type="text" class="category-new-name" maxlength="${MAX_CATEGORY_NAME_LEN}" placeholder="${escapeHtml(t("categoryNewNamePlaceholder"))}" />
+      <span>${escapeHtml(t("categoryNewGroupLabel"))}</span>
+      <select class="category-new-group">
+        ${CATEGORY_BUCKET_KEYS.map(k => `<option value="${k}" ${k === key ? "selected" : ""}>${escapeHtml(bucketShortLabel(k))}</option>`).join("")}
+      </select>
+      <button type="button" class="category-new-btn">${escapeHtml(t("categoryNewBtn"))}</button>
+    </div>
+    <label class="category-remember"><input type="checkbox" class="category-remember-cb" ${categoryPickerRemember ? "checked" : ""} /> ${escapeHtml(t("categoryRememberLabel"))}</label>
+    <div class="category-picker-hint">${escapeHtml(t("categoryPickHint"))}</div>
+  `;
+  const toepassen = (cat) => {
+    const s = basisdataScenario();
+    const idxNu = s[key].items.indexOf(item);
+    if(idxNu === -1 || !cat) return;
+    const snap = JSON.stringify(state);
+    const oud = item.l;
+    const res = assignBasisdataCategory(s, key, idxNu, cat, { remember: categoryPickerRemember });
+    categoryPickerOpenFor = null;
+    renderAll();
+    if(res.changed) offerUndo(t("undoCategoryAssigned")(oud, cat.name), snap);
+  };
+  picker.querySelector(".category-remember-cb").onchange = (e) => { categoryPickerRemember = e.target.checked; };
+  const nieuw = picker.querySelector(".category-new");
+  picker.querySelector(".category-select").onchange = (e) => {
+    const v = e.target.value;
+    if(v === "__new__"){
+      nieuw.hidden = false;
+      const naamVeld = picker.querySelector(".category-new-name");
+      naamVeld.focus();
+      return;
+    }
+    nieuw.hidden = true;
+    if(!v) return;
+    toepassen(findCategory(v));
+  };
+  const maakAan = () => {
+    const naam = picker.querySelector(".category-new-name").value.trim();
+    const bucket = picker.querySelector(".category-new-group").value;
+    if(!naam) return;
+    const res = createCategory(naam, bucket);
+    const cat = res && res.category ? res.category
+      : state.categories.find(c => c.bucket === bucket && c.name.trim().toLowerCase() === naam.toLowerCase());
+    if(cat) toepassen(cat);
+  };
+  picker.querySelector(".category-new-btn").onclick = maakAan;
+  picker.querySelector(".category-new-name").onkeydown = (e) => { if(e.key === "Enter"){ e.preventDefault(); maakAan(); } };
+  rowWrap.appendChild(picker);
 }
 
 /* Muis/touch-afhandeling voor het verslepen. Start op pointerdown op het greepje; pas na een paar
@@ -5983,7 +6603,7 @@ function moveBasisdataItem(s, fromKey, fromIdx, toKey, toIdx){
    slepen volgt een zwevende kopie van de rij de aanwijzer, is de oorspronkelijke rij verborgen, en
    laat een gestippelde plaatshouder zien waar hij terechtkomt. Buiten elke kaart blijft de
    plaatshouder staan waar hij het laatst was — loslaten naast een kaart is dus niet "kwijt". Escape
-   breekt af. Zelfde opzet als enableLongPressReorder: luisteren op `document`, omdat de DOM tijdens
+   breekt af. Luistert op `document` (niet op de rij zelf), omdat de DOM tijdens
    het slepen verschuift. */
 const ROW_DRAG_START_PX = 4;
 const ROW_DRAG_EDGE_PX = 60;   // afstand tot de rand van het venster waarbinnen automatisch gescrold wordt
@@ -6097,6 +6717,10 @@ function startRowDrag(e, ctx){
     active = false;
     cleanup();
     if(!wasActive) return;
+    // Er volgt nog een click-event op het greepje; dat mag de categorielijst niet openen.
+    rowDragJustEnded = true;
+    setTimeout(() => { rowDragJustEnded = false; }, 0);
+    categoryPickerOpenFor = null;
     const targetCard = placeholder.closest(".card[data-drag-group]");
     const rowsEl = placeholder.parentNode;
     let toIdx = 0;
@@ -6115,12 +6739,17 @@ function startRowDrag(e, ctx){
     if(toKey === ctx.fromKey) cardSortState.delete(ctx.card._dragSortScopeKey);
     const oudeSleutel = `budgetcard:${ctx.fromKey}::${ctx.item.l}`;
     const wasOpen = expandedBreakdowns.has(oudeSleutel);
+    const snap = JSON.stringify(state);
     const res = moveBasisdataItem(s, ctx.fromKey, ctx.fromIdx, toKey, toIdx);
     if(res && wasOpen){
       expandedBreakdowns.delete(oudeSleutel);
       expandedBreakdowns.add(`budgetcard:${toKey}::${ctx.item.l}`);
     }
+    // Naar een andere groep: herkenregels en een gelijknamige categorie verhuizen mee, anders zet
+    // de volgende import dezelfde tegenpartij weer terug in de oude groep.
+    if(res && toKey !== ctx.fromKey) followRulesOnMove(ctx.item.l, ctx.fromKey, toKey);
     renderAll();
+    if(res && toKey !== ctx.fromKey) offerUndo(t("undoMoved")(ctx.item.l), snap);
   };
   const onCancel = () => { active = false; cleanup(); restore(); };
   const onKey = (ev) => {
@@ -6249,6 +6878,12 @@ function renderCard(key, cat, opts={}){
     // offsetPicker: van welke andere regel deze regel wordt afgetrokken (zie findOffsetPairs).
     // Allebei alleen daar waar de kaart erom vraagt, zodat gewone kaarten onveranderd blijven.
     const isSalary = item.role === "salary";
+    // Categorieknop + keuzelijst: alleen op Basisdata (de kaarten die ook versleepbaar zijn). Op
+    // een telefoon is er geen ruimte voor nog een knop; daar opent een tik op het greepje 'm.
+    const categoryPicker = draggable && opts.dragGroup === "basisdata";
+    const catPickKey = `${key}::${idx}`;
+    const catPickOpen = categoryPicker && categoryPickerOpenFor === catPickKey;
+    const hasCat = categoryPicker && itemHasCategory(item, key);
     const pickerKey = `${typeof opts.offsetPicker === "string" ? opts.offsetPicker : "?"}::${key}::${idx}`;
     const pickerOpen = offsetPickerOpenFor === pickerKey;
     const hasOffset = !!(item.offsetTarget||"").trim();
@@ -6256,7 +6891,7 @@ function renderCard(key, cat, opts={}){
     const row = document.createElement("div");
     row.className = "row";
     row.innerHTML = `
-      ${draggable ? `<button type="button" class="drag-handle" title="${escapeHtml(t('dragHandleTitle'))}" aria-label="${escapeHtml(t('dragHandleTitle'))}"><svg viewBox="0 0 10 14" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.3"/><circle cx="7.5" cy="2.5" r="1.3"/><circle cx="2.5" cy="7" r="1.3"/><circle cx="7.5" cy="7" r="1.3"/><circle cx="2.5" cy="11.5" r="1.3"/><circle cx="7.5" cy="11.5" r="1.3"/></svg></button>` : ""}
+      ${draggable ? `<button type="button" class="drag-handle${hasCat ? " has-category" : ""}" title="${escapeHtml(t('dragHandleTitle'))}" aria-label="${escapeHtml(t('dragHandleTitle'))}"><svg viewBox="0 0 10 14" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.3"/><circle cx="7.5" cy="2.5" r="1.3"/><circle cx="2.5" cy="7" r="1.3"/><circle cx="7.5" cy="7" r="1.3"/><circle cx="2.5" cy="11.5" r="1.3"/><circle cx="7.5" cy="11.5" r="1.3"/></svg></button>` : ""}
       ${hasBreakdown ? `<button type="button" class="breakdown-toggle-btn ${isOpen?'open':''}" data-key="${escapeHtml(breakdownKey)}" title="${t('breakdownToggleBtn')}" aria-label="${t('breakdownToggleBtn')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}
       ${opts.salaryPicker ? `<button type="button" class="role-btn salary-btn ${isSalary?'active':''}" title="${escapeHtml(isSalary ? t('salaryRoleBtnUnset') : t('salaryRoleBtnSet'))}" aria-pressed="${isSalary}">${isSalary ? "★" : "☆"}</button>` : ""}
       <input class="label-input" value="${displayLabel}" ${labelEditable ? "" : "disabled"} />
@@ -6266,6 +6901,7 @@ function renderCard(key, cat, opts={}){
         <input class="value-input" type="number" step="0.01" value="${(Number(displayValue)||0).toFixed(2)}" ${editable ? "" : "disabled"} />
       </div>
       ${opts.offsetPicker ? `<button type="button" class="role-btn offset-btn ${hasOffset?'active':''}" title="${escapeHtml(t('offsetBtnTitle'))}" aria-expanded="${pickerOpen}">⇥</button>` : ""}
+      ${categoryPicker ? `<button type="button" class="role-btn category-btn ${hasCat?'active':''}" title="${escapeHtml(t('categoryBtnTitle'))}" aria-label="${escapeHtml(t('categoryBtnTitle'))}" aria-expanded="${catPickOpen}">${CATEGORY_ICON}</button>` : ""}
       <button class="del-btn" title="${t('delRow')}">×</button>
     `;
     const labelInput = row.querySelector(".label-input");
@@ -6300,12 +6936,16 @@ function renderCard(key, cat, opts={}){
     }
     delBtn.onclick = () => {
       // Een verwijderde regel mag geen verweesde koppeling achterlaten.
+      const snap = JSON.stringify(state);
       const weg = (item.l||"").trim().toLowerCase();
       cat.items.splice(idx,1);
       cat.items.forEach(other => {
         if((other.offsetTarget||"").trim().toLowerCase() === weg) delete other.offsetTarget;
       });
+      if(categoryPicker) categoryPickerOpenFor = null;
       renderAll();
+      // Geen bevestigingsvraag (een rij weghalen moet snel kunnen), wel een weg terug.
+      offerUndo(t("undoRowDeleted")((item.l||"").trim() || t("newItem")), snap);
     };
     if(breakdownBtn){
       breakdownBtn.onclick = () => { toggleBreakdown(breakdownKey); renderCategories(); };
@@ -6313,6 +6953,25 @@ function renderCard(key, cat, opts={}){
     if(draggable){
       const handle = row.querySelector(".drag-handle");
       handle.addEventListener("pointerdown", (e) => startRowDrag(e, { card: wrap, rowWrap, fromKey: key, fromIdx: idx, item }));
+      if(categoryPicker){
+        // Een tik op het greepje (zonder te slepen) opent de categorielijst — op een telefoon de
+        // enige ingang, op desktop een tweede naast de categorieknop. Na een échte sleep volgt ook
+        // een click-event; dat mag de lijst niet openen.
+        handle.addEventListener("click", () => {
+          if(rowDragJustEnded){ rowDragJustEnded = false; return; }
+          categoryPickerOpenFor = catPickOpen ? null : catPickKey;
+          offsetPickerOpenFor = null;
+          renderAll();
+        });
+      }
+    }
+    const categoryBtn = row.querySelector(".category-btn");
+    if(categoryBtn){
+      categoryBtn.onclick = () => {
+        categoryPickerOpenFor = catPickOpen ? null : catPickKey;
+        offsetPickerOpenFor = null;
+        renderAll();
+      };
     }
     if(salaryBtn){
       salaryBtn.onclick = () => {
@@ -6351,6 +7010,7 @@ function renderCard(key, cat, opts={}){
       };
       rowWrap.appendChild(picker);
     }
+    if(catPickOpen) renderCategoryPicker(item, key, idx, rowWrap);
     if(hasBreakdown && isOpen){
       // Op Basisdata (dezelfde kaarten die ook versleepbaar zijn) mag je een losse betaling uit de
       // regel halen zonder de hele regel te verwijderen — zie removeBasisdataEntry.
@@ -6358,8 +7018,10 @@ function renderCard(key, cat, opts={}){
       if(draggable){
         rowWrap.querySelectorAll(".breakdown-del-btn").forEach(btn => {
           btn.onclick = () => {
+            const snap = JSON.stringify(state);
             removeBasisdataEntry(item, key, Number(btn.dataset.entryIdx));
             renderAll();
+            offerUndo(t("undoEntryDeleted"), snap);
           };
         });
       }
@@ -6574,6 +7236,17 @@ let importBasisdataSuccessInfo = null; // pas gevuld ná bevestigen, voor het su
    annuleren gooit hem simpelweg weg (zie resetImportBasisdataUI). */
 const importBasisdataPendingRules = new Map();
 
+/* Waar de import naartoe gaat (zie renderImportDestination). Een bestand met één maand gaat
+   standaard als die maand onder Maandbudgetten; met meerdere maanden worden het meerdere
+   maandbudgetten. "basisdata" vervangt Basisdata zoals dit scherm tot v26 altijd deed. */
+let importDest = "month";             // "month" | "basisdata"
+let importFileMonths = [];            // [{ym, count, partial}] — de maanden die in het bestand staan
+let importMulti = false;              // meer dan één volwaardige maand in het bestand
+let importSingleYm = null;            // gekozen maand bij één maand (keuzelijst)
+let importDetectedYm = null;          // wat FinBo zelf uit het bestand haalde
+let importMultiSelected = new Set();  // aangevinkte maanden bij een bestand met meerdere maanden
+let importSkippedBefore = 0;          // transacties van vóór MONTH_MIN_YM (niet te kiezen)
+
 function resetImportBasisdataUI(){
   importBasisdataStep = "upload";
   importBasisdataRows = [];
@@ -6581,7 +7254,160 @@ function resetImportBasisdataUI(){
   importBasisdataPendingRules.clear();
   importBasisdataSourceLabel = "";
   importBasisdataSuccessInfo = null;
+  importDest = "month";
+  importFileMonths = [];
+  importMulti = false;
+  importSingleYm = null;
+  importDetectedYm = null;
+  importMultiSelected = new Set();
+  importSkippedBefore = 0;
 }
+
+/* Welke maanden staan er in het ingelezen bestand? Een gewoon maandafschrift heeft één maand, op
+   een paar boekingen na die net in de maand ervoor of erna vallen. Een export over een langere
+   periode heeft er meerdere. Een maand telt als "volwaardig" bij minstens 5 transacties én minstens
+   10% van de drukste maand — zo maken twee verdwaalde boekingen van een buurmaand er geen
+   tweede maand van. De eerste en laatste maand van een langere export zijn vaak maar half
+   gevuld; die worden als onvolledig gemarkeerd en staan standaard uit. */
+function analyzeImportMonths(fileName){
+  const perYm = new Map();
+  importBasisdataRows.forEach(r => (r.entries||[]).forEach(e => {
+    const ym = String(e.datum||"").slice(0,7);
+    if(!ymValid(ym)) return;
+    const dag = Number(String(e.datum).slice(8,10)) || 0;
+    if(!perYm.has(ym)) perYm.set(ym, { ym, count:0, minDag:99, maxDag:0 });
+    const m = perYm.get(ym);
+    m.count++; m.minDag = Math.min(m.minDag, dag); m.maxDag = Math.max(m.maxDag, dag);
+  }));
+  const maanden = [...perYm.values()].sort((a,b) => a.ym.localeCompare(b.ym));
+  const drukste = maanden.reduce((a,m) => Math.max(a, m.count), 0);
+  const volwaardig = maanden.filter(m => m.count >= Math.max(5, drukste * 0.10));
+  importMulti = volwaardig.length >= 2;
+  const uitNaam = (() => { const d = detectMonthFromFilename(fileName || ""); return d ? ymFromParts(d.year, d.month) : null; })();
+  if(importMulti){
+    const eerste = volwaardig[0].ym, laatste = volwaardig[volwaardig.length-1].ym;
+    importSkippedBefore = maanden.filter(m => m.ym < MONTH_MIN_YM).reduce((a,m) => a + m.count, 0);
+    importFileMonths = volwaardig
+      .filter(m => ymInPickerRange(m.ym))
+      .map(m => ({ ym: m.ym, count: m.count,
+                   partial: (m.ym === eerste && m.minDag > 5) || (m.ym === laatste && m.maxDag < 24) }));
+    importMultiSelected = new Set(importFileMonths.filter(m => !m.partial).map(m => m.ym));
+    importSingleYm = null;
+    importDetectedYm = null;
+  } else {
+    const dominant = maanden.slice().sort((a,b) => b.count - a.count)[0];
+    importDetectedYm = dominant ? dominant.ym : uitNaam;
+    importSingleYm = ymInPickerRange(importDetectedYm) ? importDetectedYm : null;
+    importFileMonths = importDetectedYm ? [{ ym: importDetectedYm, count: dominant ? dominant.count : 0, partial:false }] : [];
+    importMultiSelected = new Set();
+    importSkippedBefore = 0;
+  }
+}
+
+/* De doelmaanden van deze import (alleen bij importDest "month"). */
+function importTargetYms(){
+  if(importMulti) return importFileMonths.map(m => m.ym).filter(ym => importMultiSelected.has(ym));
+  return importSingleYm ? [importSingleYm] : [];
+}
+
+/* De importrijen beperkt tot de transacties uit de gegeven maanden — elke rij houdt zijn groep,
+   categorie en debet/credit-keuze, alleen de bedragen worden opnieuw uit die transacties afgeleid.
+   Een rij zonder transacties in die maanden valt weg. Zo hoef je een bestand met twaalf maanden
+   maar één keer in te delen. */
+function importRowsForMonths(ymSet){
+  const rond = n => Math.round(n*100)/100;
+  const uit = [];
+  importBasisdataRows.forEach(r => {
+    const entries = (r.entries||[]).filter(e => ymSet.has(String(e.datum||"").slice(0,7)));
+    if(!entries.length) return;
+    let debet = 0, credit = 0;
+    entries.forEach(e => { if(e.amt < 0) debet += -e.amt; else credit += e.amt; });
+    uit.push({ ...r, entries, debet: rond(debet), credit: rond(credit) });
+  });
+  return uit;
+}
+
+function computeImportLinesByBucket(rows){
+  const uit = {};
+  CATEGORY_BUCKET_KEYS.forEach(k => { uit[k] = computeImportBasisdataResultingLines(k, rows); });
+  return uit;
+}
+
+/* Bij een bestand met meerdere maanden: het gemiddelde per maand over de aangevinkte maanden,
+   zoals "Basisdata herberekenen" dat ook doet (een maand zonder die regel telt als 0). Een
+   gemiddelde heeft geen eigen transactielijst meer; de datum van de laatste betaling blijft. */
+function importAveragedLinesByBucket(){
+  const yms = [...importMultiSelected];
+  const n = yms.length || 1;
+  const totaal = computeImportLinesByBucket(importRowsForMonths(new Set(yms)));
+  const uit = {};
+  CATEGORY_BUCKET_KEYS.forEach(k => {
+    uit[k] = totaal[k].map(l => ({
+      ...l,
+      amt: Math.round((l.amt / n) * 100) / 100,
+      datum: (l.entries && l.entries.length) ? l.entries[l.entries.length-1].datum : "",
+      entries: [],
+    })).filter(l => Math.abs(l.amt) >= CENT_EPSILON);
+  });
+  return uit;
+}
+
+/* Tegenpartijen die in hetzelfde bestand als losse rijen zijn afgesplitst weer samenvoegen (punt 3:
+   splitsen was eenrichtingsverkeer). Een "deel"-rij gaat terug in de rij waar hij uit kwam; een
+   af/bij-helft gaat terug met zijn andere helft. Zodra er van een tegenpartij niets meer
+   afgesplitst is, krijgt de rij zijn herkensleutel (matchName) terug, zodat er weer een regel
+   geleerd kan worden. */
+function canRejoinImportRow(r){
+  if(!r) return false;
+  if(r.splitParent) return importBasisdataRows.some(x => x.id === r.splitParent);
+  if(r.splitPair) return importBasisdataRows.filter(x => x.splitPair === r.splitPair).length > 1;
+  return false;
+}
+function rejoinImportRow(rowId){
+  const r = importBasisdataRows.find(x => x.id === rowId);
+  if(!r || !canRejoinImportRow(r)) return false;
+  let doel, weg;
+  if(r.splitParent){
+    doel = importBasisdataRows.find(x => x.id === r.splitParent);
+    weg = [r];
+  } else {
+    const paar = importBasisdataRows.filter(x => x.splitPair === r.splitPair);
+    doel = paar[0];
+    weg = paar.slice(1);
+  }
+  const rond = n => Math.round(n*100)/100;
+  const entries = [...doel.entries, ...weg.flatMap(x => x.entries)]
+    .sort((a,b) => String(a.datum||"").localeCompare(String(b.datum||"")));
+  let debet = 0, credit = 0;
+  entries.forEach(e => { if(e.amt < 0) debet += -e.amt; else credit += e.amt; });
+  doel.entries = entries;
+  doel.debet = rond(debet);
+  doel.credit = rond(credit);
+  // De debet/credit-keuze van de rij blijft staan zolang die kant er nog is. Alleen een af/bij-paar
+  // gaat terug naar "saldo" (zo stond de rij vóór het splitsen ook).
+  const heeftAf = doel.debet > CENT_EPSILON, heeftBij = doel.credit > CENT_EPSILON;
+  const keuzeGeldig = (doel.mode === "net") || (doel.mode === "debet" && heeftAf) || (doel.mode === "credit" && heeftBij);
+  if(r.splitPair && !r.splitParent) doel.mode = (heeftAf && heeftBij) ? "net" : (heeftBij ? "credit" : "debet");
+  else if(!keuzeGeldig) doel.mode = (heeftAf && heeftBij) ? "net" : (heeftBij ? "credit" : "debet");
+  const oudDoelId = doel.id;
+  if(r.splitPair && !r.splitParent){
+    doel.id = r.splitPair;
+    delete doel.splitPair;
+    delete doel.splitKind;
+    if(!doel.suggestion){ const met = weg.find(x => x.suggestion); if(met) doel.suggestion = met.suggestion; }
+  }
+  // Rijen die uit een weggehaalde rij waren afgesplitst, hangen voortaan aan het doel.
+  const wegIds = new Set(weg.map(x => x.id));
+  importBasisdataRows = importBasisdataRows.filter(x => !wegIds.has(x.id));
+  importBasisdataRows.forEach(x => { if(x.splitParent && (wegIds.has(x.splitParent) || x.splitParent === oudDoelId)) x.splitParent = doel.id; });
+  const nogGesplitst = importBasisdataRows.some(x => x !== doel && (x.splitParent === doel.id));
+  if(!doel.splitKind && !doel.splitParent && !nogGesplitst && doel.origMatchName){
+    doel.matchName = doel.origMatchName;
+  }
+  importSplitSelection.clear();
+  return true;
+}
+
 
 /* Levert een platte rijenlijst op i.p.v. het "maand"-object van buildMonthFromCSV.
    Eén rij = één TEGENPARTIJ, precies zoals die op het afschrift staat.
@@ -6730,6 +7556,16 @@ function importRowContributingEntries(r){
 /* Bouwt een nieuwe importrij uit een deelverzameling transacties van een bestaande rij.
    Debet/credit/bedrag worden opnieuw uit die transacties afgeleid, zodat een afgesplitste rij
    altijd klopt met wat erin zit. */
+/* Een afgesplitste rij krijgt een id op basis van de oorspronkelijke ("ibd3:deel1"). Na splitsen,
+   terugvoegen en opnieuw splitsen kan zo'n id al in gebruik zijn — en twee rijen met hetzelfde id
+   betekent dat knoppen de verkeerde rij aanpassen en terugvoegen er twee tegelijk weghaalt. */
+function uniekeImportRijId(id){
+  if(!importBasisdataRows.some(r => r.id === id)) return id;
+  let n = 2;
+  while(importBasisdataRows.some(r => r.id === `${id}~${n}`)) n++;
+  return `${id}~${n}`;
+}
+
 function makeImportRowFromEntries(basis, entries, tag){
   let debet = 0, credit = 0;
   entries.forEach(e => { if(e.amt < 0) debet += -e.amt; else credit += e.amt; });
@@ -6745,6 +7581,8 @@ function makeImportRowFromEntries(basis, entries, tag){
     // herkenregel te leren — dezelfde naam zou dan naar twee groepen moeten wijzen, en één regel
     // die de andere overschrijft is erger dan geen regel. Zie rememberUserRule.
     matchName: null,
+    // Om later weer te kunnen terugvoegen (zie rejoinImportRow): de oorspronkelijke herkensleutel.
+    origMatchName: basis.matchName || basis.origMatchName || null,
     splitFrom: basis.splitFrom || basis.name,
     splitKind: tag,
     suggestion: houdVoorstel ? basis.suggestion : null,
@@ -6767,9 +7605,14 @@ function splitImportBasisdataRow(rowId){
   const af = r.entries.filter(e => e.amt < 0);
   const bij = r.entries.filter(e => e.amt > 0);
   if(!af.length || !bij.length) return false;
-  importBasisdataRows.splice(idx, 1,
-    makeImportRowFromEntries(r, af, "debet"),
-    makeImportRowFromEntries(r, bij, "credit"));
+  const helftAf = makeImportRowFromEntries(r, af, "debet");
+  const helftBij = makeImportRowFromEntries(r, bij, "credit");
+  helftAf.id = uniekeImportRijId(helftAf.id);
+  helftBij.id = uniekeImportRijId(helftBij.id);
+  helftAf.splitPair = helftBij.splitPair = r.id;
+  // Was dit zelf al een afgesplitst deel, dan horen beide helften nog steeds bij die ouder.
+  if(r.splitParent) helftAf.splitParent = helftBij.splitParent = r.splitParent;
+  importBasisdataRows.splice(idx, 1, helftAf, helftBij);
   return true;
 }
 
@@ -6800,7 +7643,11 @@ function splitImportBasisdataEntries(rowId, entryIndexes){
   rest.suggestion = r.suggestion;
   rest.bucket = r.bucket;
   rest.catId = r.catId;
+  if(r.splitParent) rest.splitParent = r.splitParent;
+  if(r.splitPair) rest.splitPair = r.splitPair;
   deel.splitSeq = volgnr;
+  deel.splitParent = r.id;
+  deel.id = uniekeImportRijId(deel.id);
 
   importBasisdataRows.splice(idx, 1, rest, deel);
   return true;
@@ -6848,8 +7695,8 @@ function importRowSplitTag(r){
    blijft een eigen regel onder zijn geïmporteerde naam. Eén rij met een unieke categorie is
    functioneel hetzelfde geval (merged===1) en leest dan als een hernoeming i.p.v. een samenvoeging --
    zie renderImportBasisdataRowHtml voor het bijbehorende badge-onderscheid. */
-function computeImportBasisdataResultingLines(bucketKey){
-  const bucketRows = importBasisdataRows.filter(r => r.bucket === bucketKey);
+function computeImportBasisdataResultingLines(bucketKey, rows){
+  const bucketRows = (rows || importBasisdataRows).filter(r => r.bucket === bucketKey);
   const byCat = {};
   const solo = [];
   const byLabel = {};
@@ -6936,6 +7783,8 @@ function handleImportBasisdataCSVUpload(e){
       importBasisdataRows = buildImportBasisdataRows(rows);
       if(!importBasisdataRows.length){ alert(t("importBasisdataNoRowsError")); return; }
       importBasisdataSourceLabel = file.name;
+      analyzeImportMonths(file.name);
+      dismissUndo();
       importBasisdataStep = "review";
       renderAll();
     }catch(err){ alert(t("csvParseError") + err.message); }
@@ -6954,6 +7803,8 @@ function handleImportBasisdataPDFUpload(e){
       importBasisdataRows = buildImportBasisdataRows(rows);
       if(!importBasisdataRows.length){ alert(t("importBasisdataNoRowsError")); return; }
       importBasisdataSourceLabel = file.name;
+      analyzeImportMonths(file.name);
+      dismissUndo();
       importBasisdataStep = "review";
       renderAll();
     }catch(err){ alert(t("pdfParseError") + err.message); }
@@ -7077,7 +7928,7 @@ function renderImportBasisdataRowHtml(r){
   return `
     <div class="import-bd-row${r.bucket?"":" needs-group"}">
       <div class="import-bd-row-main">
-        <span class="import-bd-row-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}${r.splitKind ? `<span class="import-bd-split-tag">${escapeHtml(importRowSplitTag(r))}</span>` : ""}</span>
+        <span class="import-bd-row-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}${r.splitKind ? `<span class="import-bd-split-tag">${escapeHtml(importRowSplitTag(r))}</span>` : ""}${canRejoinImportRow(r) ? `<button type="button" class="import-bd-rejoin" data-rejoin="${escapeHtml(r.id)}" title="${escapeHtml(t("importRejoinTitle"))}">${escapeHtml(t("importRejoinBtn"))}</button>` : ""}</span>
         ${bedragen}
       </div>
       ${suggestieBadge}
@@ -7187,6 +8038,12 @@ function wireImportBasisdataRowHandlers(container){
       renderImportBasisdataScreen();
     };
   });
+
+  container.querySelectorAll(".import-bd-rejoin").forEach(btn=>{
+    btn.onclick = () => {
+      if(rejoinImportRow(btn.dataset.rejoin)) renderImportBasisdataScreen();
+    };
+  });
 }
 
 function renderImportBasisdataUploadStep(container){
@@ -7234,8 +8091,11 @@ function renderImportBasisdataReviewStep(container){
 
   const rowsHtml = importBasisdataRows.map(r=>renderImportBasisdataRowHtml(r)).join("");
 
+  // Voorbeeld: bij één maand precies wat er landt; bij meerdere maanden het gemiddelde per maand
+  // over de aangevinkte maanden (de totalen over het hele bestand zeggen per regel weinig).
+  const previewLines = importMulti ? importAveragedLinesByBucket() : computeImportLinesByBucket(importBasisdataRows);
   const previewBucketsHtml = CATEGORY_BUCKET_KEYS.map(bucket=>{
-    const lines = computeImportBasisdataResultingLines(bucket);
+    const lines = previewLines[bucket];
     if(!lines.length) return "";
     const labelObj = PROFILE_CATEGORY_BUCKETS.find(b=>b.key===bucket);
     const linesHtml = lines.map(l=>`
@@ -7247,6 +8107,18 @@ function renderImportBasisdataReviewStep(container){
 
   const { done, total } = importBasisdataProgress();
   const pct = total ? Math.round((done/total)*100) : 0;
+  const doelen = importTargetYms();
+  const bestemmingKlaar = importDest === "basisdata"
+    ? (!importMulti || importMultiSelected.size > 0)
+    : doelen.length > 0;
+  const kanOpslaan = total > 0 && done >= total && bestemmingKlaar;
+  const knopTekst = importDest === "basisdata" ? t("importBasisdataCreateBtn")
+    : (!doelen.length ? t("importPickMonthFirst")
+      : (doelen.length === 1 ? t("importSaveMonthBtn")(ymTitle(doelen[0])) : t("importSaveMonthsBtn")(doelen.length)));
+  const previewTitel = importDest === "basisdata"
+    ? (importMulti ? t("importPreviewTitleAvg")(importMultiSelected.size) : t("importBasisdataPreviewTitle"))
+    : (importMulti ? t("importPreviewTitleAvg")(importMultiSelected.size)
+      : (importSingleYm ? t("importPreviewTitleMonth")(ymTitle(importSingleYm)) : t("importBasisdataPreviewTitle")));
 
   // Eén gezamenlijke tip i.p.v. dezelfde zin onder elke rij (zie renderImportBasisdataRowHtml).
   const geenCategorieen = state.categories.length === 0;
@@ -7255,11 +8127,13 @@ function renderImportBasisdataReviewStep(container){
     : "";
 
   container.innerHTML = `
+    ${importMulti ? `<p class="import-bd-multi-note">${escapeHtml(t("importMultiTotalsNote")(importFileMonths.length))}</p>` : ""}
     <div class="import-bd-tiles">${tilesHtml}${unclassifiedTile}</div>
     ${catTip}
     <div class="import-bd-rows">${rowsHtml}</div>
+    ${renderImportDestinationHtml()}
     <div class="import-bd-preview">
-      <h3>${t("importBasisdataPreviewTitle")}</h3>
+      <h3>${escapeHtml(previewTitel)}</h3>
       <p class="import-bd-preview-hint">${t("importBasisdataPreviewHint")}</p>
       ${previewBucketsHtml || `<p class="import-bd-preview-empty">—</p>`}
     </div>
@@ -7270,7 +8144,7 @@ function renderImportBasisdataReviewStep(container){
       </div>
       <div class="import-bd-footer-actions">
         <button type="button" class="import-bd-btn-secondary" id="importBdCancelBtn">${t("importBasisdataCancelBtn")}</button>
-        <button type="button" class="import-bd-btn-danger" id="importBdCreateBtn" ${done<total ? "disabled":""}>${t("importBasisdataCreateBtn")}</button>
+        <button type="button" class="${importDest === "basisdata" ? "import-bd-btn-danger" : "import-bd-btn-danger import-bd-btn-save"}" id="importBdCreateBtn" ${kanOpslaan ? "" : "disabled"}>${escapeHtml(knopTekst)}</button>
       </div>
     </div>
   `;
@@ -7283,12 +8157,181 @@ function renderImportBasisdataReviewStep(container){
       renderAll();
     }
   };
+  wireImportDestination(container);
   const createBtn = container.querySelector("#importBdCreateBtn");
   createBtn.onclick = () => {
     const p = importBasisdataProgress();
-    if(p.done < p.total) return;
-    showImportBasisdataConfirm();
+    if(!p.total || p.done < p.total) return;
+    if(importDest === "basisdata"){
+      if(importMulti && !importMultiSelected.size) return;
+      showImportBasisdataConfirm();
+      return;
+    }
+    const doelen = importTargetYms();
+    if(!doelen.length) return;
+    const bestaand = doelen.filter(ym => state.budgets.some(b => b.ym === ym));
+    if(bestaand.length) showImportMonthReplaceConfirm(bestaand);
+    else applyImportToMonths();
   };
+}
+
+/* Het blok "Waar moet deze import naartoe?" onder de rijen. */
+function renderImportDestinationHtml(){
+  const bestaat = (ym) => state.budgets.some(b => b.ym === ym);
+  let maandDeel = "";
+  if(importMulti){
+    const van = importFileMonths.length ? ymTitle(importFileMonths[0].ym) : "";
+    const tot = importFileMonths.length ? ymTitle(importFileMonths[importFileMonths.length-1].ym) : "";
+    maandDeel = `
+      <div class="import-dest-note">${escapeHtml(t("importMultiHint")(importFileMonths.length, van, tot))}</div>
+      <div class="import-dest-months">
+        ${importFileMonths.map(m => `<label class="import-dest-month">
+          <input type="checkbox" data-dest-ym="${m.ym}" ${importMultiSelected.has(m.ym) ? "checked" : ""} />
+          <span>${escapeHtml(ymTitle(m.ym))}</span>
+          <span class="tag">${escapeHtml(t("importMultiTxCount")(m.count))}${m.partial ? " · " + escapeHtml(t("importMultiPartial")) : ""}</span>
+          ${(importDest === "month" && bestaat(m.ym)) ? `<span class="tag replace">${escapeHtml(t("monthExistsSuffix").trim())}</span>` : ""}
+        </label>`).join("")}
+      </div>
+      ${importSkippedBefore ? `<div class="import-dest-note">${escapeHtml(t("importMultiSkipped")(importSkippedBefore))}</div>` : ""}`;
+  } else {
+    const opties = monthPickerOptions();
+    maandDeel = `
+      <select id="importDestMonthSelect">
+        <option value="" ${importSingleYm ? "" : "selected"}>${escapeHtml(t("importPickMonthFirst"))}</option>
+        ${opties.map(ym => `<option value="${ym}" ${importSingleYm === ym ? "selected" : ""}>${escapeHtml(ymTitle(ym) + (bestaat(ym) ? t("monthExistsSuffix") : ""))}</option>`).join("")}
+      </select>
+      ${importDetectedYm ? `<div class="import-dest-note">${escapeHtml(ymInPickerRange(importDetectedYm)
+          ? t("importDetectedHint")(ymTitle(importDetectedYm))
+          : t("importDetectOutOfRange")(ymTitle(importDetectedYm)))}</div>` : ""}
+      ${(importSingleYm && bestaat(importSingleYm)) ? `<div class="import-dest-note replace">${escapeHtml(t("importMonthReplaceNote")(ymTitle(importSingleYm)))}</div>` : ""}
+      ${(() => {
+        // Een maandafschrift bevat soms een paar boekingen met een datum in de maand ervoor of erna.
+        // Die horen bij dít afschrift en tellen dus mee in de gekozen maand — maar dat moet je wel
+        // kunnen zien, anders telt een overlap tussen twee exports ongemerkt dubbel.
+        if(!importSingleYm) return "";
+        const anders = importBasisdataRows.reduce((a, r) => a + (r.entries||[]).filter(e => String(e.datum||"").slice(0,7) !== importSingleYm).length, 0);
+        return anders ? `<div class="import-dest-note">${escapeHtml(t("importStrayNote")(anders, ymTitle(importSingleYm)))}</div>` : "";
+      })()}`;
+  }
+  return `
+    <div class="import-dest" id="importDest">
+      <h3>${escapeHtml(t("importDestTitle"))}</h3>
+      <label class="import-dest-option"><input type="radio" name="importDest" id="importDestMonth" value="month" ${importDest === "month" ? "checked" : ""} />
+        <span>${escapeHtml(importMulti ? t("importDestMonths") : t("importDestMonth"))}</span></label>
+      ${importDest === "month" ? `<div class="import-dest-body">${maandDeel}</div>` : ""}
+      <label class="import-dest-option"><input type="radio" name="importDest" id="importDestBasisdata" value="basisdata" ${importDest === "basisdata" ? "checked" : ""} />
+        <span>${escapeHtml(t("importDestBasisdata"))}</span></label>
+      ${importDest === "basisdata" ? `
+        ${importMulti ? `<div class="import-dest-body">${maandDeel}<div class="import-dest-note">${escapeHtml(t("importMultiBasisdataNote")(importMultiSelected.size))}</div></div>` : ""}
+        <div class="import-bd-warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+          <div class="import-bd-warn-text">${t("importBasisdataWarning")}</div>
+        </div>` : ""}
+    </div>`;
+}
+function wireImportDestination(container){
+  container.querySelectorAll('input[name="importDest"]').forEach(r => {
+    r.onchange = () => { importDest = r.value; renderImportBasisdataScreen(); };
+  });
+  const sel = container.querySelector("#importDestMonthSelect");
+  if(sel) sel.onchange = () => { importSingleYm = sel.value || null; renderImportBasisdataScreen(); };
+  container.querySelectorAll("[data-dest-ym]").forEach(cb => {
+    cb.onchange = () => {
+      if(cb.checked) importMultiSelected.add(cb.dataset.destYm); else importMultiSelected.delete(cb.dataset.destYm);
+      renderImportBasisdataScreen();
+    };
+  });
+}
+
+function showImportMonthReplaceConfirm(yms){
+  const overlay = document.createElement("div");
+  overlay.className = "import-bd-confirm-overlay";
+  overlay.innerHTML = `
+    <div class="import-bd-confirm-card">
+      <h3>${escapeHtml(t("importReplaceMonthTitle"))}</h3>
+      <p>${escapeHtml(t("importReplaceMonthText")(yms.map(ym => ymTitle(ym)).join(", ")))}</p>
+      <div class="import-bd-confirm-actions">
+        <button type="button" class="import-bd-btn-secondary" id="importBdReplaceCancel">${t("importBasisdataCancelBtn")}</button>
+        <button type="button" class="import-bd-btn-danger" id="importBdReplaceYes">${escapeHtml(t("importReplaceMonthYes"))}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector("#importBdReplaceCancel").onclick = () => overlay.remove();
+  overlay.querySelector("#importBdReplaceYes").onclick = () => { overlay.remove(); applyImportToMonths(); };
+}
+
+/* Gedeeld door beide bestemmingen: de tijdens het indelen geleerde herkenregels vastleggen, en
+   voor regels die meerdere tegenpartijen samenvoegden een categorie aanmaken (zie de toelichting
+   in applyImportBasisdata). Geeft de nieuw aangemaakte categorieën terug. */
+function commitImportLearning(linesByBucket){
+  importBasisdataPendingRules.forEach(r => rememberUserRule(r.match, r.bucket, r.label));
+  const nieuweCategorieen = [];
+  CATEGORY_BUCKET_KEYS.forEach(bucket=>{
+    linesByBucket[bucket].forEach(l=>{
+      if(l.merged < 2) return;
+      // Een naam die alleen door het splitsen ontstaan is ("Bouwmarkt (Praxis — deel 1)") is geen
+      // categorie maar een gelegenheidslabel.
+      if(/\(.*\)\s*$/.test(l.label||"")) return;
+      const bestaat = state.categories.some(c => c.bucket === bucket
+        && c.name.trim().toLowerCase() === (l.label||"").trim().toLowerCase());
+      if(bestaat) return;
+      const res = createCategory(l.label, bucket);
+      if(res && res.category) nieuweCategorieen.push(res.category);
+    });
+  });
+  return nieuweCategorieen;
+}
+
+/* Van regel uit de import naar post in een groep — zie de uitleg bij naarPost in
+   applyImportBasisdata (tekenomkering, entries vanaf 2 transacties, datum = laatste). */
+function importLineToPost(l, bucket){
+  const rond = n => Math.round(n*100)/100;
+  const v = bucket === "income" ? rond(l.amt) : rond(-l.amt);
+  const post = { l: l.label, v };
+  if(l.entries && l.entries.length > 1) post.entries = l.entries.map(e => ({...e}));
+  if(l.entries && l.entries.length) post.datum = l.entries[l.entries.length-1].datum || null;
+  else if(l.datum) post.datum = l.datum;
+  return post;
+}
+
+/* Slaat de import op als maandbudget(ten) met de werkelijke bedragen. Bestaat de maand al, dan
+   worden de regels daarvan vervangen (id, titel en eventuele terugboekingen blijven, zodat
+   koppelingen vanuit oude maandimports niet breken). Bij een bestand met meerdere maanden krijgt
+   elke aangevinkte maand alleen zijn eigen transacties. */
+function applyImportToMonths(){
+  const doelen = importTargetYms();
+  if(!doelen.length) return;
+  const snap = JSON.stringify(state);
+  const nieuweCategorieen = commitImportLearning(computeImportLinesByBucket(importBasisdataRows));
+  const opgeslagen = [];
+  doelen.forEach(ym => {
+    const rows = importMulti ? importRowsForMonths(new Set([ym])) : importBasisdataRows;
+    const lines = computeImportLinesByBucket(rows);
+    let b = state.budgets.find(x => x.ym === ym);
+    const vervangen = !!b;
+    if(!b){
+      const leeg = { income:{items:[]}, vasteLasten:{items:[]}, abonnementen:{items:[]}, variabeleLasten:{items:[]} };
+      b = makeBudget(ymTitle(ym), leeg, ym);
+      state.budgets.unshift(b);
+    }
+    CATEGORY_BUCKET_KEYS.forEach(k => {
+      b[k] = { items: lines[k]
+        .filter(l => !importMulti || Math.abs(l.amt) >= CENT_EPSILON)
+        .map(l => importLineToPost(l, k)) };
+    });
+    b.source = "import";
+    b.sourceFile = importBasisdataSourceLabel;
+    b.importedAt = Date.now();
+    opgeslagen.push({ ym, id: b.id, vervangen, lines });
+  });
+  importBasisdataSuccessInfo = { kind: "months", sourceLabel: importBasisdataSourceLabel, opgeslagen, nieuweCategorieen };
+  importBasisdataStep = "success";
+  renderAll();
+  const label = opgeslagen.length === 1
+    ? (opgeslagen[0].vervangen ? t("undoMonthReplaced")(ymTitle(opgeslagen[0].ym)) : t("undoMonthsSaved")(ymTitle(opgeslagen[0].ym)))
+    : t("importMonthsSuccessTitle")(opgeslagen.length);
+  offerUndo(label, snap,
+    () => { importBasisdataStep = importBasisdataRows.length ? "review" : "upload"; importBasisdataSuccessInfo = null; });
 }
 
 function showImportBasisdataConfirm(){
@@ -7319,8 +8362,11 @@ function showImportBasisdataConfirm(){
    aankondigt. Raakt state.months/state.budgets bewust totaal niet aan. */
 function applyImportBasisdata(){
   const bd = basisdataScenario();
-  const linesByBucket = {};
-  CATEGORY_BUCKET_KEYS.forEach(bucket=>{ linesByBucket[bucket] = computeImportBasisdataResultingLines(bucket); });
+  const snap = JSON.stringify(state);
+  // Vorige versie bewaren (zie pushBasisdataHistory): Basisdata vervangen is niet meer onomkeerbaar.
+  pushBasisdataHistory("import");
+  // Bij een bestand met meerdere maanden: het gemiddelde per maand over de aangevinkte maanden.
+  const linesByBucket = importMulti ? importAveragedLinesByBucket() : computeImportLinesByBucket(importBasisdataRows);
 
   // De salarisregel moet de vervanging van Basisdata overleven. Doet hij dat niet, dan vindt
   // getLoonItem() niets meer, valt baseLoonRaw() terug op 0 en cascadeert elk volgend jaar vanaf
@@ -7350,8 +8396,9 @@ function applyImportBasisdata(){
      Een bedrag dat tegen zijn groep in gaat (een teruggave bij de kosten, een negatieve
      inkomstenregel) blijft nu gewoon zichtbaar als negatief getal, en wordt hieronder ook expliciet
      gemeld op het successcherm in plaats van weggepoetst. */
-  // Nu pas de tijdens het indelen geleerde herkenregels vastleggen (zie `leer`).
-  importBasisdataPendingRules.forEach(r => rememberUserRule(r.match, r.bucket, r.label));
+  // Nu pas de tijdens het indelen geleerde herkenregels vastleggen (zie `leer`) — samen met het
+  // aanmaken van categorieën voor samengevoegde regels, zie commitImportLearning.
+  const nieuweCategorieen = commitImportLearning(importMulti ? computeImportLinesByBucket(importBasisdataRows) : linesByBucket);
 
   const rond = n => Math.round(n*100)/100;
   const tegendraads = [];
@@ -7370,6 +8417,7 @@ function applyImportBasisdata(){
     // ligt hier al oplopend gesorteerd (zie computeImportBasisdataResultingLines), dus het laatste
     // element is de laatste (meest recente) transactie.
     if(l.entries && l.entries.length) post.datum = l.entries[l.entries.length-1].datum || null;
+    else if(l.datum) post.datum = l.datum;
     return post;
   };
   bd.income.items = linesByBucket.income.map(l=>naarPost(l, "income"));
@@ -7384,21 +8432,7 @@ function applyImportBasisdata(){
   // Alleen bij een échte samenvoeging (2 of meer rijen) — één rij onder zijn eigen naam is geen
   // categorie. Bestaat de naam al in die groep, of past hij niet binnen de regels van
   // createCategory (bv. langer dan 20 tekens), dan gebeurt er simpelweg niets.
-  const nieuweCategorieen = [];
-  CATEGORY_BUCKET_KEYS.forEach(bucket=>{
-    linesByBucket[bucket].forEach(l=>{
-      if(l.merged < 2) return;
-      // Een naam die alleen door het splitsen ontstaan is ("Bouwmarkt (Praxis — deel 1)") is geen
-      // categorie maar een gelegenheidslabel; die hoort niet permanent onder Profiel > Categorieën
-      // te belanden.
-      if(/\(.*\)\s*$/.test(l.label||"")) return;
-      const bestaat = state.categories.some(c => c.bucket === bucket
-        && c.name.trim().toLowerCase() === (l.label||"").trim().toLowerCase());
-      if(bestaat) return;
-      const res = createCategory(l.label, bucket);
-      if(res && res.category) nieuweCategorieen.push(res.category);
-    });
-  });
+  // (Uitgevoerd in commitImportLearning, hierboven aangeroepen.)
 
   // Salarisregel aanwijzen volgens de drie stappen hierboven.
   let salarisItem = null;
@@ -7411,6 +8445,7 @@ function applyImportBasisdata(){
   if(salarisItem) setSalaryRole(bd, salarisItem);
 
   importBasisdataSuccessInfo = {
+    kind: "basisdata",
     sourceLabel: importBasisdataSourceLabel, linesByBucket, nieuweCategorieen,
     salarisNaam: salarisItem ? salarisItem.l : null,
     tegendraads,
@@ -7418,11 +8453,13 @@ function applyImportBasisdata(){
   importBasisdataStep = "success";
   syncComputedLoons();
   renderAll();
+  offerUndo(t("undoBasisdataReplaced"), snap, () => { importBasisdataStep = importBasisdataRows.length ? "review" : "upload"; importBasisdataSuccessInfo = null; });
 }
 
 function renderImportBasisdataSuccessStep(container){
   const info = importBasisdataSuccessInfo;
   if(!info){ container.innerHTML = ""; return; }
+  if(info.kind === "months"){ renderImportMonthsSuccess(container, info); return; }
   const summaryHtml = CATEGORY_BUCKET_KEYS.map(bucket=>{
     const lines = info.linesByBucket[bucket];
     if(!lines.length) return "";
@@ -7469,6 +8506,48 @@ function renderImportBasisdataSuccessStep(container){
   };
 }
 
+function renderImportMonthsSuccess(container, info){
+  const een = info.opgeslagen.length === 1;
+  const titel = een ? t("importMonthSuccessTitle")(ymTitle(info.opgeslagen[0].ym)) : t("importMonthsSuccessTitle")(info.opgeslagen.length);
+  const lijst = een
+    ? CATEGORY_BUCKET_KEYS.map(bucket => {
+        const lines = info.opgeslagen[0].lines[bucket];
+        if(!lines.length) return "";
+        return `<li><b>${t(bucket)}:</b> ${lines.map(l => escapeHtml(l.label)).join(", ")}</li>`;
+      }).join("")
+    : info.opgeslagen.slice().sort((a,b) => b.ym.localeCompare(a.ym)).map(o =>
+        `<li>${escapeHtml(ymTitle(o.ym))}${o.vervangen ? ` <span class="import-dest-note replace">(${escapeHtml(t("importMonthReplacedTag"))})</span>` : ""}</li>`).join("");
+  const catsHtml = (info.nieuweCategorieen && info.nieuweCategorieen.length)
+    ? `<p class="import-bd-success-cats">${escapeHtml(t("importBasisdataSuccessNewCats")(info.nieuweCategorieen.map(c=>c.name).join(", ")))}</p>`
+    : "";
+  container.innerHTML = `
+    <div class="import-bd-success-card">
+      <h3>${escapeHtml(titel)}</h3>
+      <p>${escapeHtml(t("importMonthSuccessNote")(info.sourceLabel))}</p>
+      <ul>${lijst}</ul>
+      ${catsHtml}
+      <div class="import-bd-success-actions">
+        <button type="button" id="importGoToMonthBtn">${escapeHtml(een ? t("importGoToMonthBtn")(ymTitle(info.opgeslagen[0].ym)) : t("importGoToMonthBtn")(ymTitle(info.opgeslagen.slice().sort((a,b)=>b.ym.localeCompare(a.ym))[0].ym)))}</button>
+        <button type="button" class="secondary" id="importAnotherBtn">${escapeHtml(t("importAnotherBtn"))}</button>
+        <button type="button" class="secondary" id="importGoRecalcBtn">${escapeHtml(t("importGoRecalcBtn"))}</button>
+      </div>
+    </div>`;
+  const nieuwste = info.opgeslagen.slice().sort((a,b)=>b.ym.localeCompare(a.ym))[0];
+  container.querySelector("#importGoToMonthBtn").onclick = () => {
+    resetImportBasisdataUI();
+    state.activeView = { type:"budget", id: nieuwste.id };
+    renderAll();
+  };
+  container.querySelector("#importAnotherBtn").onclick = () => { resetImportBasisdataUI(); renderAll(); };
+  container.querySelector("#importGoRecalcBtn").onclick = () => {
+    resetImportBasisdataUI();
+    state.activeScenario = 0;
+    state.activeView = { type:"scenario", index:0 };
+    renderAll();
+    showRecalcModal();
+  };
+}
+
 /* Hoofd-entrypoint, aangeroepen vanuit renderCategories() (zie hieronder) zodra
    state.activeView.type === "importBasisdata". Bouwt titel/intro/waarschuwing altijd op, en
    daaronder de stap die op dat moment actief is (upload/review/success). */
@@ -7477,16 +8556,376 @@ function renderImportBasisdataScreen(){
   el.innerHTML = `
     <h2 style="margin-top:0;">${t("importBasisdataPageTitle")}</h2>
     <p class="import-bd-intro">${t("importBasisdataIntro")}</p>
-    <div class="import-bd-warn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
-      <div class="import-bd-warn-text">${t("importBasisdataWarning")}</div>
-    </div>
     <div id="importBdBody"></div>
   `;
   const body = document.getElementById("importBdBody");
   if(importBasisdataStep === "review") renderImportBasisdataReviewStep(body);
   else if(importBasisdataStep === "success") renderImportBasisdataSuccessStep(body);
   else renderImportBasisdataUploadStep(body);
+}
+
+/* ---------- ONGEDAAN MAKEN ----------
+   Eén melding onderin met "Ongedaan maken", na handelingen die je met één klik doet maar niet met
+   één klik terugdraait: een regel of betaling weghalen, een regel naar een andere groep slepen of
+   in een categorie zetten, een maand of Basisdata vervangen door een import, herberekenen,
+   terugzetten, iets uit het menu verwijderen. De melding bewaart een momentopname van de HELE
+   staat van vlak ervoor; terugdraaien zet die terug. Bewust kortlopend (10 s) en maar één niveau
+   diep: wie pas later spijt krijgt van een Basisdata-wijziging heeft "Vorige versies" (zie
+   pushBasisdataHistory) — dat overleeft ook een herlaadbeurt. */
+const UNDO_TOAST_MS = 10000;
+let undoTimer = null;
+/* Een openstaande melding hoort bij de vorige handeling; bij een nieuwe import of een venster
+   erbovenop zou "Ongedaan maken" verwarrend zijn, dus dan verdwijnt hij. */
+function dismissUndo(){
+  const el = document.getElementById("undoToast");
+  if(el) el.remove();
+  clearTimeout(undoTimer);
+}
+let undoCreatedAt = 0;
+/* Elke volgende handeling (klik, typen, een keuzelijst) laat de melding verdwijnen: "Ongedaan
+   maken" zet de hele staat terug naar vlak vóór de handeling, dus wat je daarna nog deed zou
+   ongemerkt mee terugdraaien. Klikken ín de melding tellen niet, en ook niet de click-gebeurtenis
+   die de browser direct na een sleep of knopdruk nog nastuurt (vandaar de korte marge). */
+["click","input","change","keydown"].forEach(type => document.addEventListener(type, (e) => {
+  if(!document.getElementById("undoToast")) return;
+  if(e.target && e.target.closest && e.target.closest("#undoToast")) return;
+  if(type === "keydown" && (e.key === "Tab" || e.key === "Shift")) return;
+  if(Date.now() - undoCreatedAt < 400) return;
+  dismissUndo();
+}, true));
+function offerUndo(label, snapshotJson, afterUndo){
+  undoCreatedAt = Date.now();
+  const oud = document.getElementById("undoToast");
+  if(oud) oud.remove();
+  clearTimeout(undoTimer);
+  const el = document.createElement("div");
+  el.id = "undoToast";
+  el.className = "undo-toast";
+  el.setAttribute("role", "status");
+  el.innerHTML = `
+    <span class="undo-toast-text">${escapeHtml(label)}</span>
+    <button type="button" class="undo-toast-btn">${escapeHtml(t("undoBtn"))}</button>
+    <button type="button" class="undo-toast-close" title="${escapeHtml(t("undoCloseTitle"))}" aria-label="${escapeHtml(t("undoCloseTitle"))}">×</button>
+  `;
+  document.body.appendChild(el);
+  const sluit = () => { el.remove(); clearTimeout(undoTimer); };
+  el.querySelector(".undo-toast-btn").onclick = () => {
+    sluit();
+    state = JSON.parse(snapshotJson);
+    categoryPickerOpenFor = null;
+    offsetPickerOpenFor = null;
+    if(afterUndo) afterUndo();
+    syncComputedLoons();
+    renderAll();
+  };
+  el.querySelector(".undo-toast-close").onclick = sluit;
+  undoTimer = setTimeout(sluit, UNDO_TOAST_MS);
+}
+
+/* ---------- VORIGE VERSIES VAN BASISDATA ----------
+   Vlak vóór elke vervanging van Basisdata (import, herberekenen, terugzetten) bewaart FinBo de
+   vier groepen in state.basisdataHistory — nieuwste eerst, maximaal vijf. Staat in `state`, dus
+   gaat versleuteld mee naar de cloud en overleeft een herlaadbeurt, anders dan de melding
+   hierboven. Alleen de regels zelf; jaren, maandbudgetten en regels/categorieën blijven buiten. */
+const BASISDATA_HISTORY_MAX = 5;
+function pushBasisdataHistory(reason){
+  if(!Array.isArray(state.basisdataHistory)) state.basisdataHistory = [];
+  const bd = basisdataScenario();
+  const data = {};
+  CATEGORY_BUCKET_KEYS.forEach(k => { data[k] = cloneItems(bd[k].items); });
+  state.basisdataHistory.unshift({ at: Date.now(), reason, data });
+  if(state.basisdataHistory.length > BASISDATA_HISTORY_MAX) state.basisdataHistory.length = BASISDATA_HISTORY_MAX;
+}
+function restoreBasisdataVersion(index){
+  const versie = (state.basisdataHistory||[])[index];
+  if(!versie) return false;
+  const snap = JSON.stringify(state);
+  const data = versie.data;
+  pushBasisdataHistory("restore");
+  const bd = basisdataScenario();
+  CATEGORY_BUCKET_KEYS.forEach(k => { bd[k].items = cloneItems((data && data[k]) || []); });
+  syncComputedLoons();
+  renderAll();
+  offerUndo(t("undoRestored"), snap);
+  return true;
+}
+function formatMoment(ms){
+  try{
+    return new Date(ms).toLocaleString(state.lang === "en" ? "en-GB" : "nl-NL",
+      { day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+  }catch(e){ return String(new Date(ms)); }
+}
+function showBasisdataHistory(){
+  dismissUndo();
+  const lijst = state.basisdataHistory || [];
+  const reden = { import: t("historyReasonImport"), recalc: t("historyReasonRecalc"), restore: t("historyReasonRestore") };
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <h3>${escapeHtml(t("historyTitle"))}</h3>
+      <p>${escapeHtml(t("historyIntro"))}</p>
+      <div class="history-list">
+        ${lijst.length ? lijst.map((v, i) => {
+          const inkomen = sum((v.data && v.data.income) || []);
+          const kosten = ["vasteLasten","abonnementen","variabeleLasten"].reduce((a,k) => a + sum((v.data && v.data[k]) || []), 0);
+          return `<div class="history-item">
+            <span class="when">${escapeHtml(formatMoment(v.at))}</span>
+            <span class="why">${escapeHtml(reden[v.reason] || "")}</span>
+            <span class="sums">${escapeHtml(t("historySums")(fmt(inkomen), fmt(kosten)))}</span>
+            <button type="button" data-restore="${i}">${escapeHtml(t("historyRestoreBtn"))}</button>
+          </div>`;
+        }).join("") : `<p>${escapeHtml(t("historyEmpty"))}</p>`}
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary" id="historyCloseBtn">${escapeHtml(t("historyCloseBtn"))}</button></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const sluit = () => { overlay.remove(); document.removeEventListener("keydown", onKey, true); };
+  const onKey = (e) => { if(e.key === "Escape"){ e.stopPropagation(); sluit(); } };
+  document.addEventListener("keydown", onKey, true);
+  overlay.addEventListener("click", (e) => { if(e.target === overlay) sluit(); });
+  overlay.querySelector("#historyCloseBtn").onclick = sluit;
+  overlay.querySelectorAll("[data-restore]").forEach(btn => {
+    btn.onclick = () => {
+      const i = Number(btn.dataset.restore);
+      const v = lijst[i];
+      if(!v || !confirm(t("historyRestoreConfirm")(formatMoment(v.at)))) return;
+      sluit();
+      restoreBasisdataVersion(i);
+    };
+  });
+}
+
+/* ---------- BASISDATA HERBEREKENEN UIT INGELEZEN MAANDEN ----------
+   Per kalendermaand telt maar één bron mee, in deze volgorde: een ingelezen maand (maandbudget met
+   source "import") → een oude maandimport uit state.months → een maandbudget dat nog een
+   momentopname van Basisdata is (plan; staat er wel, maar standaard uitgevinkt — een plan meten
+   tegen zichzelf zegt niets). */
+function recalcSources(){
+  const perYm = new Map();
+  const zet = (bron) => {
+    const huidig = perYm.get(bron.ym);
+    if(!huidig || bron.prio > huidig.prio) perYm.set(bron.ym, bron);
+  };
+  state.budgets.forEach(b => {
+    if(!ymValid(b.ym)) return;
+    const imp = b.source === "import";
+    zet({ ym: b.ym, kind: imp ? "import" : "plan", prio: imp ? 3 : 1, label: b.title || ymTitle(b.ym),
+          items: { income: b.income.items, vasteLasten: b.vasteLasten.items, abonnementen: b.abonnementen.items, variabeleLasten: b.variabeleLasten.items } });
+  });
+  (state.months||[]).forEach(m => {
+    if(!ymValid(m.key)) return;
+    zet({ ym: m.key, kind: "legacy", prio: 2, label: monthLabel(m),
+          items: { income: m.income.items, vasteLasten: m.vasteLasten.items, abonnementen: m.abonnementen.items, variabeleLasten: m.variabeleLasten.items } });
+  });
+  return [...perYm.values()].sort((a,b) => b.ym.localeCompare(a.ym));
+}
+function measuredMonthCount(){ return recalcSources().filter(s => s.kind !== "plan").length; }
+
+/* Het voorstel: per regel het gemiddelde over de gekozen maanden, een maand zonder die regel telt
+   als 0. Regels worden op naam herkend (hoofdletterongevoelig), net als overal in FinBo. Staat een
+   regel in Basisdata in een andere KOSTENgroep dan in de maand, dan telt hij mee bij de groep van
+   Basisdata (zelfde tekenconventie); tussen inkomsten en kosten wordt nooit geschoven. */
+function computeRecalcProposal(bronnen){
+  const N = bronnen.length;
+  const rond = n => Math.round(n*100)/100;
+  const bd = basisdataScenario();
+  const inBd = new Map();        // label → eerste plek in Basisdata
+  const inBdGroep = new Set();   // "groep::label" — staat dit label in déze groep van Basisdata?
+  CATEGORY_BUCKET_KEYS.forEach(k => bd[k].items.forEach(it => {
+    const key = (it.l||"").trim().toLowerCase();
+    if(!key) return;
+    inBdGroep.add(k + "::" + key);
+    if(!inBd.has(key)) inBd.set(key, { bucket:k, item:it });
+  }));
+  const acc = new Map();
+  bronnen.forEach(bron => {
+    CATEGORY_BUCKET_KEYS.forEach(k => ((bron.items && bron.items[k]) || []).forEach(it => {
+      const key = (it.l||"").trim().toLowerCase();
+      if(!key) return;
+      let bucket = k;
+      const b = inBd.get(key);
+      // Alleen naar een andere (kosten)groep schuiven als Basisdata dit label níet in de eigen groep
+      // van de maand heeft — een categorienaam mag in twee groepen tegelijk bestaan.
+      if(b && !inBdGroep.has(k + "::" + key) && b.bucket !== k && b.bucket !== "income" && k !== "income") bucket = b.bucket;
+      const id = bucket + "::" + key;
+      const bdItem = bd[bucket].items.find(i => (i.l||"").trim().toLowerCase() === key);
+      if(!acc.has(id)) acc.set(id, { bucket, key, label: bdItem ? bdItem.l : it.l, total:0, seen:new Set(), datum:"" });
+      const a = acc.get(id);
+      a.total += parseFloat(it.v)||0;
+      a.seen.add(bron.ym);
+      const d = it.datum || (it.entries && it.entries.length ? it.entries[it.entries.length-1].datum : "") || "";
+      if(d && d > a.datum) a.datum = d;
+    }));
+  });
+  const regels = [];
+  CATEGORY_BUCKET_KEYS.forEach(k => bd[k].items.forEach(it => {
+    const key = (it.l||"").trim().toLowerCase();
+    const id = k + "::" + key;
+    const a = acc.get(id);
+    const oud = rond(parseFloat(it.v)||0);
+    if(a && N){
+      const nieuw = rond(a.total / N);
+      regels.push({ id, bucket:k, key, label: it.l, oud, nieuw, seen: a.seen.size, datum: a.datum,
+                    status: Math.abs(nieuw - oud) < 0.005 ? "same" : "changed" });
+      acc.delete(id);
+    } else {
+      regels.push({ id, bucket:k, key, label: it.l, oud, nieuw: null, seen: 0, status: "notMeasured" });
+    }
+  }));
+  acc.forEach(a => {
+    if(!N) return;
+    const nieuw = rond(a.total / N);
+    if(Math.abs(nieuw) < 0.005) return;
+    regels.push({ id: a.bucket + "::" + a.key, bucket: a.bucket, key: a.key, label: a.label, oud: null, nieuw, seen: a.seen.size, datum: a.datum, status: "new" });
+  });
+  return regels;
+}
+
+function applyRecalcProposal(regels){
+  const snap = JSON.stringify(state);
+  pushBasisdataHistory("recalc");
+  const bd = basisdataScenario();
+  let n = 0;
+  regels.forEach(r => {
+    if(r.status === "changed"){
+      const it = bd[r.bucket].items.find(i => (i.l||"").trim().toLowerCase() === r.key);
+      if(!it) return;
+      it.v = r.nieuw;
+      // Een gemiddelde heeft geen eigen transactielijst meer: de losse betalingen van één maand
+      // zouden niet optellen tot het bedrag erboven (zie removeBasisdataEntry).
+      delete it.entries;
+      if(r.datum) it.datum = r.datum;
+      n++;
+    } else if(r.status === "new"){
+      const post = { l: r.label, v: r.nieuw };
+      if(r.datum) post.datum = r.datum;
+      bd[r.bucket].items.push(post);
+      n++;
+    }
+  });
+  syncComputedLoons();
+  renderAll();
+  offerUndo(t("recalcDoneToast"), snap);
+  return n;
+}
+
+let recalcSelectedYms = null;   // Set — transiënt, alleen zolang het venster open is
+let recalcExcluded = new Set();  // regel-id's die (door de gebruiker of standaard) uitgevinkt zijn
+let recalcTouched = new Set();   // regel-id's waar de gebruiker zelf aan heeft gezeten
+/* Een NIEUWE regel die in minder dan de helft van de maanden voorkomt is meestal een incidentele
+   uitgave (één keer een cadeau, een reparatie). Die staat wel in het voorstel, maar standaard
+   uitgevinkt: Basisdata hoort vooral wat steeds terugkomt te bevatten. Zelf aanvinken kan altijd. */
+function recalcDefaultExcluded(r, n){
+  return r.status === "new" && r.seen < Math.ceil(n / 2);
+}
+function showRecalcModal(){
+  dismissUndo();
+  const bronnen = recalcSources();
+  recalcSelectedYms = new Set(bronnen.filter(b => b.kind !== "plan").map(b => b.ym));
+  recalcExcluded = new Set();
+  recalcTouched = new Set();
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.id = "recalcOverlay";
+  document.body.appendChild(overlay);
+  const sluit = () => { overlay.remove(); document.removeEventListener("keydown", onKey, true); };
+  const onKey = (e) => { if(e.key === "Escape"){ e.stopPropagation(); sluit(); } };
+  document.addEventListener("keydown", onKey, true);
+  overlay.addEventListener("click", (e) => { if(e.target === overlay) sluit(); });
+
+  const teken = () => {
+    const gekozen = bronnen.filter(b => recalcSelectedYms.has(b.ym));
+    const regels = computeRecalcProposal(gekozen);
+    regels.forEach(r => {
+      if(recalcTouched.has(r.id)) return;
+      if(recalcDefaultExcluded(r, gekozen.length)) recalcExcluded.add(r.id); else recalcExcluded.delete(r.id);
+    });
+    const toepasbaar = regels.filter(r => (r.status === "changed" || r.status === "new") && !recalcExcluded.has(r.id));
+    const soortTag = { import: t("recalcSourceImport"), legacy: t("recalcSourceLegacy"), plan: t("recalcSourcePlan") };
+    const rijen = CATEGORY_BUCKET_KEYS.map(k => {
+      const inGroep = regels.filter(r => r.bucket === k);
+      if(!inGroep.length) return "";
+      return `<tr class="bucket" style="--bucket-color:${bucketColorVar(k)}"><td colspan="5">${escapeHtml(t(k))}</td></tr>` +
+        inGroep.map(r => {
+          const kiesbaar = r.status === "changed" || r.status === "new";
+          const verschil = (r.nieuw !== null && r.oud !== null) ? r.nieuw - r.oud : null;
+          const richting = verschil === null || Math.abs(verschil) < 0.005 ? "" : ((k === "income") === (verschil > 0) ? "down" : "up");
+          const status = r.status === "new" ? `<span class="status new">${escapeHtml(t("recalcStatusNew"))}</span>`
+            : r.status === "same" ? `<span class="status">${escapeHtml(t("recalcStatusSame"))}</span>`
+            : r.status === "notMeasured" ? `<span class="status">${escapeHtml(t("recalcStatusNotMeasured"))}</span>` : "";
+          return `<tr class="${kiesbaar ? "" : "muted"}">
+            <td>${kiesbaar ? `<input type="checkbox" data-regel="${escapeHtml(r.id)}" ${recalcExcluded.has(r.id) ? "" : "checked"} />` : ""}</td>
+            <td class="lbl">${escapeHtml(r.label)} ${status}${r.status === "notMeasured" ? "" : `<span class="seen-inline">${escapeHtml(t("recalcColSeen"))} ${escapeHtml(t("recalcSeenIn")(r.seen, gekozen.length))}</span>`}</td>
+            <td class="mono">${r.oud === null ? "—" : "€ " + fmt(r.oud)}</td>
+            <td class="mono ${richting}">${r.nieuw === null ? "—" : "€ " + fmt(r.nieuw)}</td>
+            <td class="seen-col">${r.status === "notMeasured" ? "" : escapeHtml(t("recalcSeenIn")(r.seen, gekozen.length))}</td>
+          </tr>`;
+        }).join("");
+    }).join("");
+    overlay.innerHTML = `
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <h3>${escapeHtml(t("recalcTitle"))}</h3>
+        <p>${escapeHtml(t("recalcIntro"))}</p>
+        <p>${escapeHtml(t("recalcJarenNote"))}</p>
+        <h4>${escapeHtml(t("recalcMonthsTitle"))}</h4>
+        <div class="recalc-months">
+          ${bronnen.map(b => `<label class="recalc-month">
+            <input type="checkbox" data-ym="${b.ym}" ${recalcSelectedYms.has(b.ym) ? "checked" : ""} />
+            <span>${escapeHtml(b.label)}</span><span class="tag">${escapeHtml(soortTag[b.kind])}</span>
+          </label>`).join("")}
+        </div>
+        <h4>${escapeHtml(t("recalcProposalTitle"))}</h4>
+        ${gekozen.length ? `<div class="recalc-table-wrap"><table class="recalc-table">
+          <thead><tr><th></th><th>${escapeHtml(t("recalcColLine"))}</th><th>${escapeHtml(t("recalcColOld"))}</th><th>${escapeHtml(t("recalcColNew"))}</th><th class="seen-col">${escapeHtml(t("recalcColSeen"))}</th></tr></thead>
+          <tbody>${rijen}</tbody></table></div>` : `<p>${escapeHtml(t("recalcNoneSelected"))}</p>`}
+        <div class="modal-actions">
+          <button type="button" class="secondary" id="recalcCancelBtn">${escapeHtml(t("recalcCancelBtn"))}</button>
+          <button type="button" id="recalcApplyBtn" ${toepasbaar.length ? "" : "disabled"}>${escapeHtml(t("recalcApplyBtn")(toepasbaar.length))}</button>
+        </div>
+      </div>`;
+    overlay.querySelectorAll("[data-ym]").forEach(cb => {
+      cb.onchange = () => { if(cb.checked) recalcSelectedYms.add(cb.dataset.ym); else recalcSelectedYms.delete(cb.dataset.ym); teken(); };
+    });
+    overlay.querySelectorAll("[data-regel]").forEach(cb => {
+      cb.onchange = () => {
+        recalcTouched.add(cb.dataset.regel);
+        if(cb.checked) recalcExcluded.delete(cb.dataset.regel); else recalcExcluded.add(cb.dataset.regel);
+        teken();
+      };
+    });
+    overlay.querySelector("#recalcCancelBtn").onclick = sluit;
+    overlay.querySelector("#recalcApplyBtn").onclick = () => {
+      if(!toepasbaar.length) return;
+      sluit();
+      applyRecalcProposal(toepasbaar);
+    };
+  };
+  teken();
+}
+
+/* Knoppenbalk bovenaan Basisdata: herberekenen + vorige versies. */
+function renderBasisdataTools(){
+  const wrap = document.createElement("div");
+  wrap.className = "bd-tools";
+  const n = measuredMonthCount();
+  const versies = (state.basisdataHistory || []).length;
+  wrap.innerHTML = `
+    <button type="button" id="recalcBtn" ${n ? "" : "disabled"}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+      ${escapeHtml(t("recalcBtn"))}
+    </button>
+    <span class="bd-tools-hint">${escapeHtml(n ? t("recalcBtnHint")(n) : t("recalcNoMonths"))}</span>
+    ${versies ? `<button type="button" id="historyBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg>
+      ${escapeHtml(t("historyBtn")(versies))}
+    </button>` : ""}
+  `;
+  const rb = wrap.querySelector("#recalcBtn");
+  if(rb) rb.onclick = () => { if(measuredMonthCount()) showRecalcModal(); };
+  const hb = wrap.querySelector("#historyBtn");
+  if(hb) hb.onclick = showBasisdataHistory;
+  return wrap;
 }
 
 /* ---------- RENDER: CATEGORIES ---------- */
@@ -7516,6 +8955,7 @@ function renderScenarioCategories(){
   el.innerHTML = "";
   const s = activeScenarioObj();
   const isBasisdata = s === basisdataScenario();
+  if(isBasisdata) el.appendChild(renderBasisdataTools());
   if(!isBasisdata){
     el.appendChild(renderLoonsverhogingCard(s));
   }
@@ -7530,6 +8970,10 @@ function renderScenarioCategories(){
   }
 }
 
+/* Weergave per ingelezen maand: "compare" (standaard) of "edit". Schermstand, niet in `state`. */
+const budgetViewModes = new Map();
+function budgetViewMode(b){ return budgetViewModes.get(b.id) || "compare"; }
+
 /* ---------- RENDER: MAANDBUDGET-PAGINA (eigen tab, eigen momentopname) ---------- */
 function renderBudgetCategories(){
   const el = document.getElementById("categories");
@@ -7539,16 +8983,69 @@ function renderBudgetCategories(){
 
   const titleWrap = document.createElement("div");
   titleWrap.className = "card";
+  /* Maandkeuze: bij welke kalendermaand dit budget hoort (b.ym). Bepaalt de plek in het menu en of
+     de maand meetelt bij "Basisdata herberekenen". Volgt de titel de maand nog (zelf niet
+     aangepast), dan verandert die mee. */
+  const opties = monthPickerOptions();
+  if(ymValid(b.ym) && !opties.includes(b.ym)) opties.push(b.ym);
+  const isImport = b.source === "import";
   titleWrap.innerHTML = `
     <div class="card-head"><h2>${t("maandbudgetTitleLabel")}</h2></div>
     <div class="rows"><div class="row">
       <input class="label-input" id="budgetTitleInput" value="${escapeHtml(b.title)}" />
     </div></div>
+    <div class="budget-meta">
+      <label class="budget-meta-row">${escapeHtml(t("budgetMonthLabel"))}
+        <select id="budgetMonthSelect">
+          <option value="" ${ymValid(b.ym) ? "" : "selected"}>${escapeHtml(t("budgetNoMonthOption"))}</option>
+          ${opties.map(ym => {
+            const anders = state.budgets.some(x => x !== b && x.ym === ym);
+            return `<option value="${ym}" ${b.ym === ym ? "selected" : ""}>${escapeHtml(ymTitle(ym) + (anders ? t("monthExistsSuffix") : ""))}</option>`;
+          }).join("")}
+        </select>
+      </label>
+      ${isImport ? `<div class="budget-source">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+        ${escapeHtml(t("budgetSourceImport")(b.sourceFile || "—", b.importedAt ? formatMoment(b.importedAt) : "—"))}
+      </div>
+      <div class="budget-meta-row"><div class="view-switch" role="tablist">
+        <button type="button" data-view="compare" class="${budgetViewMode(b) === "compare" ? "active" : ""}">${escapeHtml(t("budgetViewCompare"))}</button>
+        <button type="button" data-view="edit" class="${budgetViewMode(b) === "edit" ? "active" : ""}">${escapeHtml(t("budgetViewEdit"))}</button>
+      </div></div>` : ""}
+    </div>
   `;
   const titleInput = titleWrap.querySelector("#budgetTitleInput");
   titleInput.oninput = e => { b.title = e.target.value; renderTabs(); };
   titleInput.onchange = () => renderAll();
+  titleWrap.querySelector("#budgetMonthSelect").onchange = (e) => {
+    const oud = b.ym;
+    const nieuw = e.target.value;
+    const titelVolgdeMaand = !b.title || !b.title.trim() || (ymValid(oud) && [ymTitle(oud, "nl"), ymTitle(oud, "en")].includes(b.title.trim()));
+    if(ymValid(nieuw)) b.ym = nieuw; else delete b.ym;
+    if(titelVolgdeMaand && ymValid(nieuw)) b.title = ymTitle(nieuw);
+    budgetYearOpen.delete(ymValid(nieuw) ? nieuw.slice(0,4) : "none");
+    renderAll();
+  };
+  titleWrap.querySelectorAll(".view-switch [data-view]").forEach(btn => {
+    btn.onclick = () => { budgetViewModes.set(b.id, btn.dataset.view); renderCategories(); };
+  });
   el.appendChild(titleWrap);
+
+  /* Een ingelezen maand staat standaard naast Basisdata: per groep en per regel wat Basisdata
+     zegt, wat er die maand werkelijk was, en het verschil. "Regels bewerken" toont de gewone
+     kaarten, waarin je de werkelijke bedragen nog kunt corrigeren. */
+  if(isImport && budgetViewMode(b) === "compare"){
+    const bd = basisdataScenario();
+    const cols = { budgetCol: t("compareBasisdataCol"), actualCol: t("compareThisMonthCol") };
+    el.appendChild(renderCompareCard(t("income"), bd.income.items, b.income.items, "income", "income", cols));
+    el.appendChild(renderCompareCard(t("vasteLasten"), bd.vasteLasten.items, b.vasteLasten.items, "cost", "vasteLasten", cols));
+    el.appendChild(renderCompareCard(t("abonnementen"), bd.abonnementen.items, b.abonnementen.items, "cost", "abonnementen", cols));
+    el.appendChild(renderCompareCard(t("variabeleLasten"), bd.variabeleLasten.items, b.variabeleLasten.items, "cost", "variabeleLasten", cols));
+    if(b.outstanding && b.outstanding.items.length){
+      el.appendChild(renderCard("outstanding", { title: t("outstandingTitle"), items: b.outstanding.items }, { sortScope: "budget:" + b.id }));
+    }
+    return;
+  }
 
   el.appendChild(renderCard("income", { title: t("income"), items: b.income.items }, { sortScope: "budget:" + b.id }));
   el.appendChild(renderVasteLastenCardForBudget(b));
@@ -7648,7 +9145,7 @@ function buildCompareRows(budgetItems, actualItems){
     .sort((a,b)=> Math.max(Math.abs(b.budget),Math.abs(b.actual)) - Math.max(Math.abs(a.budget),Math.abs(a.actual)));
 }
 
-function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
+function renderCompareCard(title, budgetItems, actualItems, kind, iconKey, colLabels){
   const rows = buildCompareRows(budgetItems, actualItems);
   const totBudget = rows.reduce((a,r)=>a+r.budget,0);
   const totActual = rows.reduce((a,r)=>a+r.actual,0);
@@ -7675,8 +9172,8 @@ function renderCompareCard(title, budgetItems, actualItems, kind, iconKey){
     </div>
     <div class="compare-head-row">
       <span class="compare-name"></span>
-      <span class="compare-col">${t("compareBudgetCol")}</span>
-      <span class="compare-col">${t("compareActualCol")}</span>
+      <span class="compare-col">${escapeHtml((colLabels && colLabels.budgetCol) || t("compareBudgetCol"))}</span>
+      <span class="compare-col">${escapeHtml((colLabels && colLabels.actualCol) || t("compareActualCol"))}</span>
       <span class="compare-col">${t("compareDiffCol")}</span>
     </div>
     <div class="compare-rows">
@@ -7940,13 +9437,14 @@ function renderReviewCard(m){
         if(entry.addedWasNew){
           // Deze toevoeging heeft indertijd een gloednieuwe regel aangemaakt -- die kan gewoon
           // helemaal weg.
-          const idx = bucket.items.indexOf(entry.addedItem);
+          const idx = findAddedIdx(bucket.items, entry.addedItem);
           if(idx>=0) bucket.items.splice(idx,1);
         } else if(entry.addedItem){
           // Deze toevoeging is samengevoegd met een regel die al bestond (zie addEntry hierboven) --
           // alleen dit bedrag er weer vanaf halen, niet de hele regel wissen (die had immers al een
           // eigen waarde vóórdat dit erbij kwam).
-          entry.addedItem.v = Math.round((entry.addedItem.v - (entry.addedContribution||0))*100)/100;
+          const doel = bucket.items[findAddedIdx(bucket.items, entry.addedItem)];
+          if(doel) doel.v = Math.round((doel.v - (entry.addedContribution||0))*100)/100;
         }
         entry.target = null;
         entry.addedItem = null;
@@ -8097,7 +9595,7 @@ function renderStornoReviewCard(m){
       if(entry.addedBudgetId){
         const targetBudget = state.budgets.find(b => b.id === entry.addedBudgetId);
         if(targetBudget && targetBudget.outstanding){
-          const idx = targetBudget.outstanding.items.indexOf(entry.addedItem);
+          const idx = findAddedIdx(targetBudget.outstanding.items, entry.addedItem);
           if(idx>=0) targetBudget.outstanding.items.splice(idx,1);
         }
         entry.addedBudgetId = null;
@@ -8107,7 +9605,7 @@ function renderStornoReviewCard(m){
         // niet een maandbudget) — ongedaan maken volgens dat oude pad.
         const bucket = m[entry.target];
         if(bucket){
-          const idx = bucket.items.indexOf(entry.addedItem);
+          const idx = findAddedIdx(bucket.items, entry.addedItem);
           if(idx>=0) bucket.items.splice(idx,1);
         }
         entry.target = null;
@@ -8585,9 +10083,11 @@ function wireActions(monthObj, scenarioObj, budgetObj){
   if(delBtn && monthObj){
     delBtn.onclick = () => {
       if(confirm(t("deleteMonthConfirm"))){
+        const snap = JSON.stringify(state);
         state.months = state.months.filter(m=>m.key!==monthObj.key);
         state.activeView = {type:"scenario", index: state.activeScenario};
         renderAll();
+        offerUndo(t("undoDeleted")(monthLabel(monthObj)), snap);
       }
     };
   }
@@ -8595,11 +10095,13 @@ function wireActions(monthObj, scenarioObj, budgetObj){
   if(delScenarioBtn && scenarioObj && !scenarioObj.locked){
     delScenarioBtn.onclick = () => {
       if(confirm(t("deleteScenarioConfirm"))){
+        const snap = JSON.stringify(state);
         const idx = state.scenarios.indexOf(scenarioObj);
         state.scenarios = state.scenarios.filter(s=>s!==scenarioObj);
         state.activeScenario = Math.max(0, idx-1);
         state.activeView = {type:"scenario", index: state.activeScenario};
         renderAll();
+        offerUndo(t("undoDeleted")(scenarioObj.label), snap);
       }
     };
   }
@@ -8607,10 +10109,12 @@ function wireActions(monthObj, scenarioObj, budgetObj){
   if(delBudgetBtn && budgetObj){
     delBudgetBtn.onclick = () => {
       if(confirm(t("deleteBudgetConfirm"))){
+        const snap = JSON.stringify(state);
         detachMonthsFromBudget(budgetObj.id);
         state.budgets = state.budgets.filter(b=>b!==budgetObj);
         state.activeView = {type:"scenario", index: 0};
         renderAll();
+        offerUndo(t("undoDeleted")(budgetObj.title), snap);
       }
     };
   }
@@ -8664,6 +10168,12 @@ function renderBudgetSummary(){
     <div class="summary-line debit"><span class="l">${t("variabeleLasten")}</span><span class="v">− € ${fmt(variabeleLasten)}</span></div>
     ${outstanding > 0 ? `<div class="summary-line debit"><span class="l">${t("outstandingTitle")}</span><span class="v">− € ${fmt(outstanding)}</span></div>` : ""}
     <div class="summary-line total"><span class="l">${t("saldo")}</span><span class="v">€ ${fmt(over)}</span></div>
+    ${b.source === "import" ? (() => {
+      const bdOver = scenarioTotals(basisdataScenario()).overTeSpenderen;
+      const verschil = over - bdOver;
+      return `<div class="summary-line"><span class="l">${t("summaryBasisdataSaldo")}</span><span class="v">€ ${fmt(bdOver)}</span></div>
+        <div class="summary-line ${verschil < 0 ? "debit" : "credit"}"><span class="l">${t("summaryDiffBasisdata")}</span><span class="v">${verschil < 0 ? "−" : "+"} € ${fmt(Math.abs(verschil))}</span></div>`;
+    })() : ""}
 
     <div class="chart-block">
       <h2>${t("chartTitle2")}</h2>
@@ -8859,6 +10369,7 @@ function setNavDrawer(open){
   // Bewust vóór het openschuiven, zodat je de groepen niet ziet dichtklappen.
   if(open && !stondOpen){
     collapsedGroups = defaultCollapsedGroups();
+    budgetYearOpen = new Map();
     renderTabs();
   }
   drawer.classList.toggle("open", open);
@@ -8880,10 +10391,10 @@ document.getElementById("navCloseBtn").addEventListener("click", () => setNavDra
 document.getElementById("navBackdrop").addEventListener("click", () => setNavDrawer(false));
 
 /* Een klik op iets wat naar een andere pagina navigeert sluit de lade. De knoppen die juist in het
-   menu thuishoren — in-/uitklappen, "+", de prullenbak en de twee maand-uploadknoppen — laten 'm
-   open, anders moet je 'm na elke handeling opnieuw openen.
-   "Import basisdata" deelt de .tab-upload-stijl met die uploadknoppen, maar is wél een pagina —
-   vandaar de uitzondering op de uitzondering. */
+   menu thuishoren — in-/uitklappen (ook van een jaar binnen Maandbudgetten), "+" en de prullenbak —
+   laten 'm open, anders moet je 'm na elke handeling opnieuw openen.
+   "Importeren" deelt de .tab-upload-stijl (die tot v26 ook bij twee losse maand-uploadknoppen
+   hoorde), maar is gewoon een pagina — vandaar de uitzondering op de uitzondering. */
 document.getElementById("navDrawer").addEventListener("click", (e) => {
   const btn = e.target.closest("button");
   if(!btn) return;
