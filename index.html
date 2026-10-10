@@ -1935,6 +1935,9 @@
     background:transparent; color:var(--text-soft);
   }
   .import-bd-rejoin:hover{border-color:var(--gold-bright); color:var(--gold-bright);}
+  .import-bd-split-rule{margin-top:6px; font-size:11px; color:var(--gold);}
+  .import-bd-split-rule.none{color:var(--text-soft); font-style:italic;}
+  .profile-rule-split{display:block; font-size:11px; color:var(--text-soft); line-height:1.5; margin-top:2px;}
   .import-bd-success-actions{display:flex; gap:10px; flex-wrap:wrap;}
   .import-bd-success-actions button{
     font-family:"Segoe UI",sans-serif; font-size:13px; font-weight:600; padding:9px 16px; border-radius:5px; cursor:pointer;
@@ -1990,6 +1993,16 @@
   .recalc-table .down{color:var(--credit);}
   .recalc-table input{accent-color:var(--gold);}
   .recalc-table .seen-inline{display:none;}
+  .recalc-table td.del-col, .recalc-table th.del-col{width:30px; padding-left:2px; padding-right:0;}
+  .recalc-del{background:none; border:1px solid transparent; color:var(--text-soft); width:26px; height:26px; padding:3px; border-radius:5px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; vertical-align:middle;}
+  .recalc-del svg{width:15px; height:15px;}
+  .recalc-del:hover, .recalc-del:focus-visible{color:var(--debit); border-color:var(--rule);}
+  .recalc-del.active{color:var(--gold); border-color:var(--rule);}
+  .recalc-del.active:hover, .recalc-del.active:focus-visible{color:var(--text);}
+  .recalc-table tr.remove td{color:var(--text-soft);}
+  .recalc-table tr.remove .naam, .recalc-table tr.remove td.mono:nth-child(3){text-decoration:line-through;}
+  .recalc-table .status.removed{color:var(--debit);}
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
   @media (max-width:640px){
     .modal-overlay{padding:12px 8px;}
     .modal-card{padding:18px 14px;}
@@ -1998,6 +2011,17 @@
     .recalc-table td.mono{font-size:11px;}
     .recalc-table .seen-col{display:none;}
     .recalc-table .seen-inline{display:block; font-size:10px; color:var(--text-soft);}
+    .recalc-table td.del-col, .recalc-table th.del-col{width:22px; padding:4px 0 4px 1px;}
+    .recalc-table td:first-child, .recalc-table th:first-child{padding-left:0; padding-right:2px;}
+    .recalc-del{width:22px; height:26px; padding:2px;}
+    .recalc-del svg{width:14px; height:14px;}
+    .recalc-table td.lbl{overflow-wrap:anywhere;}
+  }
+  /* Smalste telefoons: het euroteken eraf (de kolomkoppen zeggen al dat het bedragen zijn), zodat
+     de verwijderknop in beeld blijft zonder zijwaarts te scrollen. */
+  @media (max-width:400px){
+    .recalc-table .eur{display:none;}
+    .recalc-table td.mono{font-size:10.5px;}
   }
   .history-list{display:flex; flex-direction:column; gap:8px;}
   .history-item{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 10px; border:1px solid var(--rule); border-radius:6px; font-size:12.5px;}
@@ -2467,6 +2491,18 @@ const i18n = {
     importPreviewTitleMonth: (label) => `Voorbeeld: wat er in ${label} terechtkomt`,
     importPreviewTitleAvg: (n) => `Voorbeeld: gemiddeld per maand (${n} maanden)`,
     importRejoinBtn: "↩ Terugvoegen",
+    splitCondDebet: "alle afschrijvingen",
+    splitCondAnd: "en",
+    splitCondCredit: "alle bijschrijvingen",
+    splitCondText: (w) => `omschrijving bevat “${w}”`,
+    splitCondAmount: (b) => `bedrag precies € ${b}`,
+    splitCondBelow: (b) => `bedrag onder € ${b}`,
+    splitCondAbove: (b) => `bedrag boven € ${b}`,
+    splitRuleRemember: (c) => `Wordt onthouden voor volgende imports: ${c}.`,
+    splitRuleAuto: (c) => `Automatisch afgesplitst zoals de vorige keer: ${c}. Terugvoegen = vergeten.`,
+    splitRuleNone: "Deze splitsing geldt alleen voor deze import: FinBo vindt geen kenmerk (af/bij, een woord in de omschrijving of het bedrag) waarin deze transacties van de rest verschillen.",
+    profileSplitRulesTitle: "Onthouden splitsingen — deze tegenpartijen worden bij een import meteen opgesplitst:",
+    profileSplitRest: "de rest",
     importRejoinTitle: "Deze afgesplitste transacties weer bij de oorspronkelijke rij zetten",
     recalcBtn: "Basisdata herberekenen",
     recalcBtnHint: (n) => `uit ${n} ingelezen ${n === 1 ? "maand" : "maanden"}`,
@@ -2487,7 +2523,14 @@ const i18n = {
     recalcStatusNew: "nieuw",
     recalcStatusSame: "gelijk",
     recalcStatusNotMeasured: "niet gemeten — blijft staan",
-    recalcApplyBtn: (n) => `${n} ${n === 1 ? "regel" : "regels"} overnemen`,
+    recalcApplyBtn: (n, w = 0) => {
+      const over = `${n} ${n === 1 ? "regel" : "regels"} overnemen`;
+      const weg = `${w} ${w === 1 ? "regel" : "regels"} verwijderen`;
+      return w && n ? `${over}, ${w} verwijderen` : (w ? weg : over);
+    },
+    recalcStatusRemove: "wordt verwijderd",
+    recalcRemoveLine: "Regel verwijderen",
+    recalcKeepLine: "Toch houden",
     recalcCancelBtn: "Annuleren",
     recalcNoneSelected: "Vink minstens één maand aan.",
     recalcDoneToast: "Basisdata herberekend",
@@ -2850,6 +2893,18 @@ const i18n = {
     importPreviewTitleMonth: (label) => `Preview: what lands in ${label}`,
     importPreviewTitleAvg: (n) => `Preview: average per month (${n} months)`,
     importRejoinBtn: "↩ Rejoin",
+    splitCondDebet: "all payments out",
+    splitCondAnd: "and",
+    splitCondCredit: "all payments in",
+    splitCondText: (w) => `description contains “${w}”`,
+    splitCondAmount: (b) => `amount exactly € ${b}`,
+    splitCondBelow: (b) => `amount below € ${b}`,
+    splitCondAbove: (b) => `amount above € ${b}`,
+    splitRuleRemember: (c) => `Will be remembered for future imports: ${c}.`,
+    splitRuleAuto: (c) => `Split automatically like last time: ${c}. Rejoin = forget.`,
+    splitRuleNone: "This split only applies to this import: FinBo finds no feature (in/out, a word in the description or the amount) that sets these transactions apart from the rest.",
+    profileSplitRulesTitle: "Remembered splits — these counterparties are split straight away on import:",
+    profileSplitRest: "the rest",
     importRejoinTitle: "Put these split-off transactions back with the original row",
     recalcBtn: "Recalculate Basisdata",
     recalcBtnHint: (n) => `from ${n} imported ${n === 1 ? "month" : "months"}`,
@@ -2870,7 +2925,14 @@ const i18n = {
     recalcStatusNew: "new",
     recalcStatusSame: "same",
     recalcStatusNotMeasured: "not measured — stays",
-    recalcApplyBtn: (n) => `Apply ${n} ${n === 1 ? "line" : "lines"}`,
+    recalcApplyBtn: (n, w = 0) => {
+      const over = `Apply ${n} ${n === 1 ? "line" : "lines"}`;
+      const weg = `Remove ${w} ${w === 1 ? "line" : "lines"}`;
+      return w && n ? `${over}, remove ${w}` : (w ? weg : over);
+    },
+    recalcStatusRemove: "will be removed",
+    recalcRemoveLine: "Remove line",
+    recalcKeepLine: "Keep it",
     recalcCancelBtn: "Cancel",
     recalcNoneSelected: "Tick at least one month.",
     recalcDoneToast: "Basisdata recalculated",
@@ -3327,6 +3389,11 @@ function migrateState(){
     if(b.source !== "import") b.source = "basisdata";
   });
   if(state.basisdataHistory !== undefined && !Array.isArray(state.basisdataHistory)) delete state.basisdataHistory;
+  // Onthouden splitsingen (zie learnSplitRules): alleen goedgevormde regels houden.
+  if(state.splitRules !== undefined){
+    if(!Array.isArray(state.splitRules)) delete state.splitRules;
+    else state.splitRules = state.splitRules.filter(r => r && typeof r.key === "string" && Array.isArray(r.parts) && r.parts.every(p => p && p.cond && p.bucket));
+  }
 
   /* ---- v24 → v25: van vaste namen naar markeringen in de data ---- */
   // Tot v24 zaten twee functies vast aan letterlijke postnamen: de loonsverhoging zocht een regel
@@ -5239,11 +5306,22 @@ function renderProfileRulesTab(body){
     <div id="profileRulesList"></div>
   `;
   const list = document.getElementById("profileRulesList");
-  if(!rules.length){
+  const splitRegels = state.splitRules || [];
+  if(!rules.length && !splitRegels.length){
     list.innerHTML = `<p class="profile-cat-empty">${t("profileRulesEmpty")}</p>`;
     return;
   }
-  list.innerHTML = rules.map(r => `
+  const splitHtml = splitRegels.length ? `
+    <p class="profile-hint" style="margin-top:4px;">${escapeHtml(t("profileSplitRulesTitle"))}</p>
+    ${splitRegels.map(sr => `
+      <div class="profile-rule-row">
+        <div class="profile-rule-text">
+          <span class="profile-rule-match">${escapeHtml(sr.name)}</span>
+          <span class="profile-rule-split">${sr.parts.map(p => `${escapeHtml(describeSplitCond(p.cond))} → ${escapeHtml(bucketTitle(p.bucket))}${p.label ? " · " + escapeHtml(p.label) : ""}`).join("<br>")}${sr.rest ? `<br>${escapeHtml(t("profileSplitRest"))} → ${escapeHtml(bucketTitle(sr.rest.bucket))}${sr.rest.label ? " · " + escapeHtml(sr.rest.label) : ""}` : ""}</span>
+        </div>
+        <button type="button" class="profile-rule-del profile-split-del" data-split-key="${escapeHtml(sr.key)}" title="${escapeHtml(t("profileRulesDelete"))}">×</button>
+      </div>`).join("")}` : "";
+  list.innerHTML = splitHtml + rules.map(r => `
     <div class="profile-rule-row">
       <div class="profile-rule-text">
         <span class="profile-rule-match">${escapeHtml(r.match)}</span>
@@ -5253,8 +5331,14 @@ function renderProfileRulesTab(body){
       <button type="button" class="profile-rule-del" data-match="${escapeHtml(r.match)}" title="${escapeHtml(t("profileRulesDelete"))}">×</button>
     </div>
   `).join("");
-  list.querySelectorAll(".profile-rule-del").forEach(btn=>{
+  list.querySelectorAll(".profile-rule-del:not(.profile-split-del)").forEach(btn=>{
     btn.onclick = () => { deleteUserRule(btn.dataset.match); renderAll(); };
+  });
+  list.querySelectorAll(".profile-split-del").forEach(btn=>{
+    btn.onclick = () => {
+      state.splitRules = (state.splitRules || []).filter(x => x.key !== btn.dataset.splitKey);
+      renderAll();
+    };
   });
 }
 
@@ -6227,6 +6311,7 @@ function createNewYear(){
    dunne stroke) als CARD_ICONS/group-collapse-btn hieronder. */
 /* Labeltje: knop "categorie kiezen" op een Basisdata-regel (zie renderCard). */
 const CATEGORY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>`;
+const RECALC_KEEP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg>`;
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2"/><path d="M6 7l1 13a1 1 0 001 1h8a1 1 0 001-1l1-13"/><path d="M10 11v6M14 11v6"/></svg>`;
 
 /* Slotje voor de "verwijderen geblokkeerd"-knop op een categorie die nog aan rijen gekoppeld is
@@ -7357,17 +7442,23 @@ function importAveragedLinesByBucket(){
    af/bij-helft gaat terug met zijn andere helft. Zodra er van een tegenpartij niets meer
    afgesplitst is, krijgt de rij zijn herkensleutel (matchName) terug, zodat er weer een regel
    geleerd kan worden. */
+/* Een af/bij-helft gaat eerst terug bij zijn andere helft — ook als het paar zelf uit een
+   afgesplitst deel kwam (dan heeft de helft óók een splitParent). Pas daarna naar de ouder. */
+function heeftPaarHelft(r){
+  return !!(r && r.splitPair && importBasisdataRows.filter(x => x.splitPair === r.splitPair).length > 1);
+}
 function canRejoinImportRow(r){
   if(!r) return false;
+  if(heeftPaarHelft(r)) return true;
   if(r.splitParent) return importBasisdataRows.some(x => x.id === r.splitParent);
-  if(r.splitPair) return importBasisdataRows.filter(x => x.splitPair === r.splitPair).length > 1;
   return false;
 }
 function rejoinImportRow(rowId){
   const r = importBasisdataRows.find(x => x.id === rowId);
   if(!r || !canRejoinImportRow(r)) return false;
   let doel, weg;
-  if(r.splitParent){
+  const paarModus = heeftPaarHelft(r);
+  if(!paarModus){
     doel = importBasisdataRows.find(x => x.id === r.splitParent);
     weg = [r];
   } else {
@@ -7387,19 +7478,29 @@ function rejoinImportRow(rowId){
   // gaat terug naar "saldo" (zo stond de rij vóór het splitsen ook).
   const heeftAf = doel.debet > CENT_EPSILON, heeftBij = doel.credit > CENT_EPSILON;
   const keuzeGeldig = (doel.mode === "net") || (doel.mode === "debet" && heeftAf) || (doel.mode === "credit" && heeftBij);
-  if(r.splitPair && !r.splitParent) doel.mode = (heeftAf && heeftBij) ? "net" : (heeftBij ? "credit" : "debet");
+  if(paarModus) doel.mode = (heeftAf && heeftBij) ? "net" : (heeftBij ? "credit" : "debet");
   else if(!keuzeGeldig) doel.mode = (heeftAf && heeftBij) ? "net" : (heeftBij ? "credit" : "debet");
   const oudDoelId = doel.id;
-  if(r.splitPair && !r.splitParent){
+  if(paarModus){
     doel.id = r.splitPair;
     delete doel.splitPair;
     delete doel.splitKind;
+    delete doel.splitRule;
+    delete doel.autoSplit;
+    delete doel.splitOf;
+    delete doel.splitAt;
+    // Was de rij vóór het af/bij-splitsen zelf al een afgesplitst deel, dan wordt hij dat weer.
+    if(doel.pairOrig) Object.keys(doel.pairOrig).forEach(k => { if(doel.pairOrig[k] !== undefined) doel[k] = doel.pairOrig[k]; });
+    delete doel.pairOrig;
     if(!doel.suggestion){ const met = weg.find(x => x.suggestion); if(met) doel.suggestion = met.suggestion; }
   }
   // Rijen die uit een weggehaalde rij waren afgesplitst, hangen voortaan aan het doel.
   const wegIds = new Set(weg.map(x => x.id));
   importBasisdataRows = importBasisdataRows.filter(x => !wegIds.has(x.id));
-  importBasisdataRows.forEach(x => { if(x.splitParent && (wegIds.has(x.splitParent) || x.splitParent === oudDoelId)) x.splitParent = doel.id; });
+  importBasisdataRows.forEach(x => {
+    if(x.splitParent && (wegIds.has(x.splitParent) || x.splitParent === oudDoelId)) x.splitParent = doel.id;
+    if(x.splitOf && (wegIds.has(x.splitOf) || x.splitOf === oudDoelId)) x.splitOf = doel.id;
+  });
   const nogGesplitst = importBasisdataRows.some(x => x !== doel && (x.splitParent === doel.id));
   if(!doel.splitKind && !doel.splitParent && !nogGesplitst && doel.origMatchName){
     doel.matchName = doel.origMatchName;
@@ -7517,8 +7618,10 @@ function buildImportBasisdataRows(rows){
       catId: passendeCat ? passendeCat.id : null,
     });
   });
-  rowsOut.sort((a,b)=> Math.abs(importRowAmount(b)) - Math.abs(importRowAmount(a)));
-  return rowsOut;
+  // Onthouden splitsingen meteen toepassen (zie applySplitRules). De delen blijven direct onder hun
+  // oorspronkelijke rij staan, net als bij handmatig splitsen.
+  const gesorteerd = rowsOut.sort((a,b)=> Math.abs(importRowAmount(b)) - Math.abs(importRowAmount(a)));
+  return gesorteerd.flatMap(r => applySplitRules(r));
 }
 
 /* Het bedrag waarmee deze rij meetelt, volgens de debet/credit-keuze van de rij.
@@ -7556,6 +7659,200 @@ function importRowContributingEntries(r){
 /* Bouwt een nieuwe importrij uit een deelverzameling transacties van een bestaande rij.
    Debet/credit/bedrag worden opnieuw uit die transacties afgeleid, zodat een afgesplitste rij
    altijd klopt met wat erin zit. */
+/* ---------- AFSPLITSEN ONTHOUDEN ----------
+   Splits je bij een import transacties van één tegenpartij af (tankstation: brandstof en shop
+   door elkaar; Belastingdienst: wegenbelasting eraf, teruggave erbij), dan wil je dat de volgende
+   maand niet opnieuw hoeven doen. Daarvoor zoekt FinBo bij het splitsen een KENMERK waarin de
+   afgesplitste transacties van de rest verschillen, in deze volgorde:
+     1. af of bij (alle afgesplitste zijn afschrijvingen en de rest bijschrijvingen, of andersom);
+     2. een woord dat in de omschrijving van álle afgesplitste staat en bij geen van de rest;
+     3. precies hetzelfde bedrag (een vast abonnement tussen losse betalingen);
+     4. een bedraggrens (alle afgesplitste kleiner dan de rest, of allemaal groter).
+   Lukt dat niet, dan geldt de splitsing alleen voor deze import en zegt de rij dat ook.
+   Bij het opslaan worden de kenmerken per tegenpartij vastgelegd in state.splitRules; een volgende
+   import splitst dezelfde tegenpartij dan meteen zo, met de groep en categorie van de vorige keer. */
+const SPLIT_STOPWOORDEN = new Set([
+  ...MONTHS_NL, ...MONTHS_EN.map(m => m.toLowerCase()),
+  "jan","feb","mrt","apr","jun","jul","aug","sep","sept","okt","oct","nov","dec",
+  "transactiereferentie","kenmerk","machtiging","incassant","termijn","termijnbedrag","betaling","betaalverzoek",
+  "pas","apple","google","pay","via","van","voor","naar","met","the","and","for","eur",
+]);
+function splitWoorden(tekst){
+  return new Set(String(tekst||"").toLowerCase().split(/[^a-zà-ÿ]+/).filter(w => w.length >= 3 && !SPLIT_STOPWOORDEN.has(w)));
+}
+function deriveSplitCondition(gekozen, rest){
+  if(!gekozen.length || !rest.length) return null;
+  const rond = n => Math.round(n*100)/100;
+  if(gekozen.every(e => e.amt < 0) && rest.every(e => e.amt > 0)) return { type:"side", value:"debet" };
+  if(gekozen.every(e => e.amt > 0) && rest.every(e => e.amt < 0)) return { type:"side", value:"credit" };
+  // Een woord dat bij alle gekozen transacties in de omschrijving staat en bij geen van de rest.
+  let gemeen = null;
+  gekozen.forEach(e => {
+    const w = splitWoorden(e.omschrijving);
+    gemeen = gemeen ? new Set([...gemeen].filter(x => w.has(x))) : w;
+  });
+  const restTekst = rest.map(e => String(e.omschrijving||"").toLowerCase());
+  const kandidaten = [...(gemeen || [])].filter(w => !restTekst.some(t0 => t0.includes(w)));
+  if(kandidaten.length){
+    kandidaten.sort((a,b) => b.length - a.length || a.localeCompare(b));
+    return { type:"text", value: kandidaten[0] };
+  }
+  const abs = e => Math.abs(e.amt);
+  const eerste = abs(gekozen[0]);
+  if(gekozen.every(e => Math.abs(abs(e) - eerste) < AMOUNT_MATCH_EPSILON) && !rest.some(e => Math.abs(abs(e) - eerste) < AMOUNT_MATCH_EPSILON)){
+    return { type:"amount", value: rond(eerste) };
+  }
+  const gMax = Math.max(...gekozen.map(abs)), gMin = Math.min(...gekozen.map(abs));
+  const rMax = Math.max(...rest.map(abs)), rMin = Math.min(...rest.map(abs));
+  if(gMax < rMin) return { type:"below", value: rond((gMax + rMin) / 2) };
+  if(gMin > rMax) return { type:"above", value: rond((gMin + rMax) / 2) };
+  return null;
+}
+/* Twee kenmerken tegelijk ("afschrijvingen én omschrijving bevat shop"): ontstaat als je een
+   afgesplitst deel nog eens in af en bij splitst. */
+function allSplitCond(a, b){
+  if(!a || !b) return null;
+  const lijst = c => c.type === "all" ? c.conds : [c];
+  return { type:"all", conds:[...lijst(a), ...lijst(b)] };
+}
+function matchesSplitCond(e, c){
+  if(!c || !e) return false;
+  if(c.type === "all") return Array.isArray(c.conds) && c.conds.length > 0 && c.conds.every(x => matchesSplitCond(e, x));
+  const a = Math.abs(parseFloat(e.amt)||0);
+  if(c.type === "side") return c.value === "debet" ? e.amt < 0 : e.amt > 0;
+  if(c.type === "text") return String(e.omschrijving||"").toLowerCase().includes(String(c.value||"").toLowerCase());
+  if(c.type === "amount") return Math.abs(a - c.value) < AMOUNT_MATCH_EPSILON;
+  if(c.type === "below") return a < c.value;
+  if(c.type === "above") return a > c.value;
+  return false;
+}
+function describeSplitCond(c){
+  if(!c) return "";
+  if(c.type === "all") return (c.conds || []).map(describeSplitCond).filter(Boolean).join(" " + t("splitCondAnd") + " ");
+  if(c.type === "side") return c.value === "debet" ? t("splitCondDebet") : t("splitCondCredit");
+  if(c.type === "text") return t("splitCondText")(c.value);
+  if(c.type === "amount") return t("splitCondAmount")(fmt(c.value));
+  if(c.type === "below") return t("splitCondBelow")(fmt(c.value));
+  if(c.type === "above") return t("splitCondAbove")(fmt(c.value));
+  return "";
+}
+/* Het label dat bij een onthouden splitsing hoort: de gekozen categorie, anders het voorstel. Bewust
+   niet importRowDisplayLabel: daar zit het woordje "(deel 1)" al in, en dat komt er bij het
+   toepassen vanzelf weer bij — anders zou het er de volgende keer twee keer aan hangen. */
+function splitRuleLabel(r){
+  if(r.catId){ const c = findCategory(r.catId); if(c) return c.name; }
+  return (r.suggestion && r.suggestion.label) ? r.suggestion.label : null;
+}
+/* Bij het opslaan: per tegenpartij die in deze import voorkwam de splitsing vastleggen (of, als je
+   alles hebt teruggevoegd, de oude vergeten). "Wat je deze keer deed" wint, net als bij gewone
+   herkenregels. */
+function learnSplitRules(){
+  if(!Array.isArray(state.splitRules)) state.splitRules = [];
+  const perSleutel = new Map();
+  importBasisdataRows.forEach(r => {
+    const k = counterpartyKey(r.splitFrom || r.name);
+    if(!perSleutel.has(k)) perSleutel.set(k, []);
+    perSleutel.get(k).push(r);
+  });
+  perSleutel.forEach((rijen, k) => {
+    const bestaand = state.splitRules.findIndex(x => x.key === k);
+    const delen = rijen.filter(r => r.splitKind && r.splitRule && r.bucket);
+    if(!delen.length){
+      if(bestaand !== -1 && !rijen.some(r => r.splitKind)) state.splitRules.splice(bestaand, 1);
+      return;
+    }
+    const basis = rijen.find(r => !r.splitKind);
+    // In de volgorde waarin je splitste: een tweede splitsing is afgeleid van wat er na de eerste
+    // nog over was, dus bij de volgende import moet die ook pas daarna aan de beurt komen.
+    delen.sort((a, b) => (a.splitAt || 0) - (b.splitAt || 0));
+    const plek = new Map(delen.map((d, i) => [d.id, i]));
+    const regel = {
+      key: k,
+      name: (basis || delen[0]).splitFrom || (basis || delen[0]).name,
+      // from: uit welk eerder deel dit deel is gesplitst (-1 = uit de tegenpartij zelf).
+      parts: delen.map((d, i) => {
+        const van = plek.has(d.splitOf) ? plek.get(d.splitOf) : -1;
+        return { cond: d.splitRule, bucket: d.bucket, label: splitRuleLabel(d), from: van < i ? van : -1 };
+      }),
+      rest: (basis && basis.bucket) ? { bucket: basis.bucket, label: splitRuleLabel(basis) } : null,
+      at: Date.now(),
+    };
+    if(bestaand !== -1) state.splitRules[bestaand] = regel; else state.splitRules.push(regel);
+  });
+}
+/* Bij het inlezen: een tegenpartij waarvoor een splitsing onthouden is, meteen zo opsplitsen. */
+function applySplitRules(rij){
+  const regel = (state.splitRules || []).find(x => x && x.key === counterpartyKey(rij.name));
+  if(!regel || !Array.isArray(regel.parts) || !regel.parts.length) return [rij];
+  const catVoor = (bucket, label) => label ? state.categories.find(c => c.bucket === bucket && c.name.trim().toLowerCase() === label.trim().toLowerCase()) : null;
+  // Elke splitsing pakt zijn transacties uit de bak waar hij de vorige keer ook uit kwam: de
+  // tegenpartij zelf (-1) of een eerder afgesplitst deel. Zo doe je precies na wat de gebruiker deed.
+  const bakken = new Map([[-1, rij.entries.slice()]]);
+  const delen = [];
+  regel.parts.forEach((p, i) => {
+    const van = (Number.isInteger(p.from) && p.from >= 0 && p.from < i) ? p.from : -1;
+    const bron = bakken.get(van) || [];
+    const pak = bron.filter(e => matchesSplitCond(e, p.cond));
+    bakken.set(van, bron.filter(e => !pak.includes(e)));
+    bakken.set(i, pak);
+    delen.push({ p, van, i });
+  });
+  const rest = bakken.get(-1);
+  const gevuld = delen.filter(d => bakken.get(d.i).length);
+  const zetRest = (r) => {
+    if(!regel.rest || !regel.rest.bucket) return;
+    r.bucket = regel.rest.bucket;
+    r.suggestion = { bucket: regel.rest.bucket, label: regel.rest.label || (r.suggestion && r.suggestion.label) || r.name, role: r.suggestion ? r.suggestion.role : null };
+    const c = catVoor(regel.rest.bucket, regel.rest.label);
+    r.catId = c ? c.id : null;
+  };
+  if(!gevuld.length){ zetRest(rij); return [rij]; }
+  const uit = [];
+  let basisId = null;
+  if(rest.length){
+    const basis = makeImportRowFromEntries(rij, rest, "rest");
+    basis.id = rij.id;
+    basis.splitKind = undefined;
+    basis.splitSeq = gevuld.length;
+    basis.suggestion = rij.suggestion;
+    basis.bucket = rij.bucket;
+    basis.catId = rij.catId;
+    zetRest(basis);
+    basisId = basis.id;
+    uit.push(basis);
+  }
+  const alleenAfBij = !rest.length && gevuld.every(d => d.van === -1 && d.p.cond && d.p.cond.type === "side");
+  const rijVanDeel = new Map();
+  let volgnr = 0;
+  gevuld.forEach(d => {
+    const kant = d.p.cond && d.p.cond.type === "side";
+    const r = makeImportRowFromEntries(rij, bakken.get(d.i), kant ? d.p.cond.value : "deel" + (++volgnr));
+    r.id = rij.id + ":auto" + (d.i + 1);
+    r.bucket = d.p.bucket;
+    // Zonder eigen naam de vorige keer: dan ook nu geen (anders wordt de tegenpartijnaam bij het
+    // volgende opslaan ineens als "naam" onthouden).
+    if(d.p.label) r.suggestion = { bucket: d.p.bucket, label: d.p.label, role: null };
+    else if(r.suggestion) r.suggestion = { ...r.suggestion, bucket: d.p.bucket };
+    const c = catVoor(d.p.bucket, d.p.label);
+    r.catId = c ? c.id : null;
+    r.splitRule = d.p.cond;
+    r.autoSplit = true;
+    r.splitAt = ++importSplitClock;
+    const ouder = d.van === -1 ? null : rijVanDeel.get(d.van);
+    r.splitOf = ouder ? ouder.id : rij.id;
+    if(alleenAfBij) r.splitPair = rij.id;
+    else if(ouder) r.splitParent = ouder.id;
+    else if(basisId) r.splitParent = basisId;
+    else if(uit.length) r.splitParent = uit[0].id;   // niets over van de tegenpartij: het eerste deel is het anker
+    rijVanDeel.set(d.i, r);
+    uit.push(r);
+  });
+  return uit;
+}
+
+/* Volgorde van splitsen binnen deze sessie (zie learnSplitRules). */
+let importSplitClock = 0;
+
 /* Een afgesplitste rij krijgt een id op basis van de oorspronkelijke ("ibd3:deel1"). Na splitsen,
    terugvoegen en opnieuw splitsen kan zo'n id al in gebruik zijn — en twee rijen met hetzelfde id
    betekent dat knoppen de verkeerde rij aanpassen en terugvoegen er twee tegelijk weghaalt. */
@@ -7610,8 +7907,33 @@ function splitImportBasisdataRow(rowId){
   helftAf.id = uniekeImportRijId(helftAf.id);
   helftBij.id = uniekeImportRijId(helftBij.id);
   helftAf.splitPair = helftBij.splitPair = r.id;
+  const kantAf = { type:"side", value:"debet" }, kantBij = { type:"side", value:"credit" };
+  if(r.splitKind){
+    // Om bij terugvoegen weer het deel van vóór het splitsen te worden (zie rejoinImportRow).
+    helftAf.pairOrig = helftBij.pairOrig = { splitKind: r.splitKind, splitRule: r.splitRule, splitOf: r.splitOf, splitAt: r.splitAt, autoSplit: r.autoSplit, splitSeq: r.splitSeq };
+    // Dit was zelf al een afgesplitst deel: de helften komen uit dezelfde bak als dat deel, met
+    // beide kenmerken tegelijk. Kon het deel zelf niet onthouden worden, dan de helften ook niet.
+    helftAf.splitRule = allSplitCond(r.splitRule, kantAf);
+    helftBij.splitRule = allSplitCond(r.splitRule, kantBij);
+    helftAf.splitOf = helftBij.splitOf = r.splitOf;
+  } else {
+    helftAf.splitRule = kantAf;
+    helftBij.splitRule = kantBij;
+    helftAf.splitOf = helftBij.splitOf = r.id;
+  }
+  helftAf.splitAt = ++importSplitClock;
+  helftBij.splitAt = ++importSplitClock;
   // Was dit zelf al een afgesplitst deel, dan horen beide helften nog steeds bij die ouder.
   if(r.splitParent) helftAf.splitParent = helftBij.splitParent = r.splitParent;
+  // Delen die eerder uit deze rij zijn gehaald, verliezen hun ouder: hang ze aan de af-helft (dan
+  // kun je ze nog terugvoegen) en laat ze bij de volgende import uit dezelfde bak komen als de rij.
+  importBasisdataRows.forEach(x => {
+    if(x.splitParent === r.id) x.splitParent = helftAf.id;
+    if(x.splitOf === r.id && r.splitKind){
+      x.splitOf = r.splitOf;
+      x.splitRule = allSplitCond(r.splitRule, x.splitRule);
+    }
+  });
   importBasisdataRows.splice(idx, 1, helftAf, helftBij);
   return true;
 }
@@ -7645,8 +7967,15 @@ function splitImportBasisdataEntries(rowId, entryIndexes){
   rest.catId = r.catId;
   if(r.splitParent) rest.splitParent = r.splitParent;
   if(r.splitPair) rest.splitPair = r.splitPair;
+  if(r.splitRule) rest.splitRule = r.splitRule;
+  if(r.autoSplit) rest.autoSplit = true;
+  if(r.splitOf) rest.splitOf = r.splitOf;
+  if(r.splitAt) rest.splitAt = r.splitAt;
   deel.splitSeq = volgnr;
+  deel.splitRule = deriveSplitCondition(af, blijft);
   deel.splitParent = r.id;
+  deel.splitOf = r.id;
+  deel.splitAt = ++importSplitClock;
   deel.id = uniekeImportRijId(deel.id);
 
   importBasisdataRows.splice(idx, 1, rest, deel);
@@ -7925,12 +8254,18 @@ function renderImportBasisdataRowHtml(r){
         </div>` : ""}
     </div>` : "";
 
+  // Bij een afgesplitste rij: wat FinBo hiervan onthoudt voor de volgende import.
+  const splitNotitie = r.splitKind ? (r.splitRule
+    ? `<div class="import-bd-split-rule">${escapeHtml(r.autoSplit ? t("splitRuleAuto")(describeSplitCond(r.splitRule)) : t("splitRuleRemember")(describeSplitCond(r.splitRule)))}</div>`
+    : `<div class="import-bd-split-rule none">${escapeHtml(t("splitRuleNone"))}</div>`) : "";
+
   return `
     <div class="import-bd-row${r.bucket?"":" needs-group"}">
       <div class="import-bd-row-main">
         <span class="import-bd-row-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}${r.splitKind ? `<span class="import-bd-split-tag">${escapeHtml(importRowSplitTag(r))}</span>` : ""}${canRejoinImportRow(r) ? `<button type="button" class="import-bd-rejoin" data-rejoin="${escapeHtml(r.id)}" title="${escapeHtml(t("importRejoinTitle"))}">${escapeHtml(t("importRejoinBtn"))}</button>` : ""}</span>
         ${bedragen}
       </div>
+      ${splitNotitie}
       ${suggestieBadge}
       <div class="import-bd-pills">${pills}</div>
       ${modeKeuze}
@@ -8265,6 +8600,7 @@ function showImportMonthReplaceConfirm(yms){
    in applyImportBasisdata). Geeft de nieuw aangemaakte categorieën terug. */
 function commitImportLearning(linesByBucket){
   importBasisdataPendingRules.forEach(r => rememberUserRule(r.match, r.bucket, r.label));
+  learnSplitRules();
   const nieuweCategorieen = [];
   CATEGORY_BUCKET_KEYS.forEach(bucket=>{
     linesByBucket[bucket].forEach(l=>{
@@ -8782,11 +9118,24 @@ function computeRecalcProposal(bronnen){
   return regels;
 }
 
-function applyRecalcProposal(regels){
+function applyRecalcProposal(regels, verwijder){
   const snap = JSON.stringify(state);
   pushBasisdataHistory("recalc");
   const bd = basisdataScenario();
   let n = 0;
+  // Eerst weghalen wat de gebruiker in het voorstel heeft doorgestreept — ook regels die "gelijk"
+  // of "niet gemeten" zijn. Een verwijderde regel mag geen verweesde koppeling achterlaten.
+  (verwijder || []).forEach(r => {
+    const groep = bd[r.bucket];
+    if(!groep) return;
+    const idx = groep.items.findIndex(i => (i.l||"").trim().toLowerCase() === r.key);
+    if(idx < 0) return;
+    groep.items.splice(idx, 1);
+    groep.items.forEach(other => {
+      if((other.offsetTarget||"").trim().toLowerCase() === r.key) delete other.offsetTarget;
+    });
+    n++;
+  });
   regels.forEach(r => {
     if(r.status === "changed"){
       const it = bd[r.bucket].items.find(i => (i.l||"").trim().toLowerCase() === r.key);
@@ -8813,6 +9162,7 @@ function applyRecalcProposal(regels){
 let recalcSelectedYms = null;   // Set — transiënt, alleen zolang het venster open is
 let recalcExcluded = new Set();  // regel-id's die (door de gebruiker of standaard) uitgevinkt zijn
 let recalcTouched = new Set();   // regel-id's waar de gebruiker zelf aan heeft gezeten
+let recalcRemove = new Set();    // id's van bestaande Basisdata-regels die bij "overnemen" weg moeten
 /* Een NIEUWE regel die in minder dan de helft van de maanden voorkomt is meestal een incidentele
    uitgave (één keer een cadeau, een reparatie). Die staat wel in het voorstel, maar standaard
    uitgevinkt: Basisdata hoort vooral wat steeds terugkomt te bevatten. Zelf aanvinken kan altijd. */
@@ -8825,6 +9175,7 @@ function showRecalcModal(){
   recalcSelectedYms = new Set(bronnen.filter(b => b.kind !== "plan").map(b => b.ym));
   recalcExcluded = new Set();
   recalcTouched = new Set();
+  recalcRemove = new Set();
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
   overlay.id = "recalcOverlay";
@@ -8841,25 +9192,36 @@ function showRecalcModal(){
       if(recalcTouched.has(r.id)) return;
       if(recalcDefaultExcluded(r, gekozen.length)) recalcExcluded.add(r.id); else recalcExcluded.delete(r.id);
     });
-    const toepasbaar = regels.filter(r => (r.status === "changed" || r.status === "new") && !recalcExcluded.has(r.id));
+    // Alleen bestaande regels kun je verwijderen; een nieuwe regel laat je weg door 'm uit te vinken.
+    const bestaand = r => r.status === "changed" || r.status === "same" || r.status === "notMeasured";
+    const teVerwijderen = regels.filter(r => bestaand(r) && recalcRemove.has(r.id));
+    const toepasbaar = regels.filter(r => (r.status === "changed" || r.status === "new") && !recalcExcluded.has(r.id) && !recalcRemove.has(r.id));
+    const aantalActies = toepasbaar.length + teVerwijderen.length;
     const soortTag = { import: t("recalcSourceImport"), legacy: t("recalcSourceLegacy"), plan: t("recalcSourcePlan") };
     const rijen = CATEGORY_BUCKET_KEYS.map(k => {
       const inGroep = regels.filter(r => r.bucket === k);
       if(!inGroep.length) return "";
-      return `<tr class="bucket" style="--bucket-color:${bucketColorVar(k)}"><td colspan="5">${escapeHtml(t(k))}</td></tr>` +
+      return `<tr class="bucket" style="--bucket-color:${bucketColorVar(k)}"><td colspan="6">${escapeHtml(t(k))}</td></tr>` +
         inGroep.map(r => {
-          const kiesbaar = r.status === "changed" || r.status === "new";
+          const weg = bestaand(r) && recalcRemove.has(r.id);
+          const kiesbaar = !weg && (r.status === "changed" || r.status === "new");
           const verschil = (r.nieuw !== null && r.oud !== null) ? r.nieuw - r.oud : null;
           const richting = verschil === null || Math.abs(verschil) < 0.005 ? "" : ((k === "income") === (verschil > 0) ? "down" : "up");
           const status = r.status === "new" ? `<span class="status new">${escapeHtml(t("recalcStatusNew"))}</span>`
             : r.status === "same" ? `<span class="status">${escapeHtml(t("recalcStatusSame"))}</span>`
             : r.status === "notMeasured" ? `<span class="status">${escapeHtml(t("recalcStatusNotMeasured"))}</span>` : "";
-          return `<tr class="${kiesbaar ? "" : "muted"}">
+          const statusTxt = weg ? `<span class="status removed">${escapeHtml(t("recalcStatusRemove"))}</span>` : status;
+          const delKnop = bestaand(r)
+            ? `<button type="button" class="recalc-del ${weg ? "active" : ""}" data-del="${escapeHtml(r.id)}" aria-pressed="${weg}"
+                 title="${escapeHtml(weg ? t("recalcKeepLine") : t("recalcRemoveLine"))}" aria-label="${escapeHtml((weg ? t("recalcKeepLine") : t("recalcRemoveLine")) + ": " + r.label)}">${weg ? RECALC_KEEP_ICON : TRASH_ICON}</button>`
+            : "";
+          return `<tr class="${weg ? "remove" : (kiesbaar ? "" : "muted")}">
             <td>${kiesbaar ? `<input type="checkbox" data-regel="${escapeHtml(r.id)}" ${recalcExcluded.has(r.id) ? "" : "checked"} />` : ""}</td>
-            <td class="lbl">${escapeHtml(r.label)} ${status}${r.status === "notMeasured" ? "" : `<span class="seen-inline">${escapeHtml(t("recalcColSeen"))} ${escapeHtml(t("recalcSeenIn")(r.seen, gekozen.length))}</span>`}</td>
-            <td class="mono">${r.oud === null ? "—" : "€ " + fmt(r.oud)}</td>
-            <td class="mono ${richting}">${r.nieuw === null ? "—" : "€ " + fmt(r.nieuw)}</td>
+            <td class="lbl"><span class="naam">${escapeHtml(r.label)}</span> ${statusTxt}${r.status === "notMeasured" ? "" : `<span class="seen-inline">${escapeHtml(t("recalcColSeen"))} ${escapeHtml(t("recalcSeenIn")(r.seen, gekozen.length))}</span>`}</td>
+            <td class="mono">${r.oud === null ? "—" : `<span class="eur">€ </span>${fmt(r.oud)}`}</td>
+            <td class="mono ${weg ? "" : richting}">${weg ? "—" : (r.nieuw === null ? "—" : `<span class="eur">€ </span>${fmt(r.nieuw)}`)}</td>
             <td class="seen-col">${r.status === "notMeasured" ? "" : escapeHtml(t("recalcSeenIn")(r.seen, gekozen.length))}</td>
+            <td class="del-col">${delKnop}</td>
           </tr>`;
         }).join("");
     }).join("");
@@ -8877,11 +9239,11 @@ function showRecalcModal(){
         </div>
         <h4>${escapeHtml(t("recalcProposalTitle"))}</h4>
         ${gekozen.length ? `<div class="recalc-table-wrap"><table class="recalc-table">
-          <thead><tr><th></th><th>${escapeHtml(t("recalcColLine"))}</th><th>${escapeHtml(t("recalcColOld"))}</th><th>${escapeHtml(t("recalcColNew"))}</th><th class="seen-col">${escapeHtml(t("recalcColSeen"))}</th></tr></thead>
+          <thead><tr><th></th><th>${escapeHtml(t("recalcColLine"))}</th><th>${escapeHtml(t("recalcColOld"))}</th><th>${escapeHtml(t("recalcColNew"))}</th><th class="seen-col">${escapeHtml(t("recalcColSeen"))}</th><th class="del-col"><span class="sr-only">${escapeHtml(t("recalcRemoveLine"))}</span></th></tr></thead>
           <tbody>${rijen}</tbody></table></div>` : `<p>${escapeHtml(t("recalcNoneSelected"))}</p>`}
         <div class="modal-actions">
           <button type="button" class="secondary" id="recalcCancelBtn">${escapeHtml(t("recalcCancelBtn"))}</button>
-          <button type="button" id="recalcApplyBtn" ${toepasbaar.length ? "" : "disabled"}>${escapeHtml(t("recalcApplyBtn")(toepasbaar.length))}</button>
+          <button type="button" id="recalcApplyBtn" ${aantalActies ? "" : "disabled"}>${escapeHtml(t("recalcApplyBtn")(toepasbaar.length, teVerwijderen.length))}</button>
         </div>
       </div>`;
     overlay.querySelectorAll("[data-ym]").forEach(cb => {
@@ -8894,11 +9256,22 @@ function showRecalcModal(){
         teken();
       };
     });
+    overlay.querySelectorAll("[data-del]").forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.del;
+        if(recalcRemove.has(id)) recalcRemove.delete(id); else recalcRemove.add(id);
+        teken();
+        // De knop is na het hertekenen een nieuw element: focus terugzetten, zodat je met het
+        // toetsenbord door kunt gaan.
+        const terug = [...overlay.querySelectorAll("[data-del]")].find(b => b.dataset.del === id);
+        if(terug) terug.focus();
+      };
+    });
     overlay.querySelector("#recalcCancelBtn").onclick = sluit;
     overlay.querySelector("#recalcApplyBtn").onclick = () => {
-      if(!toepasbaar.length) return;
+      if(!aantalActies) return;
       sluit();
-      applyRecalcProposal(toepasbaar);
+      applyRecalcProposal(toepasbaar, teVerwijderen);
     };
   };
   teken();
