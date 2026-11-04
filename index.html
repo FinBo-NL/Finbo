@@ -1971,6 +1971,67 @@
   .import-bd-success-actions button.secondary{background:transparent; color:var(--gold);}
 
   /* ---- Basisdata: herberekenen + vorige versies ---- */
+  /* ---------- Bruto-netto (v30) ---------- */
+  .bn-intro{margin:0 0 14px;}
+  .bn-profielbar{display:flex; flex-direction:column; gap:10px; margin:0 0 16px;}
+  .bn-chips{display:flex; flex-wrap:wrap; gap:6px;}
+  .bn-chip{
+    font-family:"Segoe UI",sans-serif; font-size:13px; font-weight:600; cursor:pointer;
+    padding:7px 14px; border-radius:6px; border:1px solid var(--rule); background:var(--paper); color:var(--text);
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .bn-chip:hover{border-color:var(--gold);}
+  .bn-chip.active{background:var(--gold); border-color:var(--gold); color:#fff;}
+  html[data-mode="dark"] .bn-chip.active{color:#0f1a15;}
+  .bn-tools{margin:0;}
+  .bd-tools button.bn-del{border-color:var(--debit); color:var(--debit);}
+  .bd-tools button.bn-del:hover{background:color-mix(in srgb, var(--debit) 10%, transparent);}
+  .bn-rows{margin:10px 18px 12px;}
+  .bn-field{gap:10px; flex-wrap:wrap; padding:3px 0;}
+  .bn-label{flex:1 1 200px; min-width:0; display:flex; flex-direction:column; font-size:13.5px; color:var(--text); padding:4px 2px;}
+  .bn-label small{font-size:11px; color:var(--text-soft); line-height:1.35; margin-top:1px;}
+  .bn-naam-input{flex:1 1 180px; font-weight:600;}
+  .bn-mode{
+    font-family:inherit; font-size:12px; color:var(--text); background:var(--paper);
+    border:1px solid var(--rule); border-radius:5px; padding:3px 6px; max-width:100%;
+  }
+  .bn-sec{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-soft);
+    font-weight:600; padding:12px 2px 2px; border-bottom:1px dashed var(--rule);
+  }
+  .bn-correctie-info{font-size:11.5px; color:var(--text-soft); padding:6px 2px 4px;}
+  .bn-list-rows{padding:2px 18px 4px;}
+  .bn-list-total{font-size:13px; color:var(--forest); font-weight:700;}
+  .bn-detail-btn, .bn-ref-label select{
+    font-family:"Segoe UI",sans-serif; font-size:12px; cursor:pointer; color:var(--gold);
+    border:1px solid var(--gold); background:transparent; border-radius:999px; padding:4px 11px;
+  }
+  .bn-ref-label{font-size:12px; color:var(--text-soft); display:flex; align-items:center; gap:6px;}
+  .bn-ref-label select{color:var(--text); border-color:var(--rule); border-radius:5px; max-width:160px;}
+  .bn-table tr.bn-basis-row{background:color-mix(in srgb, var(--gold) 9%, transparent);}
+  .bn-table td.bn-plus{color:var(--credit);}
+  .bn-table td.bn-min{color:var(--debit);}
+  .bn-table th.bn-ref{color:var(--forest);}
+  .bn-compare tr.bn-total-row td{border-top:1px solid var(--rule); font-weight:700;}
+  .bn-tax-card .card-head{padding:0;}
+  .bn-tax-toggle{
+    display:flex; align-items:center; gap:8px; width:100%; text-align:left; cursor:pointer;
+    background:none; border:none; padding:10px 18px 8px; color:var(--forest); font:inherit;
+  }
+  .bn-caret{width:15px; height:15px; transform:rotate(-90deg); transition:transform .15s;}
+  .bn-caret.open{transform:none;}
+  .bn-tax-tools{margin:0 18px 10px;}
+  .bn-sum-compare{margin-top:14px;}
+  .bn-sum-note{color:var(--text-onink-soft); padding:10px 0 0;}
+  .card-head .bn-ref-label, .card-head .bn-detail-btn{flex-shrink:0;}
+  @media (max-width:640px){
+    .bn-rows{margin:8px 10px 10px; padding:2px 8px;}
+    .bn-list-rows{padding:2px 10px 4px;}
+    .bn-label{flex-basis:120px;}
+    .bn-field:has(.bn-mode) .bn-label{flex-basis:100%;}
+    .card-head:has(.bn-detail-btn), .card-head:has(.bn-ref-label){flex-wrap:wrap; gap:6px;}
+  }
+  .bn-field .value-wrap{margin-left:auto;}
   .bd-tools{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 14px;}
   .bd-tools button{
     font-family:"Segoe UI",sans-serif; font-size:12.5px; font-weight:600; cursor:pointer;
@@ -3100,6 +3161,199 @@ const i18n = {
     verschilMetBudget: "Difference vs. budget",
   }
 };
+/* Teksten voor de Bruto-netto-pagina (v30). Apart samengevoegd zodat dit blok in één keer te
+   overzien is; verder gewoon via t() zoals alle andere teksten. */
+Object.assign(i18n.nl, {
+  navBrutoNetto: "Bruto-netto",
+  bnIntro: "Reken een brutosalaris om naar netto per maand, in stappen. Maak per werkgever een profiel en vul in wat daar geldt: auto, pensioeninleg, vergoedingen. Zo zie je wat een aanbod netto echt oplevert. Alles hier is een schatting op basis van de maandtabel.",
+  bnDefProfiel: "Huidige werkgever",
+  bnDefThuiswerk: "Thuiswerkvergoeding",
+  bnDefTelefoon: "Telefoonvergoeding",
+  bnNieuwProfielNaam: (n) => `Werkgever ${n}`,
+  bnKopieNaam: (naam) => `${naam} (kopie)`,
+  bnNoName: "Zonder naam",
+  bnAddProfiel: "Nieuwe werkgever",
+  bnCopyProfiel: "Kopiëren",
+  bnDelProfiel: "Verwijderen",
+  bnGegevensTitle: "Gegevens van deze werkgever",
+  bnNaamLabel: "Naam",
+  bnSecSalaris: "Salaris",
+  bnBruto: "Bruto salaris per maand",
+  bnStap: "Stapgrootte in het schema",
+  bnStappen: "Aantal stappen",
+  bnSecAuto: "Auto van de zaak",
+  bnBijtelling: "Fiscale bijtelling",
+  bnBijtellingHint: "Per maand, zoals op je loonstrook. Geen auto: 0.",
+  bnBijtellingCatHint: (b) => `Cataloguswaarde per jaar × percentage = € ${b} per maand`,
+  bnModeBedragMnd: "€ per maand",
+  bnModeCatalogus: "cataloguswaarde",
+  bnBijtellingPct: "Bijtellingspercentage",
+  bnEigenBijdrage: "Eigen bijdrage auto",
+  bnEigenBijdrageHint: "Per maand. Verlaagt de bijtelling en gaat van je netto af.",
+  bnSecInhoudingen: "Inhoudingen vóór belasting",
+  bnPensioen: "Pensioeninleg (jouw deel)",
+  bnPensioenHint: "Een bedrag geldt bij het brutosalaris hierboven en schaalt mee in de stappen.",
+  bnWhk: "WHK-premie (jouw deel)",
+  bnWhkHint: "Werkhervattingskas. Staat niet bij elke werkgever op de loonstrook.",
+  bnModeBedrag: "€ per maand",
+  bnModePct: "% van bruto",
+  bnSecAfstemmen: "Afstemmen op je loonstrook",
+  bnLoonstrookLh: "Loonheffing op je loonstrook",
+  bnLoonstrookLhHint: "Optioneel. FinBo rekent het verschil met zijn eigen berekening uit en past dat op elke stap toe.",
+  bnOptioneel: "optioneel",
+  bnCorrectieGeen: "Geen correctie: de loonheffing komt helemaal uit de tabel.",
+  bnCorrectieGeenBruto: "Vul eerst een brutosalaris in.",
+  bnCorrectieTekst: (c) => `Correctie op elke stap: € ${c} (berekend min loonstrook).`,
+  bnVergoedingenTitle: "Onbelaste vergoedingen",
+  bnVergoedingenNote: "Per maand, komen netto bij je salaris. Bijvoorbeeld thuiswerk, telefoon, reiskosten.",
+  bnInhoudingenTitle: "Overige netto-inhoudingen",
+  bnInhoudingenNote: "Per maand, gaan van je netto af. Bijvoorbeeld personeelsvereniging, vakbond, fiets van de zaak.",
+  bnRegelNaam: "Omschrijving",
+  bnRegelWeg: "Regel verwijderen",
+  bnRegelErbij: "Regel toevoegen",
+  bnSchemaTitle: "Bruto-netto schema per maand",
+  bnDetailToon: "Toon belastingopbouw",
+  bnDetailVerberg: "Verberg belastingopbouw",
+  bnColBruto: "Bruto",
+  bnColNetto: "Netto",
+  bnColVerschil: "Netto erbij",
+  bnColPensioen: "Pensioen",
+  bnColLoonheffing: "Loonheffing",
+  bnColWhk: "WHK",
+  bnColAuto: "Bijtelling auto",
+  bnColEigenBijdrage: "Eigen bijdrage auto",
+  bnColInhoudingen: "Netto-inhoudingen",
+  bnColVergoedingen: "Vergoedingen",
+  bnColBelastbaar: "Belastbaar per jaar",
+  bnColSchijf: (n, pct) => `Schijf ${n} (${fmt(bnNum(pct))}%)`,
+  bnColAhk: "Alg. heffingskorting",
+  bnColAk: "Arbeidskorting",
+  bnColCorrectie: "Correctie",
+  bnHuidigeRegel: "basis",
+  bnSchemaNote: "Schatting op basis van de maandtabel. Vakantiegeld, een dertiende maand en het bijzonder tarief tellen niet mee. De arbeidskorting rekent alleen met de afbouw; dat klopt vanaf ongeveer € 25.000 per jaar.",
+  bnCompareTitle: "Werkgevers vergelijken",
+  bnRefLabel: "Vergelijk met",
+  bnVerschilRef: "Netto verschil per maand",
+  bnPerJaar: "Per jaar (× 12)",
+  bnCompareNote: "Elke werkgever bij zijn eigen brutosalaris. Het verschil per jaar is zonder vakantiegeld.",
+  bnTaxTitle: (j) => `Belastingtabel ${j}`,
+  bnTaxSecSchijven: "Schijven",
+  bnTaxSecKortingen: "Heffingskortingen",
+  bnTax_jaar: "Jaar",
+  bnTax_grens1: "Grens schijf 1 → 2 (per jaar)",
+  bnTax_grens2: "Grens schijf 2 → 3 (per jaar)",
+  bnTax_tarief1: "Tarief schijf 1",
+  bnTax_tarief2: "Tarief schijf 2",
+  bnTax_tarief3: "Tarief schijf 3",
+  bnTax_ahkMax: "Algemene heffingskorting, maximaal",
+  bnTax_ahkGrens: "Algemene heffingskorting, afbouw vanaf",
+  bnTax_ahkAfbouw: "Algemene heffingskorting, afbouw",
+  bnTax_akMax: "Arbeidskorting, maximaal",
+  bnTax_akGrens: "Arbeidskorting, afbouw vanaf",
+  bnTax_akAfbouw: "Arbeidskorting, afbouw",
+  bnTaxReset: "Terug naar de tarieven van 2026",
+  bnTaxResetDone: "Belastingtabel teruggezet",
+  bnTaxNote: "Geldt voor alle werkgevers. Bron: Belastingdienst, tarieven en heffingskortingen 2026. Pas dit aan als de tarieven van een nieuw jaar bekend zijn.",
+  bnLoonBasisdata: (l) => `In Basisdata (${l})`,
+  bnVerschilBasisdata: "Verschil met Basisdata",
+  bnSummaryNote: "Bij het brutosalaris van deze werkgever, per maand.",
+});
+Object.assign(i18n.en, {
+  navBrutoNetto: "Gross to net",
+  bnIntro: "Convert a gross salary to net pay per month, in steps. Make a profile per employer and fill in what applies there: car, pension contribution, allowances. That shows what an offer is really worth. Everything here is an estimate based on the monthly table.",
+  bnDefProfiel: "Current employer",
+  bnDefThuiswerk: "Working-from-home allowance",
+  bnDefTelefoon: "Phone allowance",
+  bnNieuwProfielNaam: (n) => `Employer ${n}`,
+  bnKopieNaam: (naam) => `${naam} (copy)`,
+  bnNoName: "Unnamed",
+  bnAddProfiel: "New employer",
+  bnCopyProfiel: "Copy",
+  bnDelProfiel: "Delete",
+  bnGegevensTitle: "Details for this employer",
+  bnNaamLabel: "Name",
+  bnSecSalaris: "Salary",
+  bnBruto: "Gross salary per month",
+  bnStap: "Step size in the table",
+  bnStappen: "Number of steps",
+  bnSecAuto: "Company car",
+  bnBijtelling: "Taxable car benefit",
+  bnBijtellingHint: "Per month, as on your payslip. No car: 0.",
+  bnBijtellingCatHint: (b) => `List price per year × percentage = € ${b} per month`,
+  bnModeBedragMnd: "€ per month",
+  bnModeCatalogus: "list price",
+  bnBijtellingPct: "Benefit percentage",
+  bnEigenBijdrage: "Own contribution for the car",
+  bnEigenBijdrageHint: "Per month. Lowers the taxable benefit and comes off your net pay.",
+  bnSecInhoudingen: "Deductions before tax",
+  bnPensioen: "Pension contribution (your share)",
+  bnPensioenHint: "An amount applies at the gross salary above and scales with the steps.",
+  bnWhk: "WHK premium (your share)",
+  bnWhkHint: "Return-to-work fund. Not every employer deducts it.",
+  bnModeBedrag: "€ per month",
+  bnModePct: "% of gross",
+  bnSecAfstemmen: "Match your payslip",
+  bnLoonstrookLh: "Wage tax on your payslip",
+  bnLoonstrookLhHint: "Optional. FinBo works out the difference with its own calculation and applies it to every step.",
+  bnOptioneel: "optional",
+  bnCorrectieGeen: "No correction: the wage tax comes entirely from the table.",
+  bnCorrectieGeenBruto: "Enter a gross salary first.",
+  bnCorrectieTekst: (c) => `Correction on every step: € ${c} (calculated minus payslip).`,
+  bnVergoedingenTitle: "Tax-free allowances",
+  bnVergoedingenNote: "Per month, added to your net pay. For example working from home, phone, travel.",
+  bnInhoudingenTitle: "Other net deductions",
+  bnInhoudingenNote: "Per month, taken off your net pay. For example staff association, union, company bike.",
+  bnRegelNaam: "Description",
+  bnRegelWeg: "Delete line",
+  bnRegelErbij: "Add line",
+  bnSchemaTitle: "Gross to net per month",
+  bnDetailToon: "Show tax breakdown",
+  bnDetailVerberg: "Hide tax breakdown",
+  bnColBruto: "Gross",
+  bnColNetto: "Net",
+  bnColVerschil: "Extra net",
+  bnColPensioen: "Pension",
+  bnColLoonheffing: "Wage tax",
+  bnColWhk: "WHK",
+  bnColAuto: "Car benefit",
+  bnColEigenBijdrage: "Own car contribution",
+  bnColInhoudingen: "Net deductions",
+  bnColVergoedingen: "Allowances",
+  bnColBelastbaar: "Taxable per year",
+  bnColSchijf: (n, pct) => `Bracket ${n} (${fmt(bnNum(pct))}%)`,
+  bnColAhk: "General tax credit",
+  bnColAk: "Employment tax credit",
+  bnColCorrectie: "Correction",
+  bnHuidigeRegel: "base",
+  bnSchemaNote: "Estimate based on the monthly table. Holiday pay, a 13th month and the special rate are not included. The employment tax credit only uses the phase-out; that is right from about € 25,000 a year.",
+  bnCompareTitle: "Compare employers",
+  bnRefLabel: "Compare with",
+  bnVerschilRef: "Net difference per month",
+  bnPerJaar: "Per year (× 12)",
+  bnCompareNote: "Each employer at its own gross salary. The yearly difference excludes holiday pay.",
+  bnTaxTitle: (j) => `Tax table ${j}`,
+  bnTaxSecSchijven: "Brackets",
+  bnTaxSecKortingen: "Tax credits",
+  bnTax_jaar: "Year",
+  bnTax_grens1: "Bracket 1 → 2 limit (per year)",
+  bnTax_grens2: "Bracket 2 → 3 limit (per year)",
+  bnTax_tarief1: "Bracket 1 rate",
+  bnTax_tarief2: "Bracket 2 rate",
+  bnTax_tarief3: "Bracket 3 rate",
+  bnTax_ahkMax: "General tax credit, maximum",
+  bnTax_ahkGrens: "General tax credit, phase-out from",
+  bnTax_ahkAfbouw: "General tax credit, phase-out",
+  bnTax_akMax: "Employment tax credit, maximum",
+  bnTax_akGrens: "Employment tax credit, phase-out from",
+  bnTax_akAfbouw: "Employment tax credit, phase-out",
+  bnTaxReset: "Back to the 2026 rates",
+  bnTaxResetDone: "Tax table reset",
+  bnTaxNote: "Applies to all employers. Source: Dutch Tax Administration, 2026 rates and tax credits. Update this when next year's rates are known.",
+  bnLoonBasisdata: (l) => `In Basisdata (${l})`,
+  bnVerschilBasisdata: "Difference with Basisdata",
+  bnSummaryNote: "At this employer's gross salary, per month.",
+});
+
 function t(key){ return i18n[state.lang][key]; }
 
 /* (v24 had hier ITEM_LABEL_TRANSLATIONS: een vaste NL→EN woordenlijst voor een handvol
@@ -6220,6 +6474,13 @@ function renderTabs(){
   importBdBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg><span>${t("importBasisdataTabLabel")}</span>`;
   importBdBtn.onclick = () => { resetImportBasisdataUI(); state.activeView = {type:"importBasisdata"}; renderAll(); };
   bdGroup.appendChild(importBdBtn);
+
+  // Bruto-netto (v30): eigen rekenpagina onder Basisdata, zie renderBrutoNettoCategories().
+  const bnBtn = document.createElement("button");
+  bnBtn.className = "tab tab-bruto-netto" + (state.activeView.type==="brutoNetto" ? " active":"");
+  bnBtn.textContent = t("navBrutoNetto");
+  bnBtn.onclick = () => { state.activeView = {type:"brutoNetto"}; renderAll(); };
+  bdGroup.appendChild(bnBtn);
   el.appendChild(bdGroup);
 
   // Maandbudgetten + Jaren staan samen in een "pair"-wrapper: op een smal scherm staan ze
@@ -9705,6 +9966,10 @@ function renderCategories(){
     renderLoonstijgingCategories();
     return;
   }
+  if(state.activeView.type === "brutoNetto"){
+    renderBrutoNettoCategories();
+    return;
+  }
   if(state.activeView.type === "importBasisdata"){
     renderImportBasisdataScreen();
     return;
@@ -10898,6 +11163,10 @@ function renderSummary(){
     renderLoonstijgingSummary();
     return;
   }
+  if(state.activeView.type === "brutoNetto"){
+    renderBrutoNettoSummary();
+    return;
+  }
   if(state.activeView.type === "importBasisdata"){
     // Dit scherm gebruikt de volle breedte van #categories zelf; de rechterkolom blijft leeg
     // (net als bij een net-verwijderd maandbudget/scenario elders in de app).
@@ -11083,6 +11352,578 @@ function renderLoonstijgingSummary(){
   legendDiv.className = "legend";
   legendDiv.innerHTML = loonstijgingLegendHTML();
   chartBlock.appendChild(legendDiv);
+  wireActions();
+}
+
+
+/* ---------- BRUTO-NETTO (v30) ----------
+   Eigen pagina, los van Basisdata: rekent een brutosalaris om naar netto per maand, in stappen
+   (zoals het Excel-schema "bruto-netto schema 2026"), voor één of meer werkgeverprofielen. Elk
+   profiel heeft z'n eigen gegevens (bruto, auto, pensioen, WHK, vergoedingen, inhoudingen), zodat
+   je een aanbod van een andere werkgever naast je huidige loonstrook kunt leggen.
+
+   Alles staat in state.brutoNetto en gaat dus versleuteld mee naar de cloud. In de code staan
+   alleen de belastingtarieven van 2026 — geen bedragen van een gebruiker (zelfde regel als bij
+   Basisdata sinds v25). De tarieven zijn in de app zelf aan te passen, voor een volgend jaar.
+
+   Rekenwijze (gelijk aan het Excel-schema, gecontroleerd: zelfde loonheffing tot op de cent):
+     belastbaar/jr = (bruto + fiscale bijtelling auto − pensioeninleg) × 12
+     loonheffing   = schijf 1 + 2 + 3 − alg. heffingskorting − arbeidskorting − correctie   (per mnd)
+     netto         = bruto − pensioen − loonheffing − WHK − eigen bijdrage auto − inhoudingen
+                     + onbelaste vergoedingen
+   Pensioen en WHK zijn een percentage van bruto; een vast bedrag wordt omgerekend naar het
+   percentage bij het basisbruto, zodat het in elke stap meeschaalt (zoals in de sheet).
+   De eigen bijdrage auto verlaagt de bijtelling (niet verder dan 0) en gaat van het netto af.
+   De correctie volgt uit "loonheffing volgens loonstrook": het verschil met de berekende
+   loonheffing bij het basisbruto, toegepast op elke stap. Leeg = geen correctie.
+   Bewust niet meegenomen (staat ook op het scherm): vakantiegeld/bijzonder tarief, en het
+   opbouwdeel van de arbeidskorting (alleen de afbouw, klopt vanaf ±€ 25.000 per jaar). */
+const BN_TAX_2026 = {
+  jaar: 2026,
+  grens1: 38883, grens2: 78426,
+  tarief1: 35.75, tarief2: 37.56, tarief3: 49.50,
+  ahkMax: 3115, ahkGrens: 29736, ahkAfbouw: 6.398,
+  akMax: 5685, akGrens: 45592, akAfbouw: 6.51,
+};
+const BN_MAX_STAPPEN = 40;
+
+// Schermstand, geen data (net als navDrawerOpen): niet in state.
+let bnTaxOpen = false;
+let bnShowDetail = false;
+
+function bnNewId(){ return "bn" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function makeBnProfiel(naam){
+  return {
+    id: bnNewId(),
+    naam: naam || t("bnDefProfiel"),
+    bruto: 0, stap: 200, stappen: 16,
+    autoMode: "bedrag", bijtelling: 0, catalogus: 0, bijtellingPct: 22, eigenBijdrage: 0,
+    pensioenMode: "bedrag", pensioen: 0,
+    whkMode: "bedrag", whk: 0,
+    loonstrookLh: null,
+    vergoedingen: [ { l: t("bnDefThuiswerk"), v: 0 }, { l: t("bnDefTelefoon"), v: 0 } ],
+    inhoudingen: [],
+  };
+}
+
+/* Geeft state.brutoNetto en vult wat ontbreekt aan (eerste bezoek, of een opgeslagen staat van
+   vóór een nieuw veld). Idempotent; raakt bestaande waarden niet. */
+function bnState(){
+  if(!state.brutoNetto || typeof state.brutoNetto !== "object") state.brutoNetto = {};
+  const bn = state.brutoNetto;
+  bn.tax = Object.assign({}, BN_TAX_2026, bn.tax || {});
+  if(!Array.isArray(bn.profielen) || !bn.profielen.length) bn.profielen = [makeBnProfiel()];
+  bn.profielen.forEach(p => {
+    const d = makeBnProfiel(p.naam);
+    Object.keys(d).forEach(k => { if(p[k] === undefined) p[k] = d[k]; });
+    if(!Array.isArray(p.vergoedingen)) p.vergoedingen = [];
+    if(!Array.isArray(p.inhoudingen)) p.inhoudingen = [];
+  });
+  if(!bn.profielen.some(p => p.id === bn.activeId)) bn.activeId = bn.profielen[0].id;
+  if(!bn.profielen.some(p => p.id === bn.refId)) bn.refId = bn.profielen[0].id;
+  return bn;
+}
+function bnActive(){ const bn = bnState(); return bn.profielen.find(p => p.id === bn.activeId); }
+
+const bnNum = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+const bnSum = list => (list || []).reduce((a, x) => a + bnNum(x.v), 0);
+
+// Pensioen/WHK als fractie van bruto. Een vast bedrag geldt bij het basisbruto van het profiel.
+function bnFrac(mode, val, basisBruto){
+  if(mode === "pct") return bnNum(val) / 100;
+  return basisBruto > 0 ? bnNum(val) / basisBruto : 0;
+}
+function bnBijtelling(p){
+  return p.autoMode === "catalogus"
+    ? bnNum(p.catalogus) * bnNum(p.bijtellingPct) / 100 / 12
+    : bnNum(p.bijtelling);
+}
+
+// Loonheffing zonder correctie, per maand, uit een belastbaar jaarloon.
+function bnLoonheffingRuw(belastbaar, tax){
+  const g1 = bnNum(tax.grens1), g2 = bnNum(tax.grens2);
+  const s1 = Math.max(0, Math.min(belastbaar, g1)) * bnNum(tax.tarief1) / 100 / 12;
+  const s2 = Math.max(0, Math.min(belastbaar, g2) - g1) * bnNum(tax.tarief2) / 100 / 12;
+  const s3 = Math.max(0, belastbaar - g2) * bnNum(tax.tarief3) / 100 / 12;
+  const ahk = Math.max(0, bnNum(tax.ahkMax) - bnNum(tax.ahkAfbouw) / 100 * Math.max(0, belastbaar - bnNum(tax.ahkGrens))) / 12;
+  const ak  = Math.max(0, bnNum(tax.akMax)  - bnNum(tax.akAfbouw)  / 100 * Math.max(0, belastbaar - bnNum(tax.akGrens))) / 12;
+  // Kortingen kunnen niet meer teruggeven dan er aan belasting is (loonheffing wordt nooit negatief).
+  const lh = Math.max(0, s1 + s2 + s3 - ahk - ak);
+  return { s1, s2, s3, ahk, ak, lh };
+}
+
+function bnBereken(p, tax, bruto){
+  bruto = bnNum(bruto);
+  const basis = bnNum(p.bruto);
+  const pensioen = bruto * bnFrac(p.pensioenMode, p.pensioen, basis);
+  const whk = bruto * bnFrac(p.whkMode, p.whk, basis);
+  const eigenBijdrage = bnNum(p.eigenBijdrage);
+  const autoFiscaal = Math.max(0, bnBijtelling(p) - eigenBijdrage);
+  const belastbaar = Math.max(0, (bruto + autoFiscaal - pensioen) * 12);
+  const r = bnLoonheffingRuw(belastbaar, tax);
+  const correctie = bnCorrectie(p, tax);
+  const loonheffing = r.lh - correctie;
+  const vergoedingen = bnSum(p.vergoedingen);
+  const inhoudingen = bnSum(p.inhoudingen);
+  const netto = bruto - pensioen - loonheffing - whk - eigenBijdrage - inhoudingen + vergoedingen;
+  return { bruto, pensioen, whk, autoFiscaal, eigenBijdrage, belastbaar, ...r, correctie, loonheffing, vergoedingen, inhoudingen, netto };
+}
+
+// Correctie = berekende loonheffing bij het basisbruto − loonheffing volgens loonstrook.
+function bnCorrectie(p, tax){
+  if(p.loonstrookLh === null || p.loonstrookLh === "" || p.loonstrookLh === undefined) return 0;
+  const basis = bnNum(p.bruto);
+  if(basis <= 0) return 0;
+  const pensioen = basis * bnFrac(p.pensioenMode, p.pensioen, basis);
+  const autoFiscaal = Math.max(0, bnBijtelling(p) - bnNum(p.eigenBijdrage));
+  const belastbaar = Math.max(0, (basis + autoFiscaal - pensioen) * 12);
+  // Op hele centen: de loonstrook zelf is ook in centen, en zo komt elke stap exact op de sheet uit.
+  return Math.round((bnLoonheffingRuw(belastbaar, tax).lh - bnNum(p.loonstrookLh)) * 100) / 100;
+}
+
+function bnStappen(p){
+  const n = Math.max(1, Math.min(BN_MAX_STAPPEN, Math.round(bnNum(p.stappen)) || 1));
+  const tax = bnState().tax;
+  const rijen = [];
+  for(let i = 0; i < n; i++) rijen.push(bnBereken(p, tax, bnNum(p.bruto) + i * bnNum(p.stap)));
+  return rijen;
+}
+
+/* ---------- RENDER: BRUTO-NETTO ---------- */
+function renderBrutoNettoCategories(){
+  const el = document.getElementById("categories");
+  el.innerHTML = "";
+  const bn = bnState();
+  const p = bnActive();
+
+  const intro = document.createElement("div");
+  intro.className = "card-note bn-intro";
+  intro.textContent = t("bnIntro");
+  el.appendChild(intro);
+
+  el.appendChild(renderBnProfielBar(bn, p));
+  el.appendChild(renderBnGegevensCard(p));
+  el.appendChild(renderBnListCard(p, "vergoedingen", t("bnVergoedingenTitle"), t("bnVergoedingenNote")));
+  el.appendChild(renderBnListCard(p, "inhoudingen", t("bnInhoudingenTitle"), t("bnInhoudingenNote")));
+
+  const results = document.createElement("div");
+  results.id = "bnResults";
+  el.appendChild(results);
+  renderBnResults();
+
+  el.appendChild(renderBnTaxCard(bn));
+}
+
+/* Na elke toetsaanslag: alleen de uitkomsten opnieuw tekenen, niet de invoervelden (anders
+   verlies je de focus midden in het typen). */
+function bnRefresh(){
+  renderBnResults();
+  renderSummary();
+  scheduleAutoSave();
+}
+
+function renderBnResults(){
+  const box = document.getElementById("bnResults");
+  if(!box) return;
+  box.innerHTML = "";
+  box.appendChild(renderBnSchemaCard(bnActive()));
+  if(bnState().profielen.length > 1) box.appendChild(renderBnCompareCard());
+}
+
+function renderBnProfielBar(bn, p){
+  const bar = document.createElement("div");
+  bar.className = "bn-profielbar";
+  bar.innerHTML = `
+    <div class="bn-chips" role="tablist">
+      ${bn.profielen.map(x => `<button type="button" role="tab" class="bn-chip${x.id === p.id ? " active" : ""}" data-id="${escapeHtml(x.id)}" aria-selected="${x.id === p.id}">${escapeHtml(x.naam || t("bnNoName"))}</button>`).join("")}
+    </div>
+    <div class="bd-tools bn-tools">
+      <button type="button" id="bnAddBtn">＋ ${escapeHtml(t("bnAddProfiel"))}</button>
+      <button type="button" id="bnCopyBtn">${escapeHtml(t("bnCopyProfiel"))}</button>
+      ${bn.profielen.length > 1 ? `<button type="button" id="bnDelBtn" class="bn-del">${escapeHtml(t("bnDelProfiel"))}</button>` : ""}
+    </div>`;
+  bar.querySelectorAll(".bn-chip").forEach(b => b.onclick = () => { bn.activeId = b.dataset.id; renderAll(); });
+  bar.querySelector("#bnAddBtn").onclick = () => {
+    const np = makeBnProfiel(t("bnNieuwProfielNaam")(bn.profielen.length + 1));
+    np.stap = bnNum(p.stap) || 200; np.stappen = bnNum(p.stappen) || 16;
+    bn.profielen.push(np); bn.activeId = np.id; renderAll();
+  };
+  bar.querySelector("#bnCopyBtn").onclick = () => {
+    const kopie = JSON.parse(JSON.stringify(p));
+    kopie.id = bnNewId();
+    kopie.naam = t("bnKopieNaam")(p.naam || t("bnNoName"));
+    kopie.loonstrookLh = null; // een correctie hoort bij één loonstrook, niet bij een ander aanbod
+    bn.profielen.splice(bn.profielen.indexOf(p) + 1, 0, kopie);
+    bn.activeId = kopie.id; renderAll();
+  };
+  const del = bar.querySelector("#bnDelBtn");
+  if(del) del.onclick = () => {
+    const snap = JSON.stringify(state);
+    const naam = p.naam || t("bnNoName");
+    bn.profielen = bn.profielen.filter(x => x.id !== p.id);
+    bn.activeId = bn.profielen[0].id;
+    renderAll();
+    offerUndo(t("undoDeleted")(naam), snap);
+  };
+  return bar;
+}
+
+/* Eén invoerregel in dezelfde stijl als het loonsverhogingsblok: vast label links, getal rechts.
+   `get`/`set` lezen en schrijven het profiel; `unit` is "€" of "%". Optioneel een keuzelijst
+   (bv. € per maand / % van bruto) via `modes`. */
+function bnFieldRow(o){
+  const row = document.createElement("div");
+  row.className = "row bn-field";
+  const lab = document.createElement("label");
+  lab.className = "bn-label";
+  lab.innerHTML = `<span>${escapeHtml(o.label)}</span>${o.hint ? `<small>${escapeHtml(o.hint)}</small>` : ""}`;
+  row.appendChild(lab);
+  if(o.modes){
+    const sel = document.createElement("select");
+    sel.className = "bn-mode";
+    sel.setAttribute("aria-label", o.label);
+    sel.innerHTML = o.modes.map(m => `<option value="${m.v}"${m.v === o.mode() ? " selected" : ""}>${escapeHtml(m.l)}</option>`).join("");
+    sel.onchange = () => { o.setMode(sel.value); renderAll(); };
+    row.appendChild(sel);
+  }
+  const wrap = document.createElement("div");
+  wrap.className = "value-wrap";
+  const unit = typeof o.unit === "function" ? o.unit() : o.unit;
+  const inp = document.createElement("input");
+  inp.className = "value-input";
+  inp.type = "number";
+  inp.step = o.step || "0.01";
+  inp.inputMode = "decimal";
+  if(o.placeholder) inp.placeholder = o.placeholder;
+  const v = o.get();
+  inp.value = (v === null || v === undefined || v === "") ? "" : String(v);
+  inp.setAttribute("aria-label", o.label);
+  inp.oninput = () => { o.set(inp.value === "" ? (o.allowEmpty ? null : 0) : Number(inp.value)); if(o.after) o.after(); bnRefresh(); };
+  if(unit === "€"){ const e = document.createElement("span"); e.className = "euro"; e.textContent = "€"; wrap.appendChild(e); }
+  wrap.appendChild(inp);
+  if(unit === "%"){ const e = document.createElement("span"); e.className = "euro"; e.textContent = "%"; wrap.appendChild(e); }
+  row.appendChild(wrap);
+  return row;
+}
+
+function renderBnGegevensCard(p){
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `<div class="card-head"><h2>${escapeHtml(t("bnGegevensTitle"))}</h2></div>`;
+  const rows = document.createElement("div");
+  rows.className = "rows verhogingen-rows bn-rows";
+
+  // Naam van het profiel
+  const nameRow = document.createElement("div");
+  nameRow.className = "row bn-field";
+  nameRow.innerHTML = `<label class="bn-label" for="bnNaamInput"><span>${escapeHtml(t("bnNaamLabel"))}</span></label>`;
+  const naam = document.createElement("input");
+  naam.id = "bnNaamInput";
+  naam.className = "label-input bn-naam-input";
+  naam.maxLength = 60;
+  naam.value = p.naam || "";
+  naam.oninput = () => { p.naam = naam.value; scheduleAutoSave(); renderSummary(); };
+  naam.onchange = () => renderAll();
+  nameRow.appendChild(naam);
+  rows.appendChild(nameRow);
+
+  const sec = (titel) => { const h = document.createElement("div"); h.className = "bn-sec"; h.textContent = titel; rows.appendChild(h); };
+
+  sec(t("bnSecSalaris"));
+  rows.appendChild(bnFieldRow({ label: t("bnBruto"), unit: "€", get: () => p.bruto, set: v => p.bruto = v }));
+  rows.appendChild(bnFieldRow({ label: t("bnStap"), unit: "€", step: "50", get: () => p.stap, set: v => p.stap = v }));
+  rows.appendChild(bnFieldRow({ label: t("bnStappen"), unit: "", step: "1", get: () => p.stappen, set: v => p.stappen = Math.max(1, Math.min(BN_MAX_STAPPEN, Math.round(v) || 1)) }));
+
+  sec(t("bnSecAuto"));
+  rows.appendChild(bnFieldRow({
+    label: t("bnBijtelling"),
+    hint: p.autoMode === "catalogus" ? t("bnBijtellingCatHint")(fmt(bnBijtelling(p))) : t("bnBijtellingHint"),
+    modes: [ { v: "bedrag", l: t("bnModeBedragMnd") }, { v: "catalogus", l: t("bnModeCatalogus") } ],
+    mode: () => p.autoMode, setMode: m => p.autoMode = m,
+    unit: "€",
+    get: () => p.autoMode === "catalogus" ? p.catalogus : p.bijtelling,
+    set: v => { if(p.autoMode === "catalogus") p.catalogus = v; else p.bijtelling = v; },
+  }));
+  if(p.autoMode === "catalogus"){
+    rows.appendChild(bnFieldRow({ label: t("bnBijtellingPct"), unit: "%", get: () => p.bijtellingPct, set: v => p.bijtellingPct = v }));
+  }
+  rows.appendChild(bnFieldRow({ label: t("bnEigenBijdrage"), hint: t("bnEigenBijdrageHint"), unit: "€", get: () => p.eigenBijdrage, set: v => p.eigenBijdrage = v }));
+
+  sec(t("bnSecInhoudingen"));
+  const pctModes = [ { v: "bedrag", l: t("bnModeBedrag") }, { v: "pct", l: t("bnModePct") } ];
+  const wisselMode = (veld, modeVeld) => (m) => {
+    // Omrekenen bij wisselen, zodat de uitkomst niet verspringt.
+    const basis = bnNum(p.bruto);
+    if(m === p[modeVeld]) return;
+    if(m === "pct") p[veld] = basis > 0 ? Math.round(bnNum(p[veld]) / basis * 100 * 10000) / 10000 : 0;
+    else p[veld] = Math.round(bnNum(p[veld]) / 100 * basis * 100) / 100;
+    p[modeVeld] = m;
+  };
+  rows.appendChild(bnFieldRow({
+    label: t("bnPensioen"), hint: p.pensioenMode === "pct" ? "" : t("bnPensioenHint"),
+    modes: pctModes, mode: () => p.pensioenMode, setMode: wisselMode("pensioen", "pensioenMode"),
+    unit: () => p.pensioenMode === "pct" ? "%" : "€", get: () => p.pensioen, set: v => p.pensioen = v,
+  }));
+  rows.appendChild(bnFieldRow({
+    label: t("bnWhk"), hint: t("bnWhkHint"),
+    modes: pctModes, mode: () => p.whkMode, setMode: wisselMode("whk", "whkMode"),
+    unit: () => p.whkMode === "pct" ? "%" : "€", get: () => p.whk, set: v => p.whk = v,
+  }));
+
+  sec(t("bnSecAfstemmen"));
+  rows.appendChild(bnFieldRow({
+    label: t("bnLoonstrookLh"), hint: t("bnLoonstrookLhHint"), unit: "€", allowEmpty: true, placeholder: t("bnOptioneel"),
+    get: () => p.loonstrookLh, set: v => p.loonstrookLh = v,
+    after: () => { const c = document.getElementById("bnCorrectieInfo"); if(c) c.textContent = bnCorrectieTekst(p); },
+  }));
+  const info = document.createElement("div");
+  info.className = "bn-correctie-info";
+  info.id = "bnCorrectieInfo";
+  info.textContent = bnCorrectieTekst(p);
+  rows.appendChild(info);
+
+  card.appendChild(rows);
+  return card;
+}
+
+function bnCorrectieTekst(p){
+  if(p.loonstrookLh === null || p.loonstrookLh === undefined || p.loonstrookLh === "") return t("bnCorrectieGeen");
+  if(bnNum(p.bruto) <= 0) return t("bnCorrectieGeenBruto");
+  return t("bnCorrectieTekst")(fmt(bnCorrectie(p, bnState().tax)));
+}
+
+/* Vergoedingen (onbelast, komen bij het netto) en netto-inhoudingen (gaan eraf): vrije lijst
+   met naam en bedrag per maand, in dezelfde rij-opmaak als de Basisdata-kaarten. */
+function renderBnListCard(p, veld, titel, note){
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `<div class="card-head"><h2>${escapeHtml(titel)}</h2><span class="mono bn-list-total" data-total="${veld}">€ ${fmt(bnSum(p[veld]))}</span></div>`;
+  const rows = document.createElement("div");
+  rows.className = "rows bn-list-rows";
+  const updTotal = () => { const s = card.querySelector(`[data-total="${veld}"]`); if(s) s.textContent = `€ ${fmt(bnSum(p[veld]))}`; };
+  p[veld].forEach((it, idx) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    const l = document.createElement("input");
+    l.className = "label-input";
+    l.value = it.l || "";
+    l.placeholder = t("bnRegelNaam");
+    l.setAttribute("aria-label", t("bnRegelNaam"));
+    l.oninput = () => { it.l = l.value; scheduleAutoSave(); };
+    const wrap = document.createElement("div");
+    wrap.className = "value-wrap";
+    wrap.innerHTML = `<span class="euro">€</span>`;
+    const v = document.createElement("input");
+    v.className = "value-input"; v.type = "number"; v.step = "0.01"; v.inputMode = "decimal";
+    v.value = String(it.v ?? 0);
+    v.setAttribute("aria-label", it.l || t("bnRegelNaam"));
+    v.oninput = () => { it.v = v.value === "" ? 0 : Number(v.value); updTotal(); bnRefresh(); };
+    wrap.appendChild(v);
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "del-btn"; del.title = t("bnRegelWeg"); del.setAttribute("aria-label", t("bnRegelWeg"));
+    del.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
+    del.onclick = () => { p[veld].splice(idx, 1); renderAll(); };
+    row.append(l, wrap, del);
+    rows.appendChild(row);
+  });
+  const add = document.createElement("button");
+  add.type = "button"; add.className = "add-row-btn";
+  add.textContent = "+ " + t("bnRegelErbij");
+  add.onclick = () => {
+    p[veld].push({ l: "", v: 0 });
+    renderAll();
+    const inputs = document.querySelectorAll(`#categories .card .bn-list-rows`);
+    // focus op de naam van de nieuwe regel
+    const lijst = [...inputs].find(r => r.closest(".card").querySelector(`[data-total="${veld}"]`));
+    if(lijst){ const laatste = lijst.querySelectorAll(".label-input"); if(laatste.length) laatste[laatste.length - 1].focus(); }
+  };
+  rows.appendChild(add);
+  card.appendChild(rows);
+  if(note){ const n = document.createElement("div"); n.className = "card-note"; n.textContent = note; card.appendChild(n); }
+  return card;
+}
+
+function renderBnSchemaCard(p){
+  const card = document.createElement("div");
+  card.className = "card";
+  const rijen = bnStappen(p);
+  const basisNetto = rijen[0].netto;
+  const detail = bnShowDetail;
+  const heeftAuto = rijen.some(r => r.autoFiscaal > 0 || r.eigenBijdrage > 0);
+  const heeftInh = rijen[0].inhoudingen > 0;
+  card.innerHTML = `
+    <div class="card-head">
+      <h2>${escapeHtml(t("bnSchemaTitle"))}</h2>
+      <button type="button" class="bn-detail-btn" id="bnDetailBtn" aria-pressed="${detail}">${escapeHtml(detail ? t("bnDetailVerberg") : t("bnDetailToon"))}</button>
+    </div>
+    <div class="table-wrap">
+      <table class="loonstijging-table bn-table">
+        <thead><tr>
+          <th>${escapeHtml(t("bnColBruto"))}</th>
+          <th>${escapeHtml(t("bnColNetto"))}</th>
+          <th>${escapeHtml(t("bnColVerschil"))}</th>
+          <th>${escapeHtml(t("bnColPensioen"))}</th>
+          <th>${escapeHtml(t("bnColLoonheffing"))}</th>
+          <th>${escapeHtml(t("bnColWhk"))}</th>
+          ${heeftAuto ? `<th>${escapeHtml(t("bnColAuto"))}</th>` : ""}
+          ${heeftInh ? `<th>${escapeHtml(t("bnColInhoudingen"))}</th>` : ""}
+          <th>${escapeHtml(t("bnColVergoedingen"))}</th>
+          ${detail ? `
+            <th>${escapeHtml(t("bnColBelastbaar"))}</th>
+            <th>${escapeHtml(t("bnColSchijf")(1, bnState().tax.tarief1))}</th>
+            <th>${escapeHtml(t("bnColSchijf")(2, bnState().tax.tarief2))}</th>
+            <th>${escapeHtml(t("bnColSchijf")(3, bnState().tax.tarief3))}</th>
+            <th>${escapeHtml(t("bnColAhk"))}</th>
+            <th>${escapeHtml(t("bnColAk"))}</th>
+            <th>${escapeHtml(t("bnColCorrectie"))}</th>` : ""}
+        </tr></thead>
+        <tbody>
+          ${rijen.map((r, i) => `
+            <tr class="${i === 0 ? "bn-basis-row" : ""}">
+              <td class="mono">€ ${fmt(r.bruto)}</td>
+              <td class="mono strong">€ ${fmt(r.netto)}</td>
+              <td class="mono ${r.netto - basisNetto > 0.005 ? "bn-plus" : ""}">${i === 0 ? escapeHtml(t("bnHuidigeRegel")) : `+ € ${fmt(r.netto - basisNetto)}`}</td>
+              <td class="mono">€ ${fmt(r.pensioen)}</td>
+              <td class="mono">€ ${fmt(r.loonheffing)}</td>
+              <td class="mono">€ ${fmt(r.whk)}</td>
+              ${heeftAuto ? `<td class="mono">€ ${fmt(r.autoFiscaal)}</td>` : ""}
+              ${heeftInh ? `<td class="mono">€ ${fmt(r.inhoudingen)}</td>` : ""}
+              <td class="mono">€ ${fmt(r.vergoedingen)}</td>
+              ${detail ? `
+                <td class="mono">€ ${fmt(r.belastbaar)}</td>
+                <td class="mono">€ ${fmt(r.s1)}</td>
+                <td class="mono">€ ${fmt(r.s2)}</td>
+                <td class="mono">€ ${fmt(r.s3)}</td>
+                <td class="mono">− € ${fmt(r.ahk)}</td>
+                <td class="mono">− € ${fmt(r.ak)}</td>
+                <td class="mono">${r.correctie ? (r.correctie > 0 ? "− " : "+ ") + "€ " + fmt(Math.abs(r.correctie)) : "—"}</td>` : ""}
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-note">${escapeHtml(t("bnSchemaNote"))}</div>`;
+  card.querySelector("#bnDetailBtn").onclick = () => { bnShowDetail = !bnShowDetail; renderBnResults(); };
+  return card;
+}
+
+/* Werkgevers naast elkaar: elk profiel bij z'n eigen basisbruto, met het verschil t.o.v. het
+   gekozen vergelijkingsprofiel. */
+function renderBnCompareCard(){
+  const bn = bnState();
+  const tax = bn.tax;
+  const res = bn.profielen.map(p => ({ p, r: bnBereken(p, tax, p.bruto) }));
+  const ref = res.find(x => x.p.id === bn.refId) || res[0];
+  const card = document.createElement("div");
+  card.className = "card";
+  const regels = [
+    ["bnColBruto", r => r.bruto],
+    ["bnColPensioen", r => -r.pensioen],
+    ["bnColLoonheffing", r => -r.loonheffing],
+    ["bnColWhk", r => -r.whk],
+    ["bnColEigenBijdrage", r => -r.eigenBijdrage],
+    ["bnColInhoudingen", r => -r.inhoudingen],
+    ["bnColVergoedingen", r => r.vergoedingen],
+  ];
+  const teken = v => (v < -0.004 ? "− " : "") + "€ " + fmt(Math.abs(v));
+  card.innerHTML = `
+    <div class="card-head">
+      <h2>${escapeHtml(t("bnCompareTitle"))}</h2>
+      <label class="bn-ref-label">${escapeHtml(t("bnRefLabel"))}
+        <select id="bnRefSelect">${bn.profielen.map(p => `<option value="${escapeHtml(p.id)}"${p.id === ref.p.id ? " selected" : ""}>${escapeHtml(p.naam || t("bnNoName"))}</option>`).join("")}</select>
+      </label>
+    </div>
+    <div class="table-wrap">
+      <table class="loonstijging-table bn-table bn-compare">
+        <thead><tr><th></th>${res.map(x => `<th class="${x === ref ? "bn-ref" : ""}">${escapeHtml(x.p.naam || t("bnNoName"))}</th>`).join("")}</tr></thead>
+        <tbody>
+          ${regels.filter(([, f]) => res.some(x => Math.abs(f(x.r)) > 0.004)).map(([k, f]) => `
+            <tr><td>${escapeHtml(t(k))}</td>${res.map(x => `<td class="mono">${teken(f(x.r))}</td>`).join("")}</tr>`).join("")}
+          <tr class="bn-total-row"><td>${escapeHtml(t("bnColNetto"))}</td>${res.map(x => `<td class="mono strong">€ ${fmt(x.r.netto)}</td>`).join("")}</tr>
+          <tr><td>${escapeHtml(t("bnVerschilRef"))}</td>${res.map(x => {
+            if(x === ref) return `<td class="mono">—</td>`;
+            const d = x.r.netto - ref.r.netto;
+            return `<td class="mono ${d > 0.004 ? "bn-plus" : d < -0.004 ? "bn-min" : ""}">${d > 0.004 ? "+ " : d < -0.004 ? "− " : ""}€ ${fmt(Math.abs(d))}</td>`;
+          }).join("")}</tr>
+          <tr><td>${escapeHtml(t("bnPerJaar"))}</td>${res.map(x => {
+            if(x === ref) return `<td class="mono">—</td>`;
+            const d = (x.r.netto - ref.r.netto) * 12;
+            return `<td class="mono ${d > 0.004 ? "bn-plus" : d < -0.004 ? "bn-min" : ""}">${d > 0.004 ? "+ " : d < -0.004 ? "− " : ""}€ ${fmt(Math.abs(d))}</td>`;
+          }).join("")}</tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-note">${escapeHtml(t("bnCompareNote"))}</div>`;
+  card.querySelector("#bnRefSelect").onchange = (e) => { bn.refId = e.target.value; bnRefresh(); };
+  return card;
+}
+
+function renderBnTaxCard(bn){
+  const card = document.createElement("div");
+  card.className = "card bn-tax-card";
+  const tax = bn.tax;
+  card.innerHTML = `
+    <div class="card-head">
+      <button type="button" class="bn-tax-toggle" id="bnTaxToggle" aria-expanded="${bnTaxOpen}">
+        <svg class="bn-caret${bnTaxOpen ? " open" : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        <h2>${escapeHtml(t("bnTaxTitle")(tax.jaar))}</h2>
+      </button>
+    </div>`;
+  card.querySelector("#bnTaxToggle").onclick = () => { bnTaxOpen = !bnTaxOpen; renderAll(); };
+  if(bnTaxOpen){
+    const rows = document.createElement("div");
+    rows.className = "rows verhogingen-rows bn-rows";
+    const f = (key, unit, step) => rows.appendChild(bnFieldRow({ label: t("bnTax_" + key), unit, step, get: () => tax[key], set: v => tax[key] = v }));
+    f("jaar", "", "1");
+    const sec = (s) => { const h = document.createElement("div"); h.className = "bn-sec"; h.textContent = s; rows.appendChild(h); };
+    sec(t("bnTaxSecSchijven"));
+    f("grens1", "€", "1"); f("grens2", "€", "1"); f("tarief1", "%"); f("tarief2", "%"); f("tarief3", "%");
+    sec(t("bnTaxSecKortingen"));
+    f("ahkMax", "€", "1"); f("ahkGrens", "€", "1"); f("ahkAfbouw", "%", "0.001");
+    f("akMax", "€", "1"); f("akGrens", "€", "1"); f("akAfbouw", "%", "0.001");
+    card.appendChild(rows);
+    const tools = document.createElement("div");
+    tools.className = "bd-tools bn-tax-tools";
+    tools.innerHTML = `<button type="button" id="bnTaxReset">${escapeHtml(t("bnTaxReset"))}</button>`;
+    tools.querySelector("#bnTaxReset").onclick = () => {
+      const snap = JSON.stringify(state);
+      bn.tax = Object.assign({}, BN_TAX_2026);
+      renderAll();
+      offerUndo(t("bnTaxResetDone"), snap);
+    };
+    card.appendChild(tools);
+    const n = document.createElement("div");
+    n.className = "card-note";
+    n.textContent = t("bnTaxNote");
+    card.appendChild(n);
+  }
+  return card;
+}
+
+function renderBrutoNettoSummary(){
+  const el = document.getElementById("summary");
+  const p = bnActive();
+  const r = bnBereken(p, bnState().tax, p.bruto);
+  const loonItem = getLoonItem(basisdataScenario());
+  const lijn = (cls, l, v) => `<div class="summary-line ${cls}"><span class="l">${escapeHtml(l)}</span><span class="v">${v}</span></div>`;
+  el.innerHTML = `
+    <h2>${escapeHtml(p.naam || t("bnNoName"))}</h2>
+    ${lijn("credit", t("bnColBruto"), "€ " + fmt(r.bruto))}
+    ${r.pensioen ? lijn("debit", t("bnColPensioen"), "− € " + fmt(r.pensioen)) : ""}
+    ${lijn("debit", t("bnColLoonheffing"), "− € " + fmt(r.loonheffing))}
+    ${r.whk ? lijn("debit", t("bnColWhk"), "− € " + fmt(r.whk)) : ""}
+    ${r.eigenBijdrage ? lijn("debit", t("bnColEigenBijdrage"), "− € " + fmt(r.eigenBijdrage)) : ""}
+    ${r.inhoudingen ? lijn("debit", t("bnColInhoudingen"), "− € " + fmt(r.inhoudingen)) : ""}
+    ${r.vergoedingen ? lijn("credit", t("bnColVergoedingen"), "+ € " + fmt(r.vergoedingen)) : ""}
+    ${lijn("total", t("bnColNetto"), "€ " + fmt(r.netto))}
+    ${loonItem ? `
+      <div class="bn-sum-compare">
+        ${lijn("", t("bnLoonBasisdata")(loonItem.l), "€ " + fmt(bnNum(loonItem.v)))}
+        ${lijn("", t("bnVerschilBasisdata"), (r.netto - bnNum(loonItem.v) < -0.004 ? "− " : r.netto - bnNum(loonItem.v) > 0.004 ? "+ " : "") + "€ " + fmt(Math.abs(r.netto - bnNum(loonItem.v))))}
+      </div>` : ""}
+    <div class="card-note bn-sum-note">${escapeHtml(t("bnSummaryNote"))}</div>
+    ${renderActionsHTML(false)}
+  `;
   wireActions();
 }
 
